@@ -1,0 +1,235 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// 1. Staff & Authentication
+enum Role {
+  ADMIN
+  AGENT
+  MANAGER
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  password       String
+  name           String
+  role           Role     @default(AGENT)
+  commissionRate Decimal? @db.Decimal(5, 2) // Percentage, e.g., 5.00
+  isActive       Boolean  @default(true)
+  
+  leads          Lead[]
+  tasks          Task[]
+  interactions   Interaction[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// 2. Customer Management
+enum CustomerType {
+  INDIVIDUAL
+  CORPORATE
+}
+
+model Customer {
+  id          String       @id @default(uuid())
+  type        CustomerType @default(INDIVIDUAL)
+  firstName   String
+  lastName    String
+  nickname    String?
+  email       String?
+  phone       String?
+  lineId      String?
+  nationality String?
+  dateOfBirth DateTime?
+  preferences String?      @db.Text // Dietary, Seat, etc.
+  
+  tags        CustomerTag[]
+  passports   Passport[]
+  interactions Interaction[]
+  leads       Lead[]
+  bookings    Booking[]
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Passport {
+  id             String   @id @default(uuid())
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  passportNumber String
+  issuingCountry String
+  expiryDate     DateTime
+  isPrimary      Boolean  @default(false)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Tag {
+  id        String        @id @default(uuid())
+  name      String        @unique
+  color     String?
+  customers CustomerTag[]
+}
+
+model CustomerTag {
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tagId      String
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, tagId])
+}
+
+// 3. Sales Pipeline & Leads
+enum LeadSource {
+  WEBSITE
+  WALKIN
+  REFERRAL
+  SOCIAL
+  LINE
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  QUOTED
+  FOLLOW_UP
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+model Lead {
+  id                 String     @id @default(uuid())
+  customerId         String
+  customer           Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  agentId            String
+  agent              User       @relation(fields: [agentId], references: [id])
+  
+  source             LeadSource @default(WEBSITE)
+  status             LeadStatus @default(NEW)
+  potentialValue     Decimal?   @db.Decimal(10, 2)
+  destinationInterest String?
+  travelDateEstimate DateTime?
+  notes              String?    @db.Text
+  
+  bookings           Booking[]
+
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+}
+
+// 4. Trip & Booking Management
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  REFUNDED
+}
+
+enum VisaStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Trip {
+  id          String    @id @default(uuid())
+  name        String
+  destination String
+  startDate   DateTime
+  endDate     DateTime
+  maxCapacity Int
+  description String?   @db.Text
+  price       Decimal?  @db.Decimal(10, 2)
+  
+  bookings    Booking[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Booking {
+  id             String        @id @default(uuid())
+  customerId     String
+  customer       Customer      @relation(fields: [customerId], references: [id])
+  leadId         String?
+  lead           Lead?         @relation(fields: [leadId], references: [id])
+  
+  tripId         String
+  trip           Trip          @relation(fields: [tripId], references: [id])
+  status         BookingStatus @default(PENDING)
+  
+  totalAmount    Decimal       @db.Decimal(10, 2)
+  paidAmount     Decimal       @db.Decimal(10, 2) @default(0)
+  paymentDueDate DateTime?
+  visaStatus     VisaStatus    @default(NOT_REQUIRED)
+  
+  tasks          Task[]
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+// 5. Relationship & Tasks
+enum InteractionType {
+  CALL
+  EMAIL
+  LINE
+  WHATSAPP
+  MEETING
+  OTHER
+}
+
+model Interaction {
+  id         String          @id @default(uuid())
+  customerId String
+  customer   Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  agentId    String
+  agent      User            @relation(fields: [agentId], references: [id])
+  
+  type       InteractionType
+  content    String          @db.Text
+  date       DateTime        @default(now())
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Task {
+  id                String       @id @default(uuid())
+  agentId           String
+  agent             User         @relation(fields: [agentId], references: [id])
+  
+  relatedCustomerId String? // Optional loose link or strict? Let's keep it strict if possible, but maybe generic?
+  // For simplicity in Prisma, let's not force a relation unless needed. 
+  // But requirement said "Create follow-up tasks for each customer".
+  // Let's link to Booking optionally too.
+  
+  relatedBookingId  String?
+  relatedBooking    Booking?     @relation(fields: [relatedBookingId], references: [id])
+  
+  title             String
+  description       String?      @db.Text
+  dueDate           DateTime
+  isCompleted       Boolean      @default(false)
+  priority          TaskPriority @default(MEDIUM)
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
