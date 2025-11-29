@@ -58,9 +58,9 @@ interface Trip {
 }
 
 interface BookingFormProps {
-  mode: "create" | "edit";
+  mode: "create" | "edit" | "view";
   initialData?: Partial<BookingFormValues>;
-  onSubmit: (values: BookingFormValues) => Promise<void>;
+  onSubmit?: (values: BookingFormValues) => Promise<void>;
   onCancel?: () => void;
   isLoading?: boolean;
   booking?: Booking; // For fallback values in edit mode
@@ -74,6 +74,7 @@ export function BookingForm({
   isLoading = false,
   booking,
 }: BookingFormProps) {
+  const readOnly = mode === "view";
   const [trips, setTrips] = useState<Trip[]>([]);
   const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
@@ -176,6 +177,7 @@ export function BookingForm({
   };
 
   async function handleSubmit(values: BookingFormValues) {
+    if (!onSubmit || readOnly) return;
     // Transform empty strings to undefined for status and visaStatus
     const transformedValues: BookingFormValues = {
       ...values,
@@ -192,26 +194,38 @@ export function BookingForm({
           control={form.control}
           name="customerId"
           render={({ field }) => (
-            <FormItem className="flex flex-col">
+              <FormItem className="flex flex-col">
               <FormLabel>Customer</FormLabel>
-              <Popover open={customerSearchOpen} onOpenChange={setCustomerSearchOpen}>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className={cn(
-                        "w-full justify-between",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {selectedCustomer
+              {readOnly ? (
+                <FormControl>
+                  <Input
+                    value={
+                      selectedCustomer
                         ? `${selectedCustomer.firstNameTh} ${selectedCustomer.lastNameTh} (${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn})`
-                        : "Search for a customer..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
+                        : ""
+                    }
+                    disabled
+                  />
+                </FormControl>
+              ) : (
+                <Popover open={customerSearchOpen} onOpenChange={setCustomerSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          "w-full justify-between",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {selectedCustomer
+                          ? `${selectedCustomer.firstNameTh} ${selectedCustomer.lastNameTh} (${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn})`
+                          : "Search for a customer..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
                 <PopoverContent className="w-[400px] p-0">
                   <Command shouldFilter={false}>
                     <CommandInput
@@ -264,6 +278,7 @@ export function BookingForm({
                   </Command>
                 </PopoverContent>
               </Popover>
+              )}
               <FormMessage />
             </FormItem>
           )}
@@ -275,24 +290,37 @@ export function BookingForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Select Trip</FormLabel>
-              <Select
-                onValueChange={handleTripChange}
-                value={field.value || (mode === "edit" && booking?.tripId) || ""}
-              >
+              {readOnly ? (
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a trip package" />
-                  </SelectTrigger>
+                  <Input
+                    value={
+                      booking?.trip
+                        ? `${booking.trip.name} (${format(new Date(booking.trip.startDate), "dd MMM")} - ${format(new Date(booking.trip.endDate), "dd MMM")})`
+                        : trips.find((t) => t.id === field.value)?.name || ""
+                    }
+                    disabled
+                  />
                 </FormControl>
-                <SelectContent>
-                  {trips.map((trip) => (
-                    <SelectItem key={trip.id} value={trip.id} disabled={trip._count.bookings >= trip.maxCapacity}>
-                      {trip.name} ({format(new Date(trip.startDate), "dd MMM")} - {format(new Date(trip.endDate), "dd MMM")}) 
-                      {trip._count.bookings >= trip.maxCapacity ? " [FULL]" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              ) : (
+                <Select
+                  onValueChange={handleTripChange}
+                  value={field.value || (mode === "edit" && booking?.tripId) || ""}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a trip package" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {trips.map((trip) => (
+                      <SelectItem key={trip.id} value={trip.id} disabled={trip._count.bookings >= trip.maxCapacity}>
+                        {trip.name} ({format(new Date(trip.startDate), "dd MMM")} - {format(new Date(trip.endDate), "dd MMM")}) 
+                        {trip._count.bookings >= trip.maxCapacity ? " [FULL]" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <FormMessage />
             </FormItem>
           )}
@@ -306,7 +334,7 @@ export function BookingForm({
               <FormItem>
                 <FormLabel>Total Amount (THB)</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="0.00" {...field} />
+                  <Input type="number" placeholder="0.00" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -319,7 +347,7 @@ export function BookingForm({
               <FormItem>
                 <FormLabel>Paid Amount (THB)</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="0.00" {...field} />
+                  <Input type="number" placeholder="0.00" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -334,23 +362,32 @@ export function BookingForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Booking Status</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value || (mode === "edit" && booking?.status) || ""}
-                >
+                {readOnly ? (
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
+                    <Input
+                      value={field.value || booking?.status || ""}
+                      disabled
+                    />
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="PENDING">Pending</SelectItem>
-                    <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                    <SelectItem value="COMPLETED">Completed</SelectItem>
-                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                    <SelectItem value="REFUNDED">Refunded</SelectItem>
-                  </SelectContent>
-                </Select>
+                ) : (
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || (mode === "edit" && booking?.status) || ""}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="PENDING">Pending</SelectItem>
+                      <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                      <SelectItem value="COMPLETED">Completed</SelectItem>
+                      <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                      <SelectItem value="REFUNDED">Refunded</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
                 <FormMessage />
               </FormItem>
             )}
@@ -361,49 +398,60 @@ export function BookingForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Visa Status</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value || (mode === "edit" && booking?.visaStatus) || ""}
-                >
+                {readOnly ? (
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select visa status" />
-                    </SelectTrigger>
+                    <Input
+                      value={field.value || booking?.visaStatus || ""}
+                      disabled
+                    />
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="NOT_REQUIRED">Not Required</SelectItem>
-                    <SelectItem value="PENDING">Pending</SelectItem>
-                    <SelectItem value="APPROVED">Approved</SelectItem>
-                    <SelectItem value="REJECTED">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
+                ) : (
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || (mode === "edit" && booking?.visaStatus) || ""}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select visa status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="NOT_REQUIRED">Not Required</SelectItem>
+                      <SelectItem value="PENDING">Pending</SelectItem>
+                      <SelectItem value="APPROVED">Approved</SelectItem>
+                      <SelectItem value="REJECTED">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
 
-        <div className="flex justify-end space-x-4">
-          {onCancel && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isLoading}
-            >
-              Cancel
+        {!readOnly && (
+          <div className="flex justify-end space-x-4">
+            {onCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+            )}
+            <Button type="submit" disabled={isLoading}>
+              {isLoading
+                ? mode === "create"
+                  ? "Creating..."
+                  : "Updating..."
+                : mode === "create"
+                  ? "Create Booking"
+                  : "Update Booking"}
             </Button>
-          )}
-          <Button type="submit" disabled={isLoading}>
-            {isLoading
-              ? mode === "create"
-                ? "Creating..."
-                : "Updating..."
-              : mode === "create"
-                ? "Create Booking"
-                : "Update Booking"}
-          </Button>
-        </div>
+          </div>
+        )}
       </form>
     </Form>
   );

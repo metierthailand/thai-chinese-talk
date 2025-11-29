@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Eye } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { DataTable } from "@/components/data-table/data-table";
@@ -110,7 +110,7 @@ export default function TripsPage() {
           <div className="flex justify-end gap-2">
             <Link href={`/dashboard/trips/${row.original.id}`}>
               <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-                View
+                <Eye className="h-4 w-4" />
               </Button>
             </Link>
             <Link href={`/dashboard/trips/${row.original.id}/edit`}>

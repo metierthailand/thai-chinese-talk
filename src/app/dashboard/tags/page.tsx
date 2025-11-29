@@ -5,7 +5,7 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye } from "lucide-react";
 import Link from "next/link";
 import {
   Dialog,
@@ -87,6 +87,11 @@ export default function TagsPage() {
         header: () => <div className="text-right">Actions</div>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
+            <Link href={`/dashboard/tags/${row.original.id}`}>
+              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                <Eye className="h-4 w-4" />
+              </Button>
+            </Link>
             <Link href={`/dashboard/tags/${row.original.id}/edit`}>
               <Button variant="ghost" size="sm">
                 <Pencil className="h-4 w-4" />

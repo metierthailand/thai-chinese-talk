@@ -38,14 +38,28 @@ export interface BookingsResponse {
 export const bookingKeys = {
   all: ["bookings"] as const,
   lists: () => [...bookingKeys.all, "list"] as const,
-  list: (page: number, pageSize: number) => [...bookingKeys.lists(), page, pageSize] as const,
+  list: (page: number, pageSize: number, search?: string) =>
+    [...bookingKeys.lists(), page, pageSize, search] as const,
   details: () => [...bookingKeys.all, "detail"] as const,
   detail: (id: string) => [...bookingKeys.details(), id] as const,
 };
 
 // Fetch bookings function
-async function fetchBookings(page: number = 1, pageSize: number = 10): Promise<BookingsResponse> {
-  const res = await fetch(`/api/bookings?page=${page}&pageSize=${pageSize}`);
+async function fetchBookings(
+  page: number = 1,
+  pageSize: number = 10,
+  search?: string,
+): Promise<BookingsResponse> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    pageSize: pageSize.toString(),
+  });
+
+  if (search && search.trim()) {
+    params.set("search", search.trim());
+  }
+
+  const res = await fetch(`/api/bookings?${params.toString()}`);
   if (!res.ok) {
     throw new Error("Failed to fetch bookings");
   }
@@ -143,10 +157,10 @@ async function deleteBooking(id: string): Promise<void> {
 }
 
 // Hook to fetch bookings with pagination
-export function useBookings(page: number, pageSize: number) {
+export function useBookings(page: number, pageSize: number, search?: string) {
   return useQuery({
-    queryKey: bookingKeys.list(page, pageSize),
-    queryFn: () => fetchBookings(page, pageSize),
+    queryKey: bookingKeys.list(page, pageSize, search),
+    queryFn: () => fetchBookings(page, pageSize, search),
     staleTime: 30 * 1000, // 30 seconds
   });
 }

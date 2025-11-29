@@ -5,7 +5,7 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Search, X } from "lucide-react";
+import { Plus, Pencil, Search, X, Eye } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/data-table/data-table";
@@ -141,6 +141,11 @@ export default function CustomersPage() {
         header: () => <div className="text-right">Actions</div>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
+            <Link href={`/dashboard/customers/${row.original.id}`}>
+              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                <Eye className="h-4 w-4" />
+              </Button>
+            </Link>
             <Link href={`/dashboard/customers/${row.original.id}/edit`}>
               <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
                 <Pencil className="h-4 w-4" />
@@ -203,14 +208,6 @@ export default function CustomersPage() {
       updateSearchParams({ pageSize: newPageSize, page: 1 }); // Reset to page 1 when changing page size
     },
     [updateSearchParams]
-  );
-
-  // Handle row click
-  const handleRowClick = useCallback(
-    (customer: Customer) => {
-      router.push(`/dashboard/customers/${customer.id}`);
-    },
-    [router]
   );
 
   if (isLoading) {
@@ -279,7 +276,6 @@ export default function CustomersPage() {
           <DataTable
             table={table}
             columns={columns}
-            onRowClick={handleRowClick}
           />
         </div>
         <DataTablePagination

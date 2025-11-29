@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { Eye } from "lucide-react";
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -140,7 +141,7 @@ export default function NotificationsPage() {
                   router.push(row.original.link!);
                 }}
               >
-                View
+                <Eye className="h-4 w-4" />
               </Button>
             )}
           </div>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -14,15 +15,56 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
+    const search = searchParams.get("search") || "";
     const skip = (page - 1) * pageSize;
 
+    // Build where clause for optional customer name search
+    const where: Prisma.BookingWhereInput =
+      search.trim().length > 0
+        ? {
+            customer: {
+              is: {
+                OR: [
+                  {
+                    firstNameTh: {
+                      contains: search,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    lastNameTh: {
+                      contains: search,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    firstNameEn: {
+                      contains: search,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    lastNameEn: {
+                      contains: search,
+                      mode: "insensitive",
+                    },
+                  },
+                ],
+              },
+            },
+          }
+        : {};
+
     // Get total count for pagination
-    const total = await prisma.booking.count();
+    const total = await prisma.booking.count({
+      where,
+    });
 
     // Fetch paginated bookings
     const bookings = await prisma.booking.findMany({
       skip,
       take: pageSize,
+      where,
       orderBy: {
         createdAt: "desc",
       },

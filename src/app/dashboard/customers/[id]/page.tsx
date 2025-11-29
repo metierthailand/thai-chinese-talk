@@ -175,7 +175,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                   <p className="text-muted-foreground">No bookings found.</p>
                 ) : (
                   customer.bookings.map((booking) => (
-                    <Link key={booking.id} href={`/dashboard/bookings/${booking.id}/edit`}>
+                    <Link key={booking.id} href={`/dashboard/bookings/${booking.id}`}>
                       <div className="rounded-md border p-4">
                         <div className="font-medium">{booking.trip.name}</div>
                         <div className="text-muted-foreground text-sm">

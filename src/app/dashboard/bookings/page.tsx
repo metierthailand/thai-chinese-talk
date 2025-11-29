@@ -1,30 +1,41 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
-import * as React from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Eye, Search, X } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { DataTable } from "@/components/data-table/data-table";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { useBookings, type Booking } from "./hooks/use-bookings";
+import { Input } from "@/components/ui/input";
+import { useDebounce } from "@/hooks/use-debounce";
 
 export default function BookingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Get pagination from URL params
+  // Get pagination and search from URL params
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
+  const searchQuery = searchParams.get("search") || "";
+
+  // Local state for search input (for controlled input)
+  const [searchInput, setSearchInput] = useState(searchQuery);
+
+  // Debounce search input to avoid too many API calls
+  const debouncedSearch = useDebounce(searchInput, 500);
+
+  // Ref to track if we're manually clearing (to prevent race condition)
+  const isClearing = useRef(false);
 
   // Function to update URL params
   const updateSearchParams = useCallback(
-    (updates: { page?: number; pageSize?: number }) => {
+    (updates: { page?: number; pageSize?: number; search?: string }) => {
       const params = new URLSearchParams(searchParams.toString());
 
       if (updates.page !== undefined) {
@@ -43,11 +54,40 @@ export default function BookingsPage() {
         }
       }
 
+      if (updates.search !== undefined) {
+        if (updates.search === "") {
+          params.delete("search");
+        } else {
+          params.set("search", updates.search);
+        }
+      }
+
       const newUrl = params.toString() ? `?${params.toString()}` : "";
       router.push(`/dashboard/bookings${newUrl}`, { scroll: false });
     },
     [searchParams, router]
   );
+
+  // Sync debounced search to URL (skip if we're clearing)
+  useEffect(() => {
+    if (isClearing.current) {
+      return;
+    }
+    if (debouncedSearch !== searchQuery) {
+      updateSearchParams({ search: debouncedSearch, page: 1 });
+    }
+  }, [debouncedSearch, searchQuery, updateSearchParams]);
+
+  // Sync URL search to input (for browser back/forward)
+  useEffect(() => {
+    if (!isClearing.current && searchQuery !== searchInput) {
+      setSearchInput(searchQuery);
+    }
+    if (isClearing.current && searchQuery === "") {
+      isClearing.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -142,6 +182,11 @@ export default function BookingsPage() {
         header: () => <div className="text-right">Actions</div>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
+            <Link href={`/dashboard/bookings/${row.original.id}`}>
+              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                <Eye className="h-4 w-4" />
+              </Button>
+            </Link>
             <Link href={`/dashboard/bookings/${row.original.id}/edit`}>
               <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
                 <Pencil className="h-4 w-4" />
@@ -155,7 +200,11 @@ export default function BookingsPage() {
   );
 
   // Use TanStack Query to fetch bookings
-  const { data: bookingsResponse, isLoading, error } = useBookings(page, pageSize);
+  const { data: bookingsResponse, isLoading, error } = useBookings(
+    page,
+    pageSize,
+    searchQuery || undefined
+  );
 
   const bookings = useMemo(() => bookingsResponse?.data ?? [], [bookingsResponse?.data]);
   const total = bookingsResponse?.total ?? 0;
@@ -223,7 +272,7 @@ export default function BookingsPage() {
   }
 
   return (
-    <div className="space-y-8 p-8">
+    <div className="flex flex-col gap-8 p-8">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Bookings</h2>
@@ -234,6 +283,34 @@ export default function BookingsPage() {
             <Plus className="mr-2 h-4 w-4" /> New Booking
           </Button>
         </Link>
+      </div>
+
+      {/* Search form */}
+      <div className="flex items-center justify-end gap-4">
+        <div className="relative w-80">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search customer name (TH/EN)..."
+            className="pl-9 pr-9"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          {searchInput && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
+              onClick={() => {
+                isClearing.current = true;
+                setSearchInput("");
+                updateSearchParams({ search: "", page: 1 });
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="relative flex flex-col gap-4 overflow-auto">
