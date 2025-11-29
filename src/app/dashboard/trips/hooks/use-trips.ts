@@ -42,8 +42,14 @@ export interface TripsResponse {
 export const tripKeys = {
   all: ["trips"] as const,
   lists: () => [...tripKeys.all, "list"] as const,
-  list: (page: number, pageSize: number, search?: string) =>
-    [...tripKeys.lists(), page, pageSize, search] as const,
+  list: (
+    page: number,
+    pageSize: number,
+    search?: string,
+    startDateFrom?: string,
+    startDateTo?: string
+  ) =>
+    [...tripKeys.lists(), page, pageSize, search, startDateFrom, startDateTo] as const,
   details: () => [...tripKeys.all, "detail"] as const,
   detail: (id: string) => [...tripKeys.details(), id] as const,
 };
@@ -52,7 +58,9 @@ export const tripKeys = {
 async function fetchTrips(
   page: number = 1,
   pageSize: number = 10,
-  search?: string
+  search?: string,
+  startDateFrom?: string,
+  startDateTo?: string
 ): Promise<TripsResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -61,6 +69,12 @@ async function fetchTrips(
 
   if (search && search.trim()) {
     params.set("search", search.trim());
+  }
+  if (startDateFrom) {
+    params.set("startDateFrom", startDateFrom);
+  }
+  if (startDateTo) {
+    params.set("startDateTo", startDateTo);
   }
 
   const res = await fetch(`/api/trips?${params.toString()}`);
@@ -116,10 +130,16 @@ async function updateTrip({ id, data }: { id: string; data: TripFormValues }): P
 }
 
 // Hook to fetch trips with pagination
-export function useTrips(page: number, pageSize: number, search?: string) {
+export function useTrips(
+  page: number,
+  pageSize: number,
+  search?: string,
+  startDateFrom?: string,
+  startDateTo?: string
+) {
   return useQuery({
-    queryKey: tripKeys.list(page, pageSize, search),
-    queryFn: () => fetchTrips(page, pageSize, search),
+    queryKey: tripKeys.list(page, pageSize, search, startDateFrom, startDateTo),
+    queryFn: () => fetchTrips(page, pageSize, search, startDateFrom, startDateTo),
     staleTime: 30 * 1000, // 30 seconds
   });
 }

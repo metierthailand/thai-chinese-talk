@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { Prisma } from "@prisma/client";
+import { BookingStatus, Prisma, VisaStatus } from "@prisma/client";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -16,10 +16,14 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
     const search = searchParams.get("search") || "";
+    const status = searchParams.get("status") || "";
+    const visaStatus = searchParams.get("visaStatus") || "";
+    const tripStartDateFrom = searchParams.get("tripStartDateFrom") || "";
+    const tripStartDateTo = searchParams.get("tripStartDateTo") || "";
     const skip = (page - 1) * pageSize;
 
     // Build where clause for optional customer name search
-    const where: Prisma.BookingWhereInput =
+    const searchFilter: Prisma.BookingWhereInput =
       search.trim().length > 0
         ? {
             customer: {
@@ -54,6 +58,36 @@ export async function GET(request: Request) {
             },
           }
         : {};
+
+    // Build where clause for status filter
+    const statusFilter: Prisma.BookingWhereInput = status
+      ? { status: status as BookingStatus }
+      : {};
+
+    // Build where clause for visa status filter
+    const visaStatusFilter: Prisma.BookingWhereInput = visaStatus
+      ? { visaStatus: visaStatus as VisaStatus }
+      : {};
+
+    // Build where clause for trip start date range filter
+    const tripDateFilter: Prisma.BookingWhereInput =
+      tripStartDateFrom || tripStartDateTo
+        ? {
+            trip: {
+              is: {
+                startDate: {
+                  ...(tripStartDateFrom ? { gte: new Date(tripStartDateFrom) } : {}),
+                  ...(tripStartDateTo ? { lte: new Date(tripStartDateTo) } : {}),
+                },
+              },
+            },
+          }
+        : {};
+
+    // Combine all filters
+    const where: Prisma.BookingWhereInput = {
+      AND: [searchFilter, statusFilter, visaStatusFilter, tripDateFilter],
+    };
 
     // Get total count for pagination
     const total = await prisma.booking.count({

@@ -40,8 +40,15 @@ export interface LeadsResponse {
 export const leadKeys = {
   all: ["leads"] as const,
   lists: () => [...leadKeys.all, "list"] as const,
-  list: (page: number, pageSize: number, search?: string) =>
-    [...leadKeys.lists(), page, pageSize, search] as const,
+  list: (
+    page: number,
+    pageSize: number,
+    search?: string,
+    status?: string,
+    source?: string,
+    minPotential?: string,
+    maxPotential?: string
+  ) => [...leadKeys.lists(), page, pageSize, search, status, source, minPotential, maxPotential] as const,
   details: () => [...leadKeys.all, "detail"] as const,
   detail: (id: string) => [...leadKeys.details(), id] as const,
 };
@@ -50,7 +57,11 @@ export const leadKeys = {
 async function fetchLeads(
   page: number = 1,
   pageSize: number = 10,
-  search?: string
+  search?: string,
+  status?: string,
+  source?: string,
+  minPotential?: string,
+  maxPotential?: string
 ): Promise<LeadsResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -59,6 +70,18 @@ async function fetchLeads(
 
   if (search && search.trim()) {
     params.set("search", search.trim());
+  }
+  if (status && status !== "ALL") {
+    params.set("status", status);
+  }
+  if (source && source !== "ALL") {
+    params.set("source", source);
+  }
+  if (minPotential) {
+    params.set("minPotential", minPotential);
+  }
+  if (maxPotential) {
+    params.set("maxPotential", maxPotential);
   }
 
   const res = await fetch(`/api/leads?${params.toString()}`);
@@ -152,10 +175,18 @@ async function updateLead({
 }
 
 // Hook to fetch leads with pagination
-export function useLeads(page: number, pageSize: number, search?: string) {
+export function useLeads(
+  page: number,
+  pageSize: number,
+  search?: string,
+  status?: string,
+  source?: string,
+  minPotential?: string,
+  maxPotential?: string
+) {
   return useQuery({
-    queryKey: leadKeys.list(page, pageSize, search),
-    queryFn: () => fetchLeads(page, pageSize, search),
+    queryKey: leadKeys.list(page, pageSize, search, status, source, minPotential, maxPotential),
+    queryFn: () => fetchLeads(page, pageSize, search, status, source, minPotential, maxPotential),
     staleTime: 30 * 1000, // 30 seconds
   });
 }

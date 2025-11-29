@@ -14,6 +14,13 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { useLeads, type Lead } from "./hooks/use-leads";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function LeadsPage() {
   const router = useRouter();
@@ -22,13 +29,32 @@ export default function LeadsPage() {
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
   const searchQuery = searchParams.get("search") || "";
+  const statusFilter = searchParams.get("status") || "ALL";
+  const sourceFilter = searchParams.get("source") || "ALL";
+  const minPotentialQuery = searchParams.get("minPotential") || "";
+  const maxPotentialQuery = searchParams.get("maxPotential") || "";
 
   const [searchInput, setSearchInput] = useState(searchQuery);
   const debouncedSearch = useDebounce(searchInput, 500);
   const isClearing = useRef(false);
 
+  const [status, setStatus] = useState(statusFilter || "ALL");
+  const [source, setSource] = useState(sourceFilter || "ALL");
+  const [minPotential, setMinPotential] = useState(minPotentialQuery);
+  const [maxPotential, setMaxPotential] = useState(maxPotentialQuery);
+  const debouncedMinPotential = useDebounce(minPotential, 500);
+  const debouncedMaxPotential = useDebounce(maxPotential, 500);
+
   const updateSearchParams = useCallback(
-    (updates: { page?: number; pageSize?: number; search?: string }) => {
+    (updates: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      status?: string;
+      source?: string;
+      minPotential?: string;
+      maxPotential?: string;
+    }) => {
       const params = new URLSearchParams(searchParams.toString());
 
       if (updates.page !== undefined) {
@@ -55,6 +81,38 @@ export default function LeadsPage() {
         }
       }
 
+      if (updates.status !== undefined) {
+        if (updates.status === "ALL" || updates.status === "") {
+          params.delete("status");
+        } else {
+          params.set("status", updates.status);
+        }
+      }
+
+      if (updates.source !== undefined) {
+        if (updates.source === "ALL" || updates.source === "") {
+          params.delete("source");
+        } else {
+          params.set("source", updates.source);
+        }
+      }
+
+      if (updates.minPotential !== undefined) {
+        if (!updates.minPotential) {
+          params.delete("minPotential");
+        } else {
+          params.set("minPotential", updates.minPotential);
+        }
+      }
+
+      if (updates.maxPotential !== undefined) {
+        if (!updates.maxPotential) {
+          params.delete("maxPotential");
+        } else {
+          params.set("maxPotential", updates.maxPotential);
+        }
+      }
+
       const newUrl = params.toString() ? `?${params.toString()}` : "";
       router.push(`/dashboard/leads${newUrl}`, { scroll: false });
     },
@@ -71,16 +129,57 @@ export default function LeadsPage() {
     }
   }, [debouncedSearch, searchQuery, updateSearchParams]);
 
-  // Sync URL search to input
+  // Sync debounced budget range to URL
+  useEffect(() => {
+    if (isClearing.current) {
+      return;
+    }
+    if (
+      debouncedMinPotential !== minPotentialQuery ||
+      debouncedMaxPotential !== maxPotentialQuery
+    ) {
+      updateSearchParams({
+        minPotential: debouncedMinPotential || undefined,
+        maxPotential: debouncedMaxPotential || undefined,
+        page: 1,
+      });
+    }
+  }, [
+    debouncedMinPotential,
+    debouncedMaxPotential,
+    minPotentialQuery,
+    maxPotentialQuery,
+    updateSearchParams,
+  ]);
+
+  // Sync URL search & filters to inputs
   useEffect(() => {
     if (!isClearing.current && searchQuery !== searchInput) {
       setSearchInput(searchQuery);
+    }
+    if (statusFilter !== status) {
+      setStatus(statusFilter || "ALL");
+    }
+    if (sourceFilter !== source) {
+      setSource(sourceFilter || "ALL");
+    }
+    if (minPotentialQuery !== minPotential) {
+      setMinPotential(minPotentialQuery);
+    }
+    if (maxPotentialQuery !== maxPotential) {
+      setMaxPotential(maxPotentialQuery);
     }
     if (isClearing.current && searchQuery === "") {
       isClearing.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+  }, [
+    searchQuery,
+    statusFilter,
+    sourceFilter,
+    minPotentialQuery,
+    maxPotentialQuery,
+  ]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -190,7 +289,11 @@ export default function LeadsPage() {
   const { data: leadsResponse, isLoading, error } = useLeads(
     page,
     pageSize,
-    searchQuery || undefined
+    searchQuery || undefined,
+    status || undefined,
+    source || undefined,
+    debouncedMinPotential || undefined,
+    debouncedMaxPotential || undefined
   );
 
   const leads = useMemo(
@@ -276,8 +379,75 @@ export default function LeadsPage() {
         </Link>
       </div>
 
-      {/* Search form */}
+      {/* Search & filters */}
       <div className="flex items-center justify-end gap-4">
+        {/* Status filter */}
+        <Select
+          value={status}
+          onValueChange={(value) => {
+            setStatus(value);
+            updateSearchParams({ status: value, page: 1 });
+          }}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Status</SelectItem>
+            <SelectItem value="NEW">New</SelectItem>
+            <SelectItem value="QUOTED">Quoted</SelectItem>
+            <SelectItem value="FOLLOW_UP">Follow Up</SelectItem>
+            <SelectItem value="CLOSED_WON">Closed Won</SelectItem>
+            <SelectItem value="CLOSED_LOST">Closed Lost</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Source filter */}
+        <Select
+          value={source}
+          onValueChange={(value) => {
+            setSource(value);
+            updateSearchParams({ source: value, page: 1 });
+          }}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Source" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Sources</SelectItem>
+            <SelectItem value="WEBSITE">Website</SelectItem>
+            <SelectItem value="WALKIN">Walk-in</SelectItem>
+            <SelectItem value="REFERRAL">Referral</SelectItem>
+            <SelectItem value="SOCIAL">Social Media</SelectItem>
+            <SelectItem value="LINE">LINE</SelectItem>
+            <SelectItem value="OTHER">Other</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Budget range filter (potentialValue) */}
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            className="w-24"
+            placeholder="Min ฿"
+            value={minPotential}
+            onChange={(e) => {
+              setMinPotential(e.target.value);
+            }}
+          />
+          <span className="text-muted-foreground text-sm">-</span>
+          <Input
+            type="number"
+            className="w-24"
+            placeholder="Max ฿"
+            value={maxPotential}
+            onChange={(e) => {
+              setMaxPotential(e.target.value);
+            }}
+          />
+        </div>
+
+        {/* Search by customer name */}
         <div className="relative w-80">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input

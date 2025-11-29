@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -17,8 +18,10 @@ export async function GET(request: Request) {
     const skip = (page - 1) * pageSize;
 
     const search = searchParams.get("search") || "";
+    const startDateFrom = searchParams.get("startDateFrom") || "";
+    const startDateTo = searchParams.get("startDateTo") || "";
 
-    const where =
+    const searchFilter: Prisma.TripWhereInput =
       search.trim().length > 0
         ? {
             name: {
@@ -27,6 +30,20 @@ export async function GET(request: Request) {
             },
           }
         : {};
+
+    const dateFilter: Prisma.TripWhereInput =
+      startDateFrom || startDateTo
+        ? {
+            startDate: {
+              ...(startDateFrom ? { gte: new Date(startDateFrom) } : {}),
+              ...(startDateTo ? { lte: new Date(startDateTo) } : {}),
+            },
+          }
+        : {};
+
+    const where: Prisma.TripWhereInput = {
+      AND: [searchFilter, dateFilter],
+    };
 
     // Get total count for pagination
     const total = await prisma.trip.count({ where });

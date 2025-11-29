@@ -38,8 +38,25 @@ export interface BookingsResponse {
 export const bookingKeys = {
   all: ["bookings"] as const,
   lists: () => [...bookingKeys.all, "list"] as const,
-  list: (page: number, pageSize: number, search?: string) =>
-    [...bookingKeys.lists(), page, pageSize, search] as const,
+  list: (
+    page: number,
+    pageSize: number,
+    search?: string,
+    status?: string,
+    visaStatus?: string,
+    tripStartDateFrom?: string,
+    tripStartDateTo?: string
+  ) =>
+    [
+      ...bookingKeys.lists(),
+      page,
+      pageSize,
+      search,
+      status,
+      visaStatus,
+      tripStartDateFrom,
+      tripStartDateTo,
+    ] as const,
   details: () => [...bookingKeys.all, "detail"] as const,
   detail: (id: string) => [...bookingKeys.details(), id] as const,
 };
@@ -49,6 +66,10 @@ async function fetchBookings(
   page: number = 1,
   pageSize: number = 10,
   search?: string,
+  status?: string,
+  visaStatus?: string,
+  tripStartDateFrom?: string,
+  tripStartDateTo?: string
 ): Promise<BookingsResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -57,6 +78,18 @@ async function fetchBookings(
 
   if (search && search.trim()) {
     params.set("search", search.trim());
+  }
+  if (status) {
+    params.set("status", status);
+  }
+  if (visaStatus) {
+    params.set("visaStatus", visaStatus);
+  }
+  if (tripStartDateFrom) {
+    params.set("tripStartDateFrom", tripStartDateFrom);
+  }
+  if (tripStartDateTo) {
+    params.set("tripStartDateTo", tripStartDateTo);
   }
 
   const res = await fetch(`/api/bookings?${params.toString()}`);
@@ -157,10 +190,35 @@ async function deleteBooking(id: string): Promise<void> {
 }
 
 // Hook to fetch bookings with pagination
-export function useBookings(page: number, pageSize: number, search?: string) {
+export function useBookings(
+  page: number,
+  pageSize: number,
+  search?: string,
+  status?: string,
+  visaStatus?: string,
+  tripStartDateFrom?: string,
+  tripStartDateTo?: string
+) {
   return useQuery({
-    queryKey: bookingKeys.list(page, pageSize, search),
-    queryFn: () => fetchBookings(page, pageSize, search),
+    queryKey: bookingKeys.list(
+      page,
+      pageSize,
+      search,
+      status,
+      visaStatus,
+      tripStartDateFrom,
+      tripStartDateTo
+    ),
+    queryFn: () =>
+      fetchBookings(
+        page,
+        pageSize,
+        search,
+        status,
+        visaStatus,
+        tripStartDateFrom,
+        tripStartDateTo
+      ),
     staleTime: 30 * 1000, // 30 seconds
   });
 }

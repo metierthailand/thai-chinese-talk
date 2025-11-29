@@ -79,13 +79,27 @@ interface CustomersResponse {
 export const customerKeys = {
   all: ["customers"] as const,
   lists: () => [...customerKeys.all, "list"] as const,
-  list: (page: number, pageSize: number, search?: string) => [...customerKeys.lists(), page, pageSize, search] as const,
+  list: (
+    page: number,
+    pageSize: number,
+    search?: string,
+    type?: string,
+    passportExpiryFrom?: string,
+    passportExpiryTo?: string
+  ) => [...customerKeys.lists(), page, pageSize, search, type, passportExpiryFrom, passportExpiryTo] as const,
   details: () => [...customerKeys.all, "detail"] as const,
   detail: (id: string) => [...customerKeys.details(), id] as const,
 };
 
 // Fetch customers function
-async function fetchCustomers(page: number = 1, pageSize: number = 10, search?: string): Promise<CustomersResponse> {
+async function fetchCustomers(
+  page: number = 1,
+  pageSize: number = 10,
+  search?: string,
+  type?: string,
+  passportExpiryFrom?: string,
+  passportExpiryTo?: string
+): Promise<CustomersResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
     pageSize: pageSize.toString(),
@@ -93,6 +107,16 @@ async function fetchCustomers(page: number = 1, pageSize: number = 10, search?: 
   if (search && search.trim()) {
     params.set("search", search.trim());
   }
+  if (type && type !== "ALL") {
+    params.set("type", type);
+  }
+  if (passportExpiryFrom) {
+    params.set("passportExpiryFrom", passportExpiryFrom);
+  }
+  if (passportExpiryTo) {
+    params.set("passportExpiryTo", passportExpiryTo);
+  }
+
   const res = await fetch(`/api/customers?${params.toString()}`);
   if (!res.ok) {
     throw new Error("Failed to fetch customers");
@@ -166,10 +190,17 @@ async function updateCustomer({ id, data }: { id: string; data: CustomerFormValu
 }
 
 // Hook to fetch customers with pagination
-export function useCustomers(page: number, pageSize: number, search?: string) {
+export function useCustomers(
+  page: number,
+  pageSize: number,
+  search?: string,
+  type?: string,
+  passportExpiryFrom?: string,
+  passportExpiryTo?: string
+) {
   return useQuery({
-    queryKey: customerKeys.list(page, pageSize, search),
-    queryFn: () => fetchCustomers(page, pageSize, search),
+    queryKey: customerKeys.list(page, pageSize, search, type, passportExpiryFrom, passportExpiryTo),
+    queryFn: () => fetchCustomers(page, pageSize, search, type, passportExpiryFrom, passportExpiryTo),
     staleTime: 30 * 1000, // 30 seconds
   });
 }

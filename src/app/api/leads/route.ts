@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { LeadSource, LeadStatus, Prisma } from "@prisma/client";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -16,8 +17,12 @@ export async function GET(request: Request) {
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
     const skip = (page - 1) * pageSize;
     const search = searchParams.get("search") || "";
+    const status = searchParams.get("status") || "";
+    const source = searchParams.get("source") || "";
+    const minPotential = searchParams.get("minPotential") || "";
+    const maxPotential = searchParams.get("maxPotential") || "";
 
-    const where =
+    const nameFilter: Prisma.LeadWhereInput =
       search.trim().length > 0
         ? {
             customer: {
@@ -52,6 +57,49 @@ export async function GET(request: Request) {
             },
           }
         : {};
+
+    const validStatuses = [
+      "NEW",
+      "QUOTED",
+      "FOLLOW_UP",
+      "CLOSED_WON",
+      "CLOSED_LOST",
+    ];
+    const statusFilter: Prisma.LeadWhereInput =
+      status && validStatuses.includes(status)
+        ? { status: status as LeadStatus }
+        : {};
+
+    const validSources = [
+      "WEBSITE",
+      "WALKIN",
+      "REFERRAL",
+      "SOCIAL",
+      "LINE",
+      "OTHER",
+    ];
+    const sourceFilter: Prisma.LeadWhereInput =
+      source && validSources.includes(source)
+        ? { source: source as LeadSource }
+        : {};
+
+    const potentialFilter: Prisma.LeadWhereInput =
+      minPotential || maxPotential
+        ? {
+            potentialValue: {
+              ...(minPotential
+                ? { gte: parseFloat(minPotential) }
+                : {}),
+              ...(maxPotential
+                ? { lte: parseFloat(maxPotential) }
+                : {}),
+            },
+          }
+        : {};
+
+    const where: Prisma.LeadWhereInput = {
+      AND: [nameFilter, statusFilter, sourceFilter, potentialFilter],
+    };
 
     const total = await prisma.lead.count({ where });
 

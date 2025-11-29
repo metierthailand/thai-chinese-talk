@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -15,21 +16,83 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
     const search = searchParams.get("search") || "";
+    const type = searchParams.get("type") || "";
+    const passportExpiryFrom = searchParams.get("passportExpiryFrom") || "";
+    const passportExpiryTo = searchParams.get("passportExpiryTo") || "";
     const skip = (page - 1) * pageSize;
 
     // Build where clause for search
-    const where = search
-      ? {
-          OR: [
-            { firstNameTh: { contains: search, mode: "insensitive" as const } },
-            { lastNameTh: { contains: search, mode: "insensitive" as const } },
-            { firstNameEn: { contains: search, mode: "insensitive" as const } },
-            { lastNameEn: { contains: search, mode: "insensitive" as const } },
-            { email: { contains: search, mode: "insensitive" as const } },
-            { phone: { contains: search, mode: "insensitive" as const } },
-          ],
-        }
-      : {};
+    const searchFilter: Prisma.CustomerWhereInput =
+      search.trim().length > 0
+        ? {
+            OR: [
+              {
+                firstNameTh: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+              {
+                lastNameTh: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+              {
+                firstNameEn: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+              {
+                lastNameEn: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+              {
+                email: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+              {
+                phone: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+            ],
+          }
+        : {};
+
+    const typeFilter: Prisma.CustomerWhereInput =
+      type === "INDIVIDUAL" || type === "CORPORATE"
+        ? { type }
+        : {};
+
+    const passportFilter: Prisma.CustomerWhereInput =
+      passportExpiryFrom || passportExpiryTo
+        ? {
+            passports: {
+              some: {
+                isPrimary: true,
+                expiryDate: {
+                  ...(passportExpiryFrom
+                    ? { gte: new Date(passportExpiryFrom) }
+                    : {}),
+                  ...(passportExpiryTo
+                    ? { lte: new Date(passportExpiryTo) }
+                    : {}),
+                },
+              },
+            },
+          }
+        : {};
+
+    const where: Prisma.CustomerWhereInput = {
+      AND: [searchFilter, typeFilter, passportFilter],
+    };
 
     // Get total count for pagination
     const total = await prisma.customer.count({ where });

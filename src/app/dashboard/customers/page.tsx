@@ -14,6 +14,22 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { useCustomers, type Customer } from "./hooks/use-customers";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function CustomersPage() {
   const router = useRouter();
@@ -23,6 +39,9 @@ export default function CustomersPage() {
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
   const searchQuery = searchParams.get("search") || "";
+  const typeFilter = searchParams.get("type") || "ALL";
+  const passportExpiryFrom = searchParams.get("passportExpiryFrom") || "";
+  const passportExpiryTo = searchParams.get("passportExpiryTo") || "";
 
   // Local state for search input (for controlled input)
   const [searchInput, setSearchInput] = useState(searchQuery);
@@ -33,9 +52,21 @@ export default function CustomersPage() {
   // Ref to track if we're manually clearing (to prevent race condition)
   const isClearing = useRef(false);
 
+  // Local state for filters
+  const [type, setType] = useState(typeFilter || "ALL");
+  const [expiryFrom, setExpiryFrom] = useState(passportExpiryFrom);
+  const [expiryTo, setExpiryTo] = useState(passportExpiryTo);
+
   // Function to update URL params
   const updateSearchParams = useCallback(
-    (updates: { page?: number; pageSize?: number; search?: string }) => {
+    (updates: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      type?: string;
+      passportExpiryFrom?: string;
+      passportExpiryTo?: string;
+    }) => {
       const params = new URLSearchParams(searchParams.toString());
 
       if (updates.page !== undefined) {
@@ -62,6 +93,30 @@ export default function CustomersPage() {
         }
       }
 
+      if (updates.type !== undefined) {
+        if (updates.type === "ALL" || updates.type === "") {
+          params.delete("type");
+        } else {
+          params.set("type", updates.type);
+        }
+      }
+
+      if (updates.passportExpiryFrom !== undefined) {
+        if (!updates.passportExpiryFrom) {
+          params.delete("passportExpiryFrom");
+        } else {
+          params.set("passportExpiryFrom", updates.passportExpiryFrom);
+        }
+      }
+
+      if (updates.passportExpiryTo !== undefined) {
+        if (!updates.passportExpiryTo) {
+          params.delete("passportExpiryTo");
+        } else {
+          params.set("passportExpiryTo", updates.passportExpiryTo);
+        }
+      }
+
       const newUrl = params.toString() ? `?${params.toString()}` : "";
       router.push(`/dashboard/customers${newUrl}`, { scroll: false });
     },
@@ -78,21 +133,25 @@ export default function CustomersPage() {
     }
   }, [debouncedSearch, searchQuery, updateSearchParams]);
 
-  // Sync URL search to input (for browser back/forward)
-  // Only sync if URL changed and we're not clearing
-  // This is a valid use case for useEffect: syncing external state (URL) with React state
+  // Sync URL search & filters to inputs (for browser back/forward)
   useEffect(() => {
     if (!isClearing.current && searchQuery !== searchInput) {
-      // Sync URL params to input state (for browser back/forward navigation)
-      // This is intentional - we need to sync external URL state with React state
       setSearchInput(searchQuery);
     }
-    // Reset clearing flag after URL has synced
+    if (typeFilter !== type) {
+      setType(typeFilter || "ALL");
+    }
+    if (passportExpiryFrom !== expiryFrom) {
+      setExpiryFrom(passportExpiryFrom);
+    }
+    if (passportExpiryTo !== expiryTo) {
+      setExpiryTo(passportExpiryTo);
+    }
     if (isClearing.current && searchQuery === "") {
       isClearing.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+  }, [searchQuery, typeFilter, passportExpiryFrom, passportExpiryTo]);
 
   const columns: ColumnDef<Customer>[] = useMemo(
     () => [
@@ -162,7 +221,10 @@ export default function CustomersPage() {
   const { data: customersResponse, isLoading, error } = useCustomers(
     page,
     pageSize,
-    searchQuery || undefined
+    searchQuery || undefined,
+    type || undefined,
+    expiryFrom || undefined,
+    expiryTo || undefined
   );
 
   const customers = useMemo(() => customersResponse?.data ?? [], [customersResponse?.data]);
@@ -246,6 +308,81 @@ export default function CustomersPage() {
 
       {/* Search form */}
       <div className="flex items-center justify-end gap-4">
+        {/* Filter: Type */}
+        <Select
+          value={type}
+          onValueChange={(value) => {
+            setType(value);
+            updateSearchParams({ type: value, page: 1 });
+          }}
+        >
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="Filter type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Types</SelectItem>
+            <SelectItem value="INDIVIDUAL">Individual</SelectItem>
+            <SelectItem value="CORPORATE">Corporate</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Filter: Passport expiry range */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-[260px] justify-start text-left font-normal",
+                !expiryFrom && !expiryTo && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {expiryFrom || expiryTo ? (
+                <span className="truncate">
+                  {expiryFrom
+                    ? format(new Date(expiryFrom), "dd MMM yyyy")
+                    : "..."}{" "}
+                  -{" "}
+                  {expiryTo
+                    ? format(new Date(expiryTo), "dd MMM yyyy")
+                    : "..."}
+                </span>
+              ) : (
+                "Passport expiry range"
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              captionLayout="dropdown"
+              mode="range"
+              numberOfMonths={2}
+              selected={{
+                from: expiryFrom ? new Date(expiryFrom) : undefined,
+                to: expiryTo ? new Date(expiryTo) : undefined,
+              }}
+              onSelect={(range) => {
+                const from = range?.from
+                  ? format(range.from, "yyyy-MM-dd")
+                  : "";
+                const to = range?.to
+                  ? format(range.to, "yyyy-MM-dd")
+                  : "";
+                setExpiryFrom(from);
+                setExpiryTo(to);
+                updateSearchParams({
+                  passportExpiryFrom: from,
+                  passportExpiryTo: to,
+                  page: 1,
+                });
+              }}
+              fromYear={2000}
+              toYear={2100}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+
         <div className="relative w-80">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
