@@ -7,6 +7,7 @@ import {
   Tag,
   Bell,
   type LucideIcon,
+  UserStar,
 } from "lucide-react";
 
 export interface NavSubItem {
@@ -26,6 +27,7 @@ export interface NavMainItem {
   comingSoon?: boolean;
   newTab?: boolean;
   isNew?: boolean;
+  roles?: string[]; // Roles that can see this item
 }
 
 export interface NavGroup {
@@ -73,6 +75,18 @@ export const sidebarItems: NavGroup[] = [
         title: "Notifications",
         url: "/dashboard/notifications",
         icon: Bell,
+      },
+    ],
+  },
+  {
+    id: 2,
+    label: "Admin",
+    items: [
+      {
+        title: "Admin Management",
+        url: "/dashboard/admin",
+        icon: UserStar,
+        roles: ["SUPER_ADMIN"],
       },
     ],
   },

@@ -11,9 +11,8 @@ datasource db {
 
 // 1. Staff & Authentication
 enum Role {
+  SUPER_ADMIN
   ADMIN
-  AGENT
-  MANAGER
 }
 
 model User {
@@ -21,7 +20,7 @@ model User {
   email          String   @unique
   password       String
   name           String
-  role           Role     @default(AGENT)
+  role           Role     @default(ADMIN)
   commissionRate Decimal? @db.Decimal(5, 2) // Percentage, e.g., 5.00
   isActive       Boolean  @default(true)
   

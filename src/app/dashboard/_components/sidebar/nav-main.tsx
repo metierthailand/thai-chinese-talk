@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 import { PlusCircleIcon, MailIcon, ChevronRight } from "lucide-react";
 
@@ -144,6 +145,8 @@ const NavItemCollapsed = ({
 export function NavMain({ items }: NavMainProps) {
   const path = usePathname();
   const { state, isMobile } = useSidebar();
+  const { data: session } = useSession();
+  const userRole = session?.user?.role;
 
   const isItemActive = (url: string, subItems?: NavMainItem["subItems"]) => {
     if (subItems?.length) {
@@ -155,6 +158,16 @@ export function NavMain({ items }: NavMainProps) {
   const isSubmenuOpen = (subItems?: NavMainItem["subItems"]) => {
     return subItems?.some((sub) => path.startsWith(sub.url)) ?? false;
   };
+
+  const filteredItems = items
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (!item.roles) return true;
+        return userRole && item.roles.includes(userRole);
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <>
@@ -173,7 +186,7 @@ export function NavMain({ items }: NavMainProps) {
                 size="icon"
                 className="h-9 w-9 shrink-0 group-data-[collapsible=icon]:opacity-0"
                 variant="outline"
-              >
+                >
                 <MailIcon />
                 <span className="sr-only">Inbox</span>
               </Button>
@@ -181,7 +194,7 @@ export function NavMain({ items }: NavMainProps) {
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup> */}
-      {items.map((group) => (
+      {filteredItems.map((group) => (
         <SidebarGroup key={group.id}>
           {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
           <SidebarGroupContent className="flex flex-col gap-2">

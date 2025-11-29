@@ -22,7 +22,7 @@ import {
   type NavbarStyle,
 } from "@/types/preferences/layout";
 
-import { AccountSwitcher } from "./_components/sidebar/account-switcher";
+import { AccountProfile } from "./_components/sidebar/account-profile";
 import { SearchDialog } from "./_components/sidebar/search-dialog";
 import { NotificationBell } from "@/components/ui/notification-bell";
 import { ThemeSwitcher } from "./_components/sidebar/theme-switcher";
@@ -38,36 +38,49 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
     redirect("/login");
   }
 
-  const [sidebarVariant, sidebarCollapsible, contentLayout, navbarStyle, users] = await Promise.all([
+  const [sidebarVariant, sidebarCollapsible, contentLayout, navbarStyle, currentUser] = await Promise.all([
     getPreference<SidebarVariant>("sidebar_variant", SIDEBAR_VARIANT_VALUES, "inset"),
     getPreference<SidebarCollapsible>("sidebar_collapsible", SIDEBAR_COLLAPSIBLE_VALUES, "icon"),
     getPreference<ContentLayout>("content_layout", CONTENT_LAYOUT_VALUES, "centered"),
     getPreference<NavbarStyle>("navbar_style", NAVBAR_STYLE_VALUES, "scroll"),
-    // Query all active users
+    // Query current user from session
     session
       ? prisma.user
-          .findMany({
+          .findUnique({
             where: {
-              isActive: true,
+              id: session.user.id,
             },
             select: {
               id: true,
               name: true,
               email: true,
               role: true,
-            },
-            orderBy: {
-              name: "asc",
+              isActive: true,
             },
           })
-          .then((users) =>
-            users.map((user) => ({
-              ...user,
-              role: user.role.toString(),
-            }))
+          .then((user) =>
+            user
+              ? {
+                  ...user,
+                  role: user.role.toString(),
+                }
+              : null
           )
-      : Promise.resolve([]),
+      : Promise.resolve(null),
   ]);
+
+  // Check if user is active - if not, clear cookies and redirect to login
+  if (!currentUser || !currentUser.isActive) {
+    // Clear all NextAuth cookies (both HTTP and HTTPS variants)
+    const allCookies = cookieStore.getAll();
+    allCookies.forEach((cookie) => {
+      if (cookie.name.includes("next-auth") || cookie.name.includes("__Secure-next-auth")) {
+        cookieStore.delete(cookie.name);
+      }
+    });
+    
+    redirect("/login");
+  }
 
   const layoutPreferences = {
     contentLayout,
@@ -105,7 +118,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
             <div className="flex items-center gap-2">
               <NotificationBell />
               <ThemeSwitcher />
-              {users.length > 0 && <AccountSwitcher users={users} />}
+              {currentUser && <AccountProfile currentUser={currentUser} />}
             </div>
           </div>
         </header>

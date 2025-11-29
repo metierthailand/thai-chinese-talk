@@ -10,16 +10,31 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const email = 'example@gmail.com';
+  const superAdminEmail = 'superadmin@gmail.com';
+  const adminEmail = 'admin@gmail.com';
   const password = await bcrypt.hash('Example1', 10);
 
-  const admin = await prisma.user.upsert({
-    where: { email },
+  const superAdmin = await prisma.user.upsert({
+    where: { email: superAdminEmail },
     update: {},
     create: {
-      email,
+      email: superAdminEmail,
       password,
       name: 'Super Admin',
+      role: Role.SUPER_ADMIN,
+      commissionRate: 0,
+    },
+  });
+
+  console.log({ superAdmin });
+
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {},
+    create: {
+      email: adminEmail,
+      password,
+      name: 'Admin',
       role: Role.ADMIN,
       commissionRate: 0,
     },

@@ -41,6 +41,11 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Check if user is active
+        if (!user.isActive) {
+          return null;
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -55,6 +60,11 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        
+        // If user is not active, return null session
+        if (token.isActive === false) {
+          return null as any;
+        }
       }
       return session;
     },
@@ -63,6 +73,29 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = (user as any).role;
       }
+      
+      // Verify user is still active on each request
+      if (token.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { isActive: true },
+          });
+          
+          // If user is deactivated, mark token as invalid
+          if (!dbUser || !dbUser.isActive) {
+            // Return a special flag instead of null to avoid JWT error
+            token.isActive = false;
+            return token;
+          }
+          
+          token.isActive = true;
+        } catch (error) {
+          // If error occurs, mark as inactive
+          token.isActive = false;
+        }
+      }
+      
       return token;
     },
   },
