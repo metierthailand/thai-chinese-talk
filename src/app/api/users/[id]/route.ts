@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
+import Decimal from "decimal.js";
 
 export async function PATCH(
   req: Request,
@@ -37,7 +38,7 @@ export async function PATCH(
 
     // Handle commissionRate - allow "0" to be parsed as 0, not null
     if (commissionRate !== undefined && commissionRate !== null && commissionRate !== "") {
-      updateData.commissionRate = parseFloat(commissionRate);
+      updateData.commissionRate = new Decimal(commissionRate.toString()).toNumber();
     } else if (commissionRate === "" || commissionRate === null) {
       updateData.commissionRate = null;
     }

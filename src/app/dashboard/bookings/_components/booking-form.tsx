@@ -30,18 +30,28 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useSearchCustomers, useCustomer } from "@/app/dashboard/customers/hooks/use-customers";
 import { Booking } from "../hooks/use-bookings";
 import { useTrips} from "@/app/dashboard/trips/hooks/use-trips";
 import { useLeads } from "@/app/dashboard/leads/hooks/use-leads";
+import { useAgents } from "../hooks/use-agents";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { PaymentForm } from "./payment-form";
 
 const formSchema = z.object({
   customerId: z.string().min(1, { message: "Customer is required" }),
   tripId: z.string().min(1, { message: "Trip is required" }),
   leadId: z.string().optional(),
+  agentId: z.string().optional(),
   totalAmount: z.string().min(1, { message: "Total amount is required" }),
   paidAmount: z.string().optional(),
   status: z.string().optional(),
@@ -57,6 +67,7 @@ interface BookingFormProps {
   onCancel?: () => void;
   isLoading?: boolean;
   booking?: Booking; // For fallback values in edit mode
+  onPaymentAdded?: () => void;
 }
 
 export function BookingForm({
@@ -66,16 +77,19 @@ export function BookingForm({
   onCancel,
   isLoading = false,
   booking,
+  onPaymentAdded,
 }: BookingFormProps) {
   const readOnly = mode === "view";
   const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
 
   // Get today's date in YYYY-MM-DD format for filtering trips that haven't started
   const today = format(new Date(), "yyyy-MM-dd");
   
   // Fetch trips using TanStack Query - filter for trips that haven't started yet
   const { data: tripsResponse } = useTrips(1, 1000, undefined, today, undefined);
+  const { data: agents = [] } = useAgents();
   
   // Filter trips to only include those that haven't started (startDate >= today)
   const trips = useMemo(() => {
@@ -95,6 +109,7 @@ export function BookingForm({
       customerId: "",
       tripId: "",
       leadId: "no_lead", // Use a specific value for "No Lead" to handle Select reset
+      agentId: "",
       totalAmount: "",
       paidAmount: "0",
       status: "PENDING",
@@ -166,6 +181,7 @@ export function BookingForm({
         customerId: initialData.customerId || "",
         tripId: initialData.tripId || "",
         leadId: initialData.leadId || "no_lead",
+        agentId: initialData.agentId || "",
         totalAmount: initialData.totalAmount || "",
         paidAmount: initialData.paidAmount || "0",
         status: initialData.status || "PENDING",
@@ -188,6 +204,7 @@ export function BookingForm({
     const transformedValues: BookingFormValues = {
       ...values,
       leadId: values.leadId === "no_lead" ? undefined : values.leadId,
+      agentId: values.agentId === "" ? undefined : values.agentId,
       status: values.status === "" ? undefined : values.status,
       visaStatus: values.visaStatus === "" ? undefined : values.visaStatus,
     };
@@ -197,6 +214,7 @@ export function BookingForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        {/* Customer Field */}
         <FormField
           control={form.control}
           name="customerId"
@@ -291,48 +309,89 @@ export function BookingForm({
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="leadId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Lead (Optional)</FormLabel>
-              {readOnly ? (
-                <FormControl>
-                  <Input
-                    value={
-                      booking?.leadId
-                        ? "Linked to Lead" // Ideally fetch lead details to show
-                        : "No Lead"
-                    }
-                    disabled
-                  />
-                </FormControl>
-              ) : (
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value}
-                  disabled={!customerId || customerLeads.length === 0}
-                >
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="leadId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Lead (Optional)</FormLabel>
+                {readOnly ? (
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={!customerId ? "Select a customer first" : customerLeads.length === 0 ? "No leads found" : "Select a lead"} />
-                    </SelectTrigger>
+                    <Input
+                      value={
+                        booking?.leadId
+                          ? "Linked to Lead" // Ideally fetch lead details to show
+                          : "No Lead"
+                      }
+                      disabled
+                    />
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="no_lead">No Lead</SelectItem>
-                    {customerLeads.map((lead) => (
-                      <SelectItem key={lead.id} value={lead.id}>
-                        {lead.source} - {lead.status} ({format(new Date(lead.createdAt), "dd MMM")})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                ) : (
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={!customerId || customerLeads.length === 0}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={!customerId ? "Select a customer first" : customerLeads.length === 0 ? "No leads found" : "Select a lead"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="no_lead">No Lead</SelectItem>
+                      {customerLeads.map((lead) => (
+                        <SelectItem key={lead.id} value={lead.id}>
+                          {lead.source} - {lead.status} ({format(new Date(lead.createdAt), "dd MMM")})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="agentId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Agent (Optional)</FormLabel>
+                {readOnly ? (
+                  <FormControl>
+                    <Input
+                      value={
+                        agents.find((a) => a.id === field.value)?.name || "Auto-assign"
+                      }
+                      disabled
+                    />
+                  </FormControl>
+                ) : (
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Auto-assign to me" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {agents.map((agent) => (
+                        <SelectItem key={agent.id} value={agent.id}>
+                          {agent.name} ({agent.role})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}
@@ -395,10 +454,44 @@ export function BookingForm({
             name="paidAmount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Paid Amount (THB)</FormLabel>
+                <div className="flex items-center justify-between">
+                  <FormLabel>Paid Amount (THB)</FormLabel>
+                  {mode === "edit" && booking && (
+                    <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-6 text-xs" type="button">
+                          <Plus className="mr-1 h-3 w-3" /> Add Payment
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add Payment</DialogTitle>
+                        </DialogHeader>
+                        <PaymentForm
+                          bookingId={booking.id}
+                          onSuccess={() => {
+                            setPaymentDialogOpen(false);
+                            if (onPaymentAdded) onPaymentAdded();
+                          }}
+                          onCancel={() => setPaymentDialogOpen(false)}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
                 <FormControl>
-                  <Input type="number" placeholder="0.00" {...field} disabled={readOnly} />
+                  <Input 
+                    type="number" 
+                    placeholder="0.00" 
+                    {...field} 
+                    disabled={readOnly || mode === "edit"} 
+                  />
                 </FormControl>
+                {mode === "edit" && (
+                  <p className="text-[0.8rem] text-muted-foreground">
+                    To update paid amount, please add a payment.
+                  </p>
+                )}
                 <FormMessage />
               </FormItem>
             )}
@@ -506,4 +599,3 @@ export function BookingForm({
     </Form>
   );
 }
-

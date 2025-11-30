@@ -30,6 +30,8 @@ model User {
   tasks         Task[]
   interactions  Interaction[]
   notifications Notification[]
+  bookings      Booking[]     @relation("AgentBookings")
+  commissions   Commission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -190,6 +192,12 @@ model Booking {
   paymentDueDate DateTime?
   visaStatus     VisaStatus @default(NOT_REQUIRED)
 
+  agentId    String?
+  agent      User?     @relation("AgentBookings", fields: [agentId], references: [id])
+
+  payments    Payment[]
+  commissions Commission[]
+
   tasks Task[]
 
   createdAt DateTime @default(now())
@@ -270,4 +278,48 @@ model Notification {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// 7. Finance & Commission
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CREDIT_CARD
+  OTHER
+}
+
+model Payment {
+  id         String   @id @default(uuid())
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  amount     Decimal  @db.Decimal(10, 2)
+  paidAt     DateTime @default(now())
+  method     PaymentMethod
+  note       String?  @db.Text
+
+  createdAt  DateTime @default(now())
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+}
+
+model Commission {
+  id         String   @id @default(uuid())
+  agentId    String
+  agent      User     @relation(fields: [agentId], references: [id])
+
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  rate       Decimal  @db.Decimal(5, 2)
+  amount     Decimal  @db.Decimal(10, 2)
+
+  status     CommissionStatus @default(PENDING)
+
+  createdAt  DateTime @default(now())
+  paidAt     DateTime?
 }

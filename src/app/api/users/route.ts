@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { sendResetPasswordEmail } from "@/lib/email";
+import Decimal from "decimal.js";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -43,13 +44,13 @@ export async function GET() {
     const usersWithCommission = users.map((user) => {
       const totalSales = user.leads.reduce((acc, lead) => {
         const leadTotal = lead.bookings.reduce((sum, booking) => {
-          return sum + Number(booking.totalAmount);
-        }, 0);
-        return acc + leadTotal;
-      }, 0);
+          return sum.plus(new Decimal(booking.totalAmount.toString()));
+        }, new Decimal(0));
+        return acc.plus(leadTotal);
+      }, new Decimal(0));
 
-      const commissionRate = user.commissionRate ? Number(user.commissionRate) : 0;
-      const totalCommission = (totalSales * commissionRate) / 100;
+      const commissionRate = user.commissionRate ? new Decimal(user.commissionRate.toString()) : new Decimal(0);
+      const totalCommission = totalSales.mul(commissionRate).div(100);
 
       // Remove leads from the response to keep it clean, or keep it if needed.
       // For the table, we just need the calculated value.
@@ -57,7 +58,7 @@ export async function GET() {
 
       return {
         ...userData,
-        totalCommission,
+        totalCommission: totalCommission.toNumber(),
       };
     });
 
@@ -105,7 +106,7 @@ export async function POST(req: Request) {
         email,
         // password is omitted - user will set it via reset password link
         role,
-        commissionRate: commissionRate ? parseFloat(commissionRate) : null,
+        commissionRate: commissionRate ? new Decimal(commissionRate).toNumber() : null,
         isActive: true,
         resetToken,
         resetTokenExpiry,

@@ -1,21 +1,174 @@
 "use client";
 
 import { use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Pencil, Users } from "lucide-react";
 import { useTrip } from "../hooks/use-trips";
 import { TripForm } from "../_components/trip-form";
+import { useBookings, type Booking } from "@/app/dashboard/bookings/hooks/use-bookings";
+import { formatDecimal } from "@/lib/utils";
+import { format } from "date-fns";
 import Link from "next/link";
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { useDataTableInstance } from "@/hooks/use-data-table-instance";
+import { useMemo, useCallback, useEffect } from "react";
 
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { id: tripId } = use(params);
   const { data: trip, isLoading: initialLoading } = useTrip(tripId);
 
+  // Pagination state
+  const page = parseInt(searchParams.get("page") || "1", 10);
+  const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
+
+  // Fetch bookings for this trip
+  const { data: bookingsResponse, isLoading: bookingsLoading } = useBookings(
+    page,
+    pageSize,
+    undefined, // search
+    undefined, // status
+    undefined, // visaStatus
+    undefined, // tripStartDateFrom
+    undefined, // tripStartDateTo
+    tripId, // tripId filter
+  );
+
+  const bookings = useMemo(() => bookingsResponse?.data ?? [], [bookingsResponse?.data]);
+  const total = bookingsResponse?.total ?? 0;
+  const totalPages = bookingsResponse?.totalPages ?? 0;
+
+  const updateSearchParams = useCallback(
+    (updates: { page?: number; pageSize?: number }) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (updates.page !== undefined) {
+        if (updates.page === 1) {
+          params.delete("page");
+        } else {
+          params.set("page", updates.page.toString());
+        }
+      }
+      if (updates.pageSize !== undefined) {
+        if (updates.pageSize === 10) {
+          params.delete("pageSize");
+        } else {
+          params.set("pageSize", updates.pageSize.toString());
+        }
+        params.set("page", "1"); // Reset to page 1 when changing page size
+      }
+      router.push(`/dashboard/trips/${tripId}?${params.toString()}`);
+    },
+    [router, searchParams, tripId],
+  );
+
+  const handlePageChange = useCallback(
+    (newPageIndex: number) => {
+      updateSearchParams({ page: newPageIndex + 1 });
+    },
+    [updateSearchParams],
+  );
+
+  const handlePageSizeChange = useCallback(
+    (newPageSize: number) => {
+      updateSearchParams({ pageSize: newPageSize, page: 1 });
+    },
+    [updateSearchParams],
+  );
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "CONFIRMED":
+        return "default";
+      case "COMPLETED":
+        return "secondary";
+      case "CANCELLED":
+        return "destructive";
+      case "PENDING":
+        return "outline";
+      default:
+        return "outline";
+    }
+  };
+
+  // Define columns for bookings table
+  const columns: ColumnDef<Booking>[] = useMemo(
+    () => [
+      {
+        accessorKey: "customer",
+        header: "Customer",
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium">
+              {`${row.original.customer.firstNameTh} ${row.original.customer.lastNameTh}`}
+            </div>
+            <div className="text-muted-foreground text-sm">{row.original.customer.email}</div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => <Badge variant={getStatusColor(row.original.status)}>{row.original.status}</Badge>,
+      },
+      {
+        accessorKey: "totalAmount",
+        header: "Total Amount",
+        cell: ({ row }) => formatDecimal(row.original.totalAmount),
+      },
+      {
+        accessorKey: "paidAmount",
+        header: "Paid Amount",
+        cell: ({ row }) => formatDecimal(row.original.paidAmount),
+      },
+      {
+        id: "remaining",
+        header: "Remaining",
+        cell: ({ row }) => {
+          const remaining = Number(row.original.totalAmount) - Number(row.original.paidAmount);
+          return remaining > 0 ? (
+            <span className="font-medium text-orange-600">{formatDecimal(remaining)}</span>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          );
+        },
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Booked On",
+        cell: ({ row }) => format(new Date(row.original.createdAt), "PPp"),
+      },
+    ],
+    [],
+  );
+
+  const table = useDataTableInstance({
+    data: bookings,
+    columns,
+    enableRowSelection: false,
+    defaultPageSize: pageSize,
+    defaultPageIndex: page - 1,
+    getRowId: (row) => row.id,
+  });
+
+  // Set manual pagination mode
+  useEffect(() => {
+    table.setOptions((prev) => ({
+      ...prev,
+      manualPagination: true,
+      pageCount: totalPages,
+      data: bookings,
+    }));
+  }, [totalPages, bookings, table]);
+
   if (initialLoading) {
     return (
-      <div className="p-8 space-y-8 max-w-2xl mx-auto">
+      <div className="mx-auto max-w-6xl space-y-8 p-8">
         <div className="flex h-64 items-center justify-center">
           <p className="text-muted-foreground">Loading trip...</p>
         </div>
@@ -25,7 +178,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
   if (!trip) {
     return (
-      <div className="p-8 space-y-8 max-w-2xl mx-auto">
+      <div className="mx-auto max-w-6xl space-y-8 p-8">
         <div className="flex h-64 items-center justify-center">
           <p className="text-destructive">Trip not found</p>
         </div>
@@ -34,7 +187,8 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="p-8 space-y-8 max-w-2xl mx-auto">
+    <div className="mx-auto max-w-6xl space-y-8 p-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
@@ -49,21 +203,62 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         </Link>
       </div>
 
-      <div className="rounded-md border p-6 bg-card">
-        <TripForm
-          mode="view"
-          initialData={{
-            name: trip.name,
-            destination: trip.destination,
-            startDate: trip.startDate.split("T")[0],
-            endDate: trip.endDate.split("T")[0],
-            maxCapacity: trip.maxCapacity.toString(),
-            price: trip.price || "",
-            description: trip.description || "",
-          }}
-        />
+      <div className="grid grid-cols-1 gap-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Trip Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TripForm
+              mode="view"
+              initialData={{
+                name: trip.name,
+                destination: trip.destination,
+                startDate: trip.startDate.split("T")[0],
+                endDate: trip.endDate.split("T")[0],
+                maxCapacity: trip.maxCapacity.toString(),
+                price: trip.price || "",
+                description: trip.description || "",
+              }}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Bookings ({total})
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {bookingsLoading ? (
+              <div className="flex h-64 items-center justify-center">
+                <p className="text-muted-foreground">Loading bookings...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <DataTable
+                  table={table}
+                  columns={columns}
+                  onRowClick={(row) => router.push(`/dashboard/bookings/${row.id}`)}
+                />
+                <DataTablePagination
+                  table={table}
+                  total={total}
+                  pageSize={pageSize}
+                  pageIndex={page - 1}
+                  pageCount={totalPages}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
-

@@ -20,6 +20,7 @@ export async function GET(request: Request) {
     const visaStatus = searchParams.get("visaStatus") || "";
     const tripStartDateFrom = searchParams.get("tripStartDateFrom") || "";
     const tripStartDateTo = searchParams.get("tripStartDateTo") || "";
+    const tripId = searchParams.get("tripId") || "";
     const skip = (page - 1) * pageSize;
 
     // Build where clause for optional customer name search
@@ -84,9 +85,14 @@ export async function GET(request: Request) {
           }
         : {};
 
+    // Build where clause for tripId filter
+    const tripIdFilter: Prisma.BookingWhereInput = tripId
+      ? { tripId }
+      : {};
+
     // Combine all filters
     const where: Prisma.BookingWhereInput = {
-      AND: [searchFilter, statusFilter, visaStatusFilter, tripDateFilter],
+      AND: [searchFilter, statusFilter, visaStatusFilter, tripDateFilter, tripIdFilter],
     };
 
     // Get total count for pagination
@@ -195,16 +201,62 @@ export async function POST(req: Request) {
       return new NextResponse("Total amount is required (trip has no price)", { status: 400 });
     }
 
-    const booking = await prisma.booking.create({
-      data: {
-        customerId: finalCustomerId,
-        tripId,
-        leadId,
-        totalAmount: finalTotalAmount,
-        paidAmount: parseFloat(paidAmount || 0),
-        status: status || "PENDING",
-        visaStatus: visaStatus || "NOT_REQUIRED",
-      },
+    // Determine agentId
+    let agentId = body.agentId;
+    if (!agentId && leadId) {
+      const lead = await prisma.lead.findUnique({
+        where: { id: leadId },
+        select: { agentId: true },
+      });
+      if (lead) {
+        agentId = lead.agentId;
+      }
+    }
+    // If still no agentId, and the creator is an AGENT, maybe assign them? 
+    // For now, let's stick to explicit assignment or lead inheritance.
+    // If the user is an AGENT creating a booking directly, they should probably be the agent.
+    if (!agentId && session.user.role === "AGENT") {
+        agentId = session.user.id;
+    }
+
+    // Use transaction to ensure data integrity
+    const booking = await prisma.$transaction(async (tx) => {
+      // 1. Create Booking with 0 paidAmount initially
+      const newBooking = await tx.booking.create({
+        data: {
+          customerId: finalCustomerId,
+          tripId,
+          leadId,
+          agentId,
+          totalAmount: finalTotalAmount,
+          paidAmount: 0, // Will be updated if there's a payment
+          status: status || "PENDING",
+          visaStatus: visaStatus || "NOT_REQUIRED",
+        },
+      });
+
+      // 2. If paidAmount is provided, create a Payment record
+      const initialPaidAmount = parseFloat(paidAmount || 0);
+      if (initialPaidAmount > 0) {
+        await tx.payment.create({
+          data: {
+            bookingId: newBooking.id,
+            amount: initialPaidAmount,
+            method: "OTHER", // Default or need input? Let's default to OTHER for now or add to input
+            note: "Initial payment at booking creation",
+          },
+        });
+
+        // 3. Update Booking paidAmount
+        await tx.booking.update({
+          where: { id: newBooking.id },
+          data: { paidAmount: initialPaidAmount },
+        });
+        
+        newBooking.paidAmount = new Prisma.Decimal(initialPaidAmount);
+      }
+
+      return newBooking;
     });
 
     return NextResponse.json(booking);

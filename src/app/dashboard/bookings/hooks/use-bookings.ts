@@ -46,7 +46,8 @@ export const bookingKeys = {
     status?: string,
     visaStatus?: string,
     tripStartDateFrom?: string,
-    tripStartDateTo?: string
+    tripStartDateTo?: string,
+    tripId?: string
   ) =>
     [
       ...bookingKeys.lists(),
@@ -57,6 +58,7 @@ export const bookingKeys = {
       visaStatus,
       tripStartDateFrom,
       tripStartDateTo,
+      tripId,
     ] as const,
   details: () => [...bookingKeys.all, "detail"] as const,
   detail: (id: string) => [...bookingKeys.details(), id] as const,
@@ -70,7 +72,8 @@ async function fetchBookings(
   status?: string,
   visaStatus?: string,
   tripStartDateFrom?: string,
-  tripStartDateTo?: string
+  tripStartDateTo?: string,
+  tripId?: string
 ): Promise<BookingsResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -91,6 +94,9 @@ async function fetchBookings(
   }
   if (tripStartDateTo) {
     params.set("tripStartDateTo", tripStartDateTo);
+  }
+  if (tripId) {
+    params.set("tripId", tripId);
   }
 
   const res = await fetch(`/api/bookings?${params.toString()}`);
@@ -206,7 +212,8 @@ export function useBookings(
   status?: string,
   visaStatus?: string,
   tripStartDateFrom?: string,
-  tripStartDateTo?: string
+  tripStartDateTo?: string,
+  tripId?: string
 ) {
   return useQuery({
     queryKey: bookingKeys.list(
@@ -216,7 +223,8 @@ export function useBookings(
       status,
       visaStatus,
       tripStartDateFrom,
-      tripStartDateTo
+      tripStartDateTo,
+      tripId
     ),
     queryFn: () =>
       fetchBookings(
@@ -226,7 +234,8 @@ export function useBookings(
         status,
         visaStatus,
         tripStartDateFrom,
-        tripStartDateTo
+        tripStartDateTo,
+        tripId
       ),
     staleTime: 30 * 1000, // 30 seconds
   });

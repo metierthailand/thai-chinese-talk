@@ -79,16 +79,18 @@ export async function PUT(
       customerId?: string;
       tripId?: string;
       totalAmount?: number;
-      paidAmount?: number;
+      // paidAmount?: number; // Removed: paidAmount should be updated via Payment transactions
       status?: string;
       visaStatus?: string;
+      agentId?: string;
     } = {};
 
     if (customerId !== undefined && customerId !== "") updateData.customerId = customerId;
     if (tripId !== undefined && tripId !== "") updateData.tripId = tripId;
-    if (paidAmount !== undefined) updateData.paidAmount = parseFloat(paidAmount);
+    // if (paidAmount !== undefined) updateData.paidAmount = parseFloat(paidAmount);
     if (status !== undefined && status !== "") updateData.status = status;
     if (visaStatus !== undefined && visaStatus !== "") updateData.visaStatus = visaStatus;
+    if (body.agentId !== undefined) updateData.agentId = body.agentId;
 
     // Handle totalAmount: use trip.price if not provided
     if (totalAmount !== undefined && parseFloat(totalAmount) > 0) {
@@ -112,9 +114,9 @@ export async function PUT(
         customerId?: string;
         tripId?: string;
         totalAmount?: number;
-        paidAmount?: number;
         status?: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "REFUNDED";
         visaStatus?: "NOT_REQUIRED" | "PENDING" | "APPROVED" | "REJECTED";
+        agentId?: string;
       },
       include: {
         customer: {

@@ -10,42 +10,29 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const superAdminEmail = 'superadmin@gmail.com';
   const adminEmail = 'admin@gmail.com';
+  const agentEmail = 'agent@gmail.com';
   const password = await bcrypt.hash('Example1', 10);
 
-  const superAdmin = await prisma.user.upsert({
-    where: { email: superAdminEmail },
-    update: {
-      // Update password if it doesn't exist
-      password: password,
-    },
-    create: {
-      email: superAdminEmail,
-      password: password,
-      name: 'Super Admin',
-      role: Role.ADMIN,
-      commissionRate: 0,
-      isActive: true,
-    },
-  });
-
-  console.log({ superAdmin });
-
-  const admin = await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: {
-      // Update password if it doesn't exist
-      password: password,
-    },
-    create: {
-      email: adminEmail,
-      password: password,
-      name: 'Admin',
-      role: Role.ADMIN,
-      commissionRate: 10,
-      isActive: true,
-    },
+  const admin = await prisma.user.createMany({
+    data: [
+      {
+        email: adminEmail,
+        password: password,
+        name: 'Admin',
+        role: Role.ADMIN,
+        commissionRate: 10,
+        isActive: true,
+      },
+      {
+        email: agentEmail,
+        password: password,
+        name: 'Agent',
+        role: Role.AGENT,
+        commissionRate: 10,
+        isActive: true,
+      },
+    ],
   });
 
   console.log({ admin });
