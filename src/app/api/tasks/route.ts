@@ -36,7 +36,7 @@ export async function POST(req: Request) {
         type: "SYSTEM",
         title: "New Task Created",
         message: `Task "${title}" has been created successfully.`,
-        link: relatedCustomerId ? `/dashboard/customers/${relatedCustomerId}?tab=task` : undefined,
+        link: relatedCustomerId ? `/dashboard/customers/${relatedCustomerId}?tab=tasks` : undefined,
         entityId: task.id,
       },
     });
@@ -56,22 +56,54 @@ export async function GET(req: Request) {
   }
 
   try {
-    const tasks = await prisma.task.findMany({
-      where: {
-        agentId: session.user.id,
-        isCompleted: false,
-      },
-      orderBy: {
-        dueDate: "asc",
-      },
-      include: {
-        agent: {
-          select: { name: true },
-        },
-      },
-    });
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
+    const customerId = searchParams.get("customerId") || "";
+    const isCompleted = searchParams.get("isCompleted");
 
-    return NextResponse.json(tasks);
+    const where: {
+      agentId: string;
+      relatedCustomerId?: string;
+      isCompleted?: boolean;
+    } = {
+      agentId: session.user.id,
+    };
+
+    if (customerId) {
+      where.relatedCustomerId = customerId;
+    }
+
+    if (isCompleted !== null && isCompleted !== undefined) {
+      where.isCompleted = isCompleted === "true";
+    }
+
+    const [tasks, total] = await Promise.all([
+      prisma.task.findMany({
+        where,
+        orderBy: {
+          dueDate: "asc",
+        },
+        include: {
+          agent: {
+            select: { name: true },
+          },
+        },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.task.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / pageSize);
+
+    return NextResponse.json({
+      data: tasks,
+      total,
+      page,
+      pageSize,
+      totalPages,
+    });
   } catch (error) {
     console.error("[TASKS_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });

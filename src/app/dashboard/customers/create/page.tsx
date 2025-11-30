@@ -7,6 +7,7 @@ import { CustomerForm } from "../_components/customer-form";
 import { CustomerFormValues } from "../hooks/use-customers";
 import { useCreateCustomer } from "../hooks/use-customers";
 import { useAllTags } from "@/app/dashboard/tags/hooks/use-tags";
+import { toast } from "sonner";
 
 export default function NewCustomerPage() {
   const router = useRouter();
@@ -24,9 +25,8 @@ export default function NewCustomerPage() {
       await createCustomerMutation.mutateAsync(values);
       router.push("/dashboard/customers");
       router.refresh();
-    } catch (error) {
-      // Error is already handled in the mutation's onError
-      console.error(error);
+    } catch {
+      toast.error("Failed to create customer");
     }
   }
 

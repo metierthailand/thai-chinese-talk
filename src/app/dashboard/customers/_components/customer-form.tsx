@@ -44,20 +44,20 @@ export function CustomerForm({ mode, initialData, onSubmit, onCancel, isLoading 
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerFormSchema),
     defaultValues: {
-      firstNameTh: "",
-      lastNameTh: "",
-      firstNameEn: "",
-      lastNameEn: "",
-      title: undefined,
-      nickname: "",
-      email: "",
-      phone: "",
-      lineId: "",
-      nationality: "",
-      dateOfBirth: "",
-      preferences: "",
-      type: "INDIVIDUAL",
-      tagIds: selectedTagIds,
+      firstNameTh: initialData?.firstNameTh ?? "",
+      lastNameTh: initialData?.lastNameTh ?? "",
+      firstNameEn: initialData?.firstNameEn ?? "",
+      lastNameEn: initialData?.lastNameEn ?? "",
+      title: initialData?.title ?? undefined,
+      nickname: initialData?.nickname || "",
+      email: initialData?.email ?? "",
+      phone: initialData?.phone ?? "",
+      lineId: initialData?.lineId ?? "",
+      nationality: initialData?.nationality ?? "",
+      dateOfBirth: initialData?.dateOfBirth ?? "",
+      preferences: initialData?.preferences ?? "",
+      type: initialData?.type ?? "INDIVIDUAL",
+      tagIds: initialData?.tagIds ?? selectedTagIds,
     },
   });
 
@@ -65,10 +65,10 @@ export function CustomerForm({ mode, initialData, onSubmit, onCancel, isLoading 
   useEffect(() => {
     if (initialData) {
       form.reset({
-        firstNameTh: initialData.firstNameTh || "",
-        lastNameTh: initialData.lastNameTh || "",
-        firstNameEn: initialData.firstNameEn || "",
-        lastNameEn: initialData.lastNameEn || "",
+        firstNameTh: initialData.firstNameTh ?? "",
+        lastNameTh: initialData.lastNameTh ?? "",
+        firstNameEn: initialData.firstNameEn ?? "",
+        lastNameEn: initialData.lastNameEn ?? "",
         title: initialData.title || undefined,
         nickname: initialData.nickname || "",
         email: initialData.email || "",
@@ -183,7 +183,7 @@ export function CustomerForm({ mode, initialData, onSubmit, onCancel, isLoading 
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Title</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select title" />

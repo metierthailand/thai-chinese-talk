@@ -13,6 +13,7 @@ import {
 import { format } from "date-fns";
 import { Phone, Mail, MessageCircle, Users, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { useInteractions, useCreateInteraction } from "../hooks/use-interactions";
+import { toast } from "sonner";
 
 interface CustomerInteractionsProps {
   customerId: string;
@@ -40,11 +41,9 @@ export function CustomerInteractions({ customerId }: CustomerInteractionsProps) 
         content,
       });
       setContent("");
-      // Reset to first page to show the new interaction
       setPage(1);
-    } catch (error) {
-      // Error is already handled in the mutation's onError
-      console.error(error);
+    } catch {
+      toast.error("Failed to add interaction. Please try again.");
     }
   };
 

@@ -9,6 +9,7 @@ import { CustomerForm } from "../../_components/customer-form";
 import { CustomerFormValues } from "../../hooks/use-customers";
 import { useCustomer, useUpdateCustomer } from "../../hooks/use-customers";
 import { useAllTags } from "@/app/dashboard/tags/hooks/use-tags";
+import { toast } from "sonner";
 
 export default function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   })) || [];
 
   // Extract tag IDs from customer
-  const selectedTagIds = customer?.tags?.map((ct) => ct.tagId) || [];
+  const selectedTagIds = customer?.tags?.map((ct) => ct.tag.id) || [];
 
   // Format initial data for the form
   const initialData: Partial<CustomerFormValues> | undefined = customer
@@ -56,9 +57,8 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       });
       router.push(`/dashboard/customers/${customerId}`);
       router.refresh();
-    } catch (error) {
-      // Error is already handled in the mutation's onError
-      console.error(error);
+    } catch {
+      toast.error("Failed to update customer");
     }
   }
 

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { format } from "date-fns";
 import { CalendarIcon, Pencil, Plus, Trash2, Check, ChevronsUpDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -40,28 +39,16 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { upsertPassport, deletePassport } from "@/app/dashboard/customers/actions";
+import {
+  passportFormSchema,
+  type PassportFormValues,
+  useCreatePassport,
+  useUpdatePassport,
+  useDeletePassport,
+} from "../hooks/use-passport";
+import { Passport } from "../hooks/types";
 
-// Define the schema locally for the form, matching the server action expectation
-const passportFormSchema = z.object({
-  id: z.string().optional(),
-  customerId: z.string(),
-  passportNumber: z.string().min(1, "Passport number is required"),
-  issuingCountry: z.string().min(1, "Issuing country is required"),
-  expiryDate: z.date(),
-  isPrimary: z.boolean(),
-});
-
-type PassportFormValues = z.infer<typeof passportFormSchema>;
-
-interface Passport {
-  id: string;
-  customerId: string;
-  passportNumber: string;
-  issuingCountry: string;
-  expiryDate: Date;
-  isPrimary: boolean;
-}
+type PassportInput = Omit<Passport, "expiryDate"> & { expiryDate: Date | string };
 
 interface PassportManagerProps {
   customerId: string;
@@ -70,8 +57,11 @@ interface PassportManagerProps {
 
 export function PassportManager({ customerId, passports }: PassportManagerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [editingPassport, setEditingPassport] = useState<Passport | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [editingPassport, setEditingPassport] = useState<PassportInput | null>(null);
+
+  const createPassport = useCreatePassport(customerId);
+  const updatePassport = useUpdatePassport(customerId);
+  const deletePassportMutation = useDeletePassport(customerId);
 
   const form = useForm<PassportFormValues>({
     resolver: zodResolver(passportFormSchema),
@@ -94,14 +84,18 @@ export function PassportManager({ customerId, passports }: PassportManagerProps)
     setIsOpen(true);
   };
 
-  const handleEdit = (passport: Passport) => {
+  const handleEdit = (passport: PassportInput) => {
+    const expiryDate = typeof passport.expiryDate === "string" 
+      ? new Date(passport.expiryDate) 
+      : passport.expiryDate;
+    
     setEditingPassport(passport);
     form.reset({
       id: passport.id,
       customerId: passport.customerId,
       passportNumber: passport.passportNumber,
       issuingCountry: passport.issuingCountry,
-      expiryDate: new Date(passport.expiryDate),
+      expiryDate,
       isPrimary: passport.isPrimary,
     });
     setIsOpen(true);
@@ -109,33 +103,36 @@ export function PassportManager({ customerId, passports }: PassportManagerProps)
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this passport?")) return;
-    
-    setIsLoading(true);
-    try {
-      await deletePassport(id, customerId);
-    } catch (error) {
-      console.error("Error deleting passport:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    deletePassportMutation.mutate(id);
   };
 
   const onSubmit = async (values: PassportFormValues) => {
-    setIsLoading(true);
-    try {
-      const result = await upsertPassport(values);
-      if (result.success) {
-        setIsOpen(false);
-        form.reset();
-      } else {
-        console.error(result.error);
-      }
-    } catch (error) {
-      console.error("Error submitting form:", error);
-    } finally {
-      setIsLoading(false);
+    if (values.id) {
+      updatePassport.mutate(values, {
+        onSuccess: () => {
+          setIsOpen(false);
+          form.reset();
+        },
+      });
+    } else {
+      createPassport.mutate(
+        {
+          passportNumber: values.passportNumber,
+          issuingCountry: values.issuingCountry,
+          expiryDate: values.expiryDate,
+          isPrimary: values.isPrimary,
+        },
+        {
+          onSuccess: () => {
+            setIsOpen(false);
+            form.reset();
+          },
+        }
+      );
     }
   };
+
+  const isLoading = createPassport.isPending || updatePassport.isPending || deletePassportMutation.isPending;
 
   return (
     <Card>

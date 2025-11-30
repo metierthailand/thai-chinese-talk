@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import z from "zod";
+import Decimal from "decimal.js";
+import type { Passport } from "./types";
 
 export const customerFormSchema = z.object({
   firstNameTh: z.string().min(1, {
@@ -44,13 +46,37 @@ interface Customer {
   nationality?: string | null;
   dateOfBirth?: string | null;
   preferences?: string | null;
-  tags: { tag: { name: string; color: string | null } }[];
+  tags: CustomerTag[];
   createdAt: string;
   updatedAt: string;
 }
 
+interface CustomerTask {
+  id: string;
+  title: string;
+  dueDate: string;
+  isCompleted: boolean;
+  priority: string;
+}
+
+interface CustomerLeadSummary {
+  id: string;
+  destinationInterest: string | null;
+  status: string;
+}
+
+interface CustomerBookingSummary {
+  id: string;
+  trip: {
+    name: string;
+    startDate: string | Date;
+    endDate: string | Date;
+  };
+  status: string;
+  totalAmount: Decimal | string | number | null;
+}
+
 interface CustomerTag {
-  tagId: string;
   tag: {
     id: string;
     name: string;
@@ -59,12 +85,11 @@ interface CustomerTag {
 }
 
 interface CustomerDetail extends Customer {
-  passports: unknown[];
-  interactions: unknown[];
-  leads: unknown[];
-  bookings: unknown[];
-  tasks: unknown[];
-  tags: CustomerTag[];
+  passports: Passport[];
+  interactions: unknown[]; // ถ้ายังไม่ใช้ ปล่อย unknown[] ไปก่อนก็ได้
+  leads: CustomerLeadSummary[];
+  bookings: CustomerBookingSummary[];
+  tasks: CustomerTask[];
 }
 
 interface CustomersResponse {
@@ -190,14 +215,21 @@ async function updateCustomer({ id, data }: { id: string; data: CustomerFormValu
 }
 
 // Hook to fetch customers with pagination
-export function useCustomers(
-  page: number,
-  pageSize: number,
-  search?: string,
-  type?: string,
-  passportExpiryFrom?: string,
-  passportExpiryTo?: string
-) {
+export function useCustomers({
+  page,
+  pageSize,
+  search,
+  type,
+  passportExpiryFrom,
+  passportExpiryTo,
+}: {
+  page: number;
+  pageSize: number; 
+  search?: string;
+  type?: string;
+  passportExpiryFrom?: string;
+  passportExpiryTo?: string;
+}) {
   return useQuery({
     queryKey: customerKeys.list(page, pageSize, search, type, passportExpiryFrom, passportExpiryTo),
     queryFn: () => fetchCustomers(page, pageSize, search, type, passportExpiryFrom, passportExpiryTo),
@@ -261,5 +293,4 @@ export function useUpdateCustomer() {
 }
 
 // Export types
-export type { Customer, CustomersResponse, CustomerDetail };
-
+export type { Customer, CustomersResponse, CustomerDetail, CustomerTask, CustomerLeadSummary, CustomerBookingSummary };

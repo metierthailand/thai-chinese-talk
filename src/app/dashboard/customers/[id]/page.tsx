@@ -1,5 +1,6 @@
-import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+"use client";
+
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,45 +9,29 @@ import { CustomerTabs } from "./_components/customer-tabs";
 import { ArrowLeft, Mail, Phone, MapPin, Calendar } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { useCustomer } from "@/app/dashboard/customers/hooks/use-customers";
+import { Loading } from "@/components/page/loading";
 
-export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default function CustomerDetailPage() {
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
+  const { data: customer, isLoading, error } = useCustomer(id);
 
-  const customer = await prisma.customer.findUnique({
-    where: { id },
-    include: {
-      tags: { include: { tag: true } },
-      passports: {
-        orderBy: { updatedAt: "desc" },
-      },
-      leads: {
-        orderBy: { updatedAt: "desc" },
-      },
-      bookings: {
-        orderBy: { createdAt: "desc" },
-        include: {
-          trip: true,
-        },
-      },
-    },
-  });
+  console.log("customer", customer);
 
-  if (!customer) {
-    notFound();
+  if (isLoading) {
+    return <Loading />;
   }
 
-  // Fetch tasks separately as they might not be directly linked in the relation if using loose linking
-  // But our schema has relatedCustomerId, so we can fetch them.
-  const tasks = await prisma.task.findMany({
-    where: { relatedCustomerId: id },
-    orderBy: { dueDate: "asc" },
-  });
-
-  const clientTasks = tasks.map((t) => ({
-    ...t,
-    dueDate: t.dueDate.toISOString(),
-    priority: t.priority.toString(),
-  }));
+  if (error || !customer) {
+    return (
+      <div className="space-y-8 p-8">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-destructive">Failed to load customer. Please try again.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 p-8">
@@ -69,7 +54,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             </div>
             <div className="flex items-end gap-2">
               <h2 className="text-3xl font-bold tracking-tight">{`${customer.firstNameTh} ${customer.lastNameTh}`}</h2>
-              <p className="text-muted-foreground mt-1 text-sm">{`${customer.firstNameEn} ${customer.lastNameEn} ${customer.nickname && `(${customer.nickname})`}`}</p>
+              <p className="text-muted-foreground mt-1 text-sm">{`${customer.firstNameEn} ${customer.lastNameEn}${customer.nickname ? ` (${customer.nickname})` : ""}`}</p>
             </div>
           </div>
         </div>
@@ -131,7 +116,6 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         <div className="md:col-span-2">
           <CustomerTabs
             customerId={customer.id}
-            initialTasks={clientTasks}
             leads={customer.leads}
             bookings={customer.bookings}
           />

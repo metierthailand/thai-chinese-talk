@@ -7,36 +7,20 @@ import { CustomerTasks } from "@/app/dashboard/customers/_components/customer-ta
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { formatDecimal } from "@/lib/utils";
+import type {
+  CustomerLeadSummary,
+  CustomerBookingSummary,
+} from "@/app/dashboard/customers/hooks/use-customers";
 
 interface CustomerTabsProps {
   customerId: string;
-  initialTasks: Array<{
-    id: string;
-    title: string;
-    dueDate: string;
-    isCompleted: boolean;
-    priority: string;
-  }>;
-  leads: Array<{
-    id: string;
-    destinationInterest: string | null;
-    status: string;
-  }>;
-  bookings: Array<{
-    id: string;
-    trip: {
-      name: string;
-      startDate: Date;
-      endDate: Date;
-    };
-    status: string;
-    totalAmount: number | string;
-  }>;
+  leads: CustomerLeadSummary[];
+  bookings: CustomerBookingSummary[];
 }
 
 export function CustomerTabs({
   customerId,
-  initialTasks,
   leads,
   bookings,
 }: CustomerTabsProps) {
@@ -69,7 +53,7 @@ export function CustomerTabs({
       </TabsContent>
 
       <TabsContent value="tasks" className="mt-6">
-        <CustomerTasks customerId={customerId} initialTasks={initialTasks} />
+        <CustomerTasks customerId={customerId} />
       </TabsContent>
 
       <TabsContent value="leads" className="mt-6">
@@ -107,7 +91,7 @@ export function CustomerTabs({
                     {format(new Date(booking.trip.startDate), "PP")} - {format(new Date(booking.trip.endDate), "PP")}
                   </div>
                   <div className="text-muted-foreground mt-1 text-xs">
-                    Status: {booking.status} | Amount: {booking.totalAmount.toString()}
+                    Status: {booking.status} | Amount: {formatDecimal(booking.totalAmount)}
                   </div>
                 </div>
               </Link>
