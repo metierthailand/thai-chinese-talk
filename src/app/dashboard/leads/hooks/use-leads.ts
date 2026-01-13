@@ -20,8 +20,15 @@ export interface LeadBooking {
 
 export interface Lead {
   id: string;
-  customerId: string;
+  customerId: string | null;
   agentId: string;
+  salesUserId: string;
+  newCustomer: boolean;
+  firstName: string | null;
+  lastName: string | null;
+  phoneNumber: string | null;
+  email: string | null;
+  lineId: string | null;
   customer: {
     id: string;
     firstNameTh: string;
@@ -29,18 +36,26 @@ export interface Lead {
     firstNameEn: string;
     lastNameEn: string;
     email: string | null;
-    phone: string | null;
-  };
+    phoneNumber: string | null;
+  } | null;
   agent: {
-    name: string;
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+  salesUser: {
+    id: string;
+    firstName: string;
+    lastName: string;
     email: string;
   } | null;
   source: string;
   status: string;
-  potentialValue: number | null;
-  destinationInterest: string | null;
-  travelDateEstimate: string | null;
-  notes: string | null;
+  tripInterest: string;
+  pax: number;
+  leadNote: string | null;
+  sourceNote: string | null;
   bookings?: LeadBooking[];
   createdAt: string;
   updatedAt: string;
@@ -64,10 +79,8 @@ export const leadKeys = {
     search?: string,
     status?: string,
     source?: string,
-    minPotential?: string,
-    maxPotential?: string,
     customerId?: string
-  ) => [...leadKeys.lists(), page, pageSize, search, status, source, minPotential, maxPotential, customerId] as const,
+  ) => [...leadKeys.lists(), page, pageSize, search, status, source, customerId] as const,
   details: () => [...leadKeys.all, "detail"] as const,
   detail: (id: string) => [...leadKeys.details(), id] as const,
 };
@@ -79,8 +92,6 @@ async function fetchLeads(
   search?: string,
   status?: string,
   source?: string,
-  minPotential?: string,
-  maxPotential?: string,
   customerId?: string
 ): Promise<LeadsResponse> {
   const params = new URLSearchParams({
@@ -97,12 +108,6 @@ async function fetchLeads(
   if (source && source !== "ALL") {
     params.set("source", source);
   }
-  if (minPotential) {
-    params.set("minPotential", minPotential);
-  }
-  if (maxPotential) {
-    params.set("maxPotential", maxPotential);
-  }
   if (customerId) {
     params.set("customerId", customerId);
   }
@@ -112,17 +117,7 @@ async function fetchLeads(
     throw new Error("Failed to fetch leads");
   }
   const data = await res.json();
-  // Convert Decimal fields to numbers
-  return {
-    ...data,
-    data: data.data.map(
-      (lead: Lead & { potentialValue: string | number | null }) => ({
-        ...lead,
-        potentialValue:
-          lead.potentialValue !== null ? Number(lead.potentialValue) : null,
-      })
-    ),
-  };
+  return data;
 }
 
 // Fetch single lead function
@@ -134,8 +129,6 @@ async function fetchLead(id: string): Promise<Lead> {
   const data = await res.json();
   return {
     ...data,
-    potentialValue:
-      data.potentialValue !== null ? Number(data.potentialValue) : null,
     bookings: data.bookings?.map((booking: LeadBooking & { totalAmount: string | number; paidAmount: string | number }) => ({
       ...booking,
       totalAmount: Number(booking.totalAmount),
@@ -146,13 +139,20 @@ async function fetchLead(id: string): Promise<Lead> {
 
 // Create lead function
 async function createLead(data: {
-  customerId: string;
+  newCustomer: boolean;
+  customerId?: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  email?: string;
+  lineId?: string;
+  salesUserId: string;
   source: string;
   status: string;
-  destinationInterest?: string;
-  potentialValue?: number;
-  travelDateEstimate?: string;
-  notes?: string;
+  tripInterest: string;
+  pax?: number;
+  leadNote?: string;
+  sourceNote?: string;
 }): Promise<Lead> {
   const res = await fetch("/api/leads", {
     method: "POST",
@@ -163,8 +163,8 @@ async function createLead(data: {
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || "Failed to create lead");
+    const error = await res.json().catch(() => ({ message: "Failed to create lead" }));
+    throw new Error(error.message || error.error || "Failed to create lead");
   }
 
   return res.json();
@@ -177,13 +177,20 @@ async function updateLead({
 }: {
   id: string;
   data: {
+    newCustomer?: boolean;
     customerId?: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+    email?: string;
+    lineId?: string;
+    salesUserId?: string;
     source?: string;
     status?: string;
-    destinationInterest?: string | null;
-    potentialValue?: number | null;
-    travelDateEstimate?: string | null;
-    notes?: string | null;
+    tripInterest?: string;
+    pax?: number;
+    leadNote?: string;
+    sourceNote?: string;
   };
 }): Promise<Lead> {
   const res = await fetch(`/api/leads/${id}`, {
@@ -195,8 +202,8 @@ async function updateLead({
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || "Failed to update lead");
+    const error = await res.json().catch(() => ({ message: "Failed to update lead" }));
+    throw new Error(error.message || error.error || "Failed to update lead");
   }
 
   return res.json();
@@ -209,13 +216,11 @@ export function useLeads(
   search?: string,
   status?: string,
   source?: string,
-  minPotential?: string,
-  maxPotential?: string,
   customerId?: string
 ) {
   return useQuery({
-    queryKey: leadKeys.list(page, pageSize, search, status, source, minPotential, maxPotential, customerId),
-    queryFn: () => fetchLeads(page, pageSize, search, status, source, minPotential, maxPotential, customerId),
+    queryKey: leadKeys.list(page, pageSize, search, status, source, customerId),
+    queryFn: () => fetchLeads(page, pageSize, search, status, source, customerId),
     staleTime: 30 * 1000, // 30 seconds
   });
 }

@@ -31,11 +31,12 @@ model User {
   resetToken        String?   @unique
   resetTokenExpiry  DateTime?
 
-  leads         Lead[]
-  tasks         Task[]
-  notifications Notification[]
-  bookings      Booking[]      @relation("AgentBookings")
-  commissions   Commission[]
+  leadsAsAgent    Lead[] @relation("AgentLeads")
+  leadsAsSales    Lead[] @relation("SalesLeads")
+  tasks           Task[]
+  notifications   Notification[]
+  bookings        Booking[] @relation("AgentBookings")
+  commissions     Commission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -155,41 +156,45 @@ model CustomerTag {
 
 // 3. Sales Pipeline & Leads
 enum LeadSource {
-  WEBSITE
-  WALKIN
-  REFERRAL
-  SOCIAL
-  LINE
-  OTHER
+  FACEBOOK
+  YOUTUBE
+  TIKTOK
+  FRIEND
 }
 
 enum LeadStatus {
-  NEW
-  CONTACTED
-  QUOTED
-  NEGOTIATING
-  CLOSED_WON
-  CLOSED_LOST
-  ABANDONED
+  INTERESTED
+  BOOKED
+  COMPLETED
+  CANCELLED
 }
 
 model Lead {
-  id         String   @id @default(uuid())
-  customerId String
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  agentId    String
-  agent      User     @relation(fields: [agentId], references: [id])
+  id          String   @id @default(uuid())
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  agentId     String
+  agent       User     @relation("AgentLeads", fields: [agentId], references: [id])
+  salesUserId String
+  salesUser   User     @relation("SalesLeads", fields: [salesUserId], references: [id])
 
-  source              LeadSource @default(WEBSITE)
-  status              LeadStatus @default(NEW)
-  potentialValue      Decimal?   @db.Decimal(10, 2)
-  destinationInterest String?
-  travelDateEstimate  DateTime?
-  notes               String?    @db.Text
+  source LeadSource @default(FACEBOOK)
+  status LeadStatus @default(INTERESTED)
 
-  // Activity tracking
-  lastActivityAt DateTime  @default(now())
-  closedAt       DateTime?
+  tripInterest String
+
+  newCustomer Boolean @default(false)
+  firstName   String?
+  lastName    String?
+
+  phoneNumber String?
+  email       String?
+  lineId      String?
+
+  pax Int @default(1)
+
+  leadNote   String? @db.Text
+  sourceNote String? @db.Text
 
   bookings    Booking[]
   commissions Commission[]

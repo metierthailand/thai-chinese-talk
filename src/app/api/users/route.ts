@@ -19,36 +19,37 @@ export async function GET(req: Request) {
     const search = searchParams.get("search") || "";
 
     // Build where clause for search
-    const where: Prisma.UserWhereInput = search.trim().length > 0
-      ? {
-          OR: [
-            {
-              firstName: {
-                contains: search,
-                mode: "insensitive" as const,
+    const where: Prisma.UserWhereInput =
+      search.trim().length > 0
+        ? {
+            OR: [
+              {
+                firstName: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
               },
-            },
-            {
-              lastName: {
-                contains: search,
-                mode: "insensitive" as const,
+              {
+                lastName: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
               },
-            },
-            {
-              email: {
-                contains: search,
-                mode: "insensitive" as const,
+              {
+                email: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
               },
-            },
-            {
-              phoneNumber: {
-                contains: search,
-                mode: "insensitive" as const,
+              {
+                phoneNumber: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
               },
-            },
-          ],
-        }
-      : {};
+            ],
+          }
+        : {};
 
     const users = await prisma.user.findMany({
       where,
@@ -62,45 +63,13 @@ export async function GET(req: Request) {
         isActive: true,
         commissionPerHead: true,
         createdAt: true,
-        leads: {
-          select: {
-            bookings: {
-              where: {
-                status: "COMPLETED",
-              },
-              select: {
-                totalAmount: true,
-              },
-            },
-          },
-        },
       },
       orderBy: {
         createdAt: "desc",
       },
     });
 
-    const usersWithCommission = users.map((user) => {
-      // Count completed bookings from leads
-      const completedBookingsCount = user.leads.reduce((acc, lead) => {
-        return acc + lead.bookings.length;
-      }, 0);
-
-      // Calculate commission: fixed amount per completed booking
-      const commissionPerHead = user.commissionPerHead ? new Decimal(user.commissionPerHead) : new Decimal(0);
-      const totalCommission = commissionPerHead.mul(completedBookingsCount);
-
-      // Remove leads from the response to keep it clean, or keep it if needed.
-      // For the table, we just need the calculated value.
-      const { leads, ...userData } = user;
-
-      return {
-        ...userData,
-        totalCommission: totalCommission.toNumber(),
-      };
-    });
-
-    return NextResponse.json(usersWithCommission);
+    return NextResponse.json(users);
   } catch (error) {
     console.error("[USERS_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });

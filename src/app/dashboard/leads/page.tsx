@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,7 @@ export default function LeadsPage() {
   // --------------------
   // params
   // --------------------
-  const { page, pageSize, search, status, source, minPotential, maxPotential, customerId, setParams } =
-    useLeadsParams();
+  const { page, pageSize, search, status, source, customerId, setParams } = useLeadsParams();
 
   const leadsQuery = mapLeadsParamsToQuery({
     page,
@@ -31,22 +30,18 @@ export default function LeadsPage() {
     search,
     status,
     source,
-    minPotential,
-    maxPotential,
     customerId,
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "NEW":
+      case "INTERESTED":
         return "bg-blue-500";
-      case "QUOTED":
-        return "bg-yellow-500";
-      case "FOLLOW_UP":
-        return "bg-purple-500";
-      case "CLOSED_WON":
+      case "BOOKED":
         return "bg-green-500";
-      case "CLOSED_LOST":
+      case "COMPLETED":
+        return "bg-emerald-500";
+      case "CANCELLED":
         return "bg-red-500";
       default:
         return "bg-gray-500";
@@ -56,21 +51,62 @@ export default function LeadsPage() {
   const columns: ColumnDef<Lead>[] = useMemo(
     () => [
       {
+        accessorKey: "tripInterest",
+        header: "Trip Interest",
+        cell: ({ row }) => row.original.tripInterest || "-",
+      },
+      {
         accessorKey: "customer",
         header: "Customer",
         cell: ({ row }) => {
-          const customer = row.original.customer;
+          const lead = row.original;
+          if (lead.newCustomer) {
+            return (
+              <div className="flex flex-col">
+                <Badge variant="outline" className="mt-1 w-fit">
+                  New
+                </Badge>
+                <span className="font-medium">
+                  {lead.firstName} {lead.lastName}
+                </span>
+                <span className="text-muted-foreground text-xs">{lead.email || lead.phoneNumber || "-"}</span>
+              </div>
+            );
+          }
+          const customer = lead.customer;
+          if (!customer) return <div className="text-muted-foreground">-</div>;
           return (
             <div className="flex flex-col">
               <span className="font-medium">
                 {customer.firstNameTh} {customer.lastNameTh}
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 ({customer.firstNameEn} {customer.lastNameEn})
               </span>
-              <span className="text-xs text-muted-foreground">
-                {customer.email || "-"}
-              </span>
+              <span className="text-muted-foreground text-xs">{customer.email || "-"}</span>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "phoneNumber",
+        header: "Phone",
+        cell: ({ row }) => row.original.phoneNumber || "-",
+      },
+      {
+        accessorKey: "pax",
+        header: "Pax",
+        cell: ({ row }) => row.original.pax || "-",
+      },
+      {
+        accessorKey: "salesUser",
+        header: "Sales Name",
+        cell: ({ row }) => {
+          const salesUser = row.original.salesUser;
+          if (!salesUser) return <div className="text-muted-foreground">-</div>;
+          return (
+            <div>
+              {salesUser.firstName} {salesUser.lastName}
             </div>
           );
         },
@@ -79,26 +115,8 @@ export default function LeadsPage() {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => (
-          <Badge className={getStatusColor(row.original.status)}>
-            {row.original.status.replace("_", " ")}
-          </Badge>
+          <Badge className={getStatusColor(row.original.status)}>{row.original.status.replace("_", " ")}</Badge>
         ),
-      },
-      {
-        accessorKey: "destinationInterest",
-        header: "Destination",
-        cell: ({ row }) => row.original.destinationInterest || "-",
-      },
-      {
-        accessorKey: "potentialValue",
-        header: "Value",
-        cell: ({ row }) =>
-          row.original.potentialValue
-            ? new Intl.NumberFormat("th-TH", {
-                style: "currency",
-                currency: "THB",
-              }).format(row.original.potentialValue)
-            : "-",
       },
       {
         accessorKey: "source",
@@ -106,31 +124,17 @@ export default function LeadsPage() {
         cell: ({ row }) => row.original.source,
       },
       {
-        accessorKey: "updatedAt",
-        header: "Last Updated",
-        cell: ({ row }) =>
-          format(new Date(row.original.updatedAt), "dd MMM yyyy"),
-      },
-      {
         id: "actions",
         header: () => <div className="text-right">Actions</div>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
             <Link href={`/dashboard/leads/${row.original.id}`}>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
                 <Eye className="h-4 w-4" />
               </Button>
             </Link>
             <Link href={`/dashboard/leads/${row.original.id}/edit`}>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
                 <Pencil className="h-4 w-4" />
               </Button>
             </Link>
@@ -138,26 +142,26 @@ export default function LeadsPage() {
         ),
       },
     ],
-    []
+    [],
   );
 
   // --------------------
   // data fetching
   // --------------------
-  const { data: leadsResponse, isLoading, error } = useLeads(
+  const {
+    data: leadsResponse,
+    isLoading,
+    error,
+  } = useLeads(
     leadsQuery.page,
     leadsQuery.pageSize,
     leadsQuery.search,
     leadsQuery.status,
     leadsQuery.source,
-    leadsQuery.minPotential,
-    leadsQuery.maxPotential
+    leadsQuery.customerId,
   );
 
-  const leads = useMemo(
-    () => leadsResponse?.data ?? [],
-    [leadsResponse?.data]
-  );
+  const leads = useMemo(() => leadsResponse?.data ?? [], [leadsResponse?.data]);
   const total = leadsResponse?.total ?? 0;
 
   const pageCount = useMemo(() => {
@@ -185,14 +189,14 @@ export default function LeadsPage() {
     (newPageIndex: number) => {
       setParams({ page: newPageIndex + 1 });
     },
-    [setParams]
+    [setParams],
   );
 
   const handlePageSizeChange = useCallback(
     (newPageSize: number) => {
       setParams({ pageSize: newPageSize, page: 1 });
     },
-    [setParams]
+    [setParams],
   );
 
   // --------------------
@@ -216,10 +220,8 @@ export default function LeadsPage() {
     <div className="flex flex-col gap-8 p-8">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Sales Pipeline</h2>
-          <p className="text-muted-foreground">
-            Track and manage your sales leads.
-          </p>
+          <h2 className="text-3xl font-bold tracking-tight">Leads</h2>
+          <p className="text-muted-foreground">Track and manage your leads.</p>
         </div>
         <Link href="/dashboard/leads/create">
           <Button>
@@ -233,11 +235,7 @@ export default function LeadsPage() {
 
       <div className="relative flex flex-col gap-4 overflow-auto">
         <div className="overflow-hidden rounded-md border">
-          <DataTable
-            table={table}
-            columns={columns}
-            onRowClick={(row) => router.push(`/dashboard/leads/${row.id}`)}
-          />
+          <DataTable table={table} columns={columns} onRowClick={(row) => router.push(`/dashboard/leads/${row.id}`)} />
         </div>
         <DataTablePagination
           table={table}

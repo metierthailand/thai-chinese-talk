@@ -14,26 +14,38 @@ export default function LeadEditPage() {
   const updateLeadMutation = useUpdateLead();
 
   async function handleSubmit(values: {
-    customerId: string;
+    newCustomer: boolean;
+    customerId?: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+    email?: string;
+    lineId?: string;
+    salesUserId: string;
     source: string;
     status: string;
-    destinationInterest?: string;
-    potentialValue?: string;
-    travelDateEstimate?: string;
-    notes?: string;
+    tripInterest: string;
+    pax: number;
+    leadNote?: string;
+    sourceNote?: string;
   }) {
     if (!id || typeof id !== "string") return;
 
     const payload = {
+      newCustomer: values.newCustomer,
       customerId: values.customerId,
+      firstName: values.firstName,
+      lastName: values.lastName,
+      phoneNumber: values.phoneNumber,
+      email: values.email,
+      lineId: values.lineId,
+      salesUserId: values.salesUserId,
       source: values.source,
       status: values.status,
-      destinationInterest: values.destinationInterest || null,
-      potentialValue: values.potentialValue
-        ? Number(values.potentialValue)
-        : null,
-      travelDateEstimate: values.travelDateEstimate || null,
-      notes: values.notes || null,
+      tripInterest: values.tripInterest,
+      pax: values.pax,
+      leadNote: values.leadNote,
+      sourceNote: values.sourceNote,
     };
 
     await updateLeadMutation.mutateAsync({ id, data: payload });

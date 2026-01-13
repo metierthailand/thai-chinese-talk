@@ -4,34 +4,86 @@ import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { format } from "date-fns";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown, CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSearchCustomers, useCustomer } from "@/app/dashboard/customers/hooks/use-customers";
-import { LEAD_STATUS_VALUES, LEAD_STATUS_LABELS, LEAD_SOURCE_VALUES, LEAD_SOURCE_LABELS, MANUAL_LEAD_STATUSES } from "@/lib/constants/lead";
-import { validateStatusChange, getStatusChangeDescription } from "@/lib/constants/lead-status-rules";
-import { StatusChangeDialog } from "./status-change-dialog";
+import { LEAD_STATUS_VALUES, LEAD_STATUS_LABELS, LEAD_SOURCE_VALUES, LEAD_SOURCE_LABELS } from "@/lib/constants/lead";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useQuery } from "@tanstack/react-query";
 import type { Lead } from "../hooks/use-leads";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
 
-const formSchema = z.object({
-  customerId: z.string().min(1, { message: "Customer is required" }),
-  source: z.string().min(1, { message: "Source is required" }),
-  status: z.string().min(1, { message: "Status is required" }),
-  destinationInterest: z.string().optional(),
-  potentialValue: z.string().optional(),
-  travelDateEstimate: z.string().optional(),
-  notes: z.string().optional(),
-});
+// Sales user interface
+interface SalesUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string | null;
+}
+
+// Fetch sales users
+async function fetchSalesUsers(): Promise<SalesUser[]> {
+  const res = await fetch("/api/users/sales");
+  if (!res.ok) {
+    throw new Error("Failed to fetch sales users");
+  }
+  return res.json();
+}
+
+// Form schema with conditional validation
+const formSchema = z
+  .object({
+    newCustomer: z.boolean(),
+    customerId: z.string().optional(),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    phoneNumber: z.string().optional(),
+    email: z.string().optional(),
+    lineId: z.string().optional(),
+    salesUserId: z.string().min(1, { message: "Please select the information." }),
+    source: z.string().min(1, { message: "Please fill in the information." }),
+    status: z.string().min(1, { message: "Please select the information." }),
+    tripInterest: z.string().min(1, { message: "Please fill in the information." }),
+    pax: z.number().min(1, { message: "Please fill in the information." }),
+    leadNote: z.string().optional(),
+    sourceNote: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.newCustomer) {
+      // Validate firstName when newCustomer is true
+      if (!data.firstName || data.firstName.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please fill in the information.",
+          path: ["firstName"],
+        });
+      }
+      // Validate lastName when newCustomer is true
+      if (!data.lastName || data.lastName.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please fill in the information.",
+          path: ["lastName"],
+        });
+      }
+    } else {
+      // Validate customerId when newCustomer is false
+      if (!data.customerId || data.customerId.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please fill in the information.",
+          path: ["customerId"],
+        });
+      }
+    }
+  });
 
 type LeadFormValues = z.infer<typeof formSchema>;
 
@@ -46,67 +98,96 @@ interface LeadFormProps {
 export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: LeadFormProps) {
   const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
-  const [statusChangeDialog, setStatusChangeDialog] = useState<{
-    open: boolean;
-    currentStatus: string;
-    newStatus: string;
-    validation: ReturnType<typeof validateStatusChange>;
-  } | null>(null);
-  const [pendingStatusChange, setPendingStatusChange] = useState<string | null>(null);
-  
-  // Check if lead has active bookings
-  const hasActiveBookings = initialData?.bookings?.some((booking) =>
-    ["PENDING", "CONFIRMED", "COMPLETED"].includes(booking.status)
-  ) || false;
-  
+  const [salesUserSearchOpen, setSalesUserSearchOpen] = useState(false);
+  const [salesUserSearchQuery, setSalesUserSearchQuery] = useState("");
+
+  // Fetch sales users
+  const { data: salesUsers = [], isLoading: isLoadingSalesUsers } = useQuery({
+    queryKey: ["salesUsers"],
+    queryFn: fetchSalesUsers,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   const form = useForm<LeadFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      customerId: initialData?.customerId ?? "",
-      source: initialData?.source ?? "WEBSITE",
-      status: initialData?.status ?? "NEW",
-      destinationInterest: initialData?.destinationInterest ?? "",
-      potentialValue: initialData?.potentialValue != null ? String(initialData.potentialValue) : "",
-      travelDateEstimate: initialData?.travelDateEstimate ? initialData.travelDateEstimate.substring(0, 10) : "",
-      notes: initialData?.notes ?? "",
+      newCustomer: initialData?.newCustomer ?? false,
+      customerId: initialData?.customerId ?? undefined,
+      firstName: initialData?.firstName ?? undefined,
+      lastName: initialData?.lastName ?? undefined,
+      phoneNumber: initialData?.phoneNumber ?? undefined,
+      email: initialData?.email ?? undefined,
+      lineId: initialData?.lineId ?? undefined,
+      salesUserId: initialData?.salesUserId ?? "",
+      source: initialData?.source ?? "FACEBOOK",
+      status: initialData?.status ?? "INTERESTED",
+      tripInterest: initialData?.tripInterest ?? "",
+      pax: initialData?.pax ?? 1,
+      leadNote: initialData?.leadNote ?? undefined,
+      sourceNote: initialData?.sourceNote ?? undefined,
     },
   });
 
   useEffect(() => {
     if (initialData) {
       form.reset({
-        customerId: initialData.customerId,
+        newCustomer: initialData.newCustomer,
+        customerId: initialData.customerId ?? undefined,
+        firstName: initialData.firstName ?? undefined,
+        lastName: initialData.lastName ?? undefined,
+        phoneNumber: initialData.phoneNumber ?? undefined,
+        email: initialData.email ?? undefined,
+        lineId: initialData.lineId ?? undefined,
+        salesUserId: initialData.salesUserId,
         source: initialData.source,
         status: initialData.status,
-        destinationInterest: initialData.destinationInterest ?? "",
-        potentialValue: initialData.potentialValue != null ? String(initialData.potentialValue) : "",
-        travelDateEstimate: initialData.travelDateEstimate ? initialData.travelDateEstimate.substring(0, 10) : "",
-        notes: initialData.notes ?? "",
+        tripInterest: initialData.tripInterest,
+        pax: initialData.pax,
+        leadNote: initialData.leadNote ?? undefined,
+        sourceNote: initialData.sourceNote ?? undefined,
       });
     }
   }, [initialData, form]);
 
   const disabled = mode === "view" || isLoading;
-
+  const newCustomer = form.watch("newCustomer");
   const customerId = form.watch("customerId");
+  const salesUserId = form.watch("salesUserId");
 
   // Search customers
   const { data: searchResults = [], isLoading: isSearching } = useSearchCustomers(customerSearchQuery, 10);
 
   // Fetch selected customer if not in search results
   const { data: selectedCustomerData } = useCustomer(
-    customerId && !searchResults.find((c) => c.id === customerId) ? customerId : undefined,
+    customerId && !searchResults.find((c) => c.id === customerId) ? customerId : undefined
   );
 
   // Find selected customer to display name
   const selectedCustomer = useMemo(() => {
     if (!customerId) return null;
-    // Try to find in search results first
     const found = searchResults.find((c) => c.id === customerId);
     if (found) return found;
-    // If not found, use fetched customer data
     return selectedCustomerData || null;
   }, [customerId, searchResults, selectedCustomerData]);
+
+  // Find selected sales user
+  const selectedSalesUser = useMemo(() => {
+    if (!salesUserId) return null;
+    return salesUsers.find((u) => u.id === salesUserId) || null;
+  }, [salesUserId, salesUsers]);
+
+  // Filter sales users by search query
+  const filteredSalesUsers = useMemo(() => {
+    if (!salesUserSearchQuery.trim()) return salesUsers;
+    const query = salesUserSearchQuery.toLowerCase();
+    return salesUsers.filter(
+      (user) =>
+        user.firstName.toLowerCase().includes(query) ||
+        user.lastName.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query) ||
+        user.phoneNumber?.toLowerCase().includes(query)
+    );
+  }, [salesUsers, salesUserSearchQuery]);
 
   const handleSubmit = async (values: LeadFormValues) => {
     await onSubmit(values);
@@ -115,16 +196,272 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        {/* Alert for active bookings */}
-        {hasActiveBookings && mode === "edit" && (
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              This lead has active bookings. Status changes are managed automatically by the system.
-            </AlertDescription>
-          </Alert>
+        {/* New Customer Toggle */}
+        <FormField
+          control={form.control}
+          name="newCustomer"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+              <FormControl>
+                <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={disabled} />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel>New Customer</FormLabel>
+                <p className="text-muted-foreground text-sm">
+                  Check if this is a new customer not in the system. You will need to provide their name and contact
+                  information.
+                </p>
+              </div>
+            </FormItem>
+          )}
+        />
+
+        {/* Customer Selection or New Customer Fields */}
+        {newCustomer ? (
+          <div className="space-y-4 rounded-md border p-4">
+            <h3 className="font-medium">New Customer Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>First Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="First name" {...field} disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>Last Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Last name" {...field} disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Phone number" {...field} disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Email" {...field} disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lineId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>LINE ID</FormLabel>
+                    <FormControl>
+                      <Input placeholder="LINE ID" {...field} disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+        ) : (
+          <FormField
+            control={form.control}
+            name="customerId"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel required>Customer</FormLabel>
+                {disabled ? (
+                  <FormControl>
+                    <Input
+                      value={
+                        selectedCustomer
+                          ? `${selectedCustomer.firstNameTh} ${selectedCustomer.lastNameTh} (${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn})`
+                          : ""
+                      }
+                      disabled
+                    />
+                  </FormControl>
+                ) : (
+                  <Popover open={customerSearchOpen} onOpenChange={setCustomerSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                        >
+                          {selectedCustomer
+                            ? `${selectedCustomer.firstNameTh} ${selectedCustomer.lastNameTh} (${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn})`
+                            : "Search for a customer..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0">
+                      <Command shouldFilter={false}>
+                        <CommandInput
+                          placeholder="Search customers by name, email, or phone..."
+                          value={customerSearchQuery}
+                          onValueChange={setCustomerSearchQuery}
+                        />
+                        <CommandList>
+                          {isSearching ? (
+                            <div className="text-muted-foreground py-6 text-center text-sm">Searching...</div>
+                          ) : searchResults.length === 0 ? (
+                            <CommandEmpty>
+                              {customerSearchQuery ? "No customers found." : "Start typing to search..."}
+                            </CommandEmpty>
+                          ) : (
+                            <CommandGroup>
+                              {searchResults.map((customer) => (
+                                <CommandItem
+                                  value={customer.id}
+                                  key={customer.id}
+                                  onSelect={() => {
+                                    field.onChange(customer.id);
+                                    setCustomerSearchOpen(false);
+                                    setCustomerSearchQuery("");
+                                  }}
+                                >
+                                  <Check
+                                    className={cn("mr-2 h-4 w-4", customer.id === field.value ? "opacity-100" : "opacity-0")}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {customer.firstNameTh} {customer.lastNameTh}
+                                    </span>
+                                    <span className="text-muted-foreground text-xs">
+                                      {customer.firstNameEn} {customer.lastNameEn}
+                                      {customer.email && ` • ${customer.email}`}
+                                      {customer.phone && ` • ${customer.phone}`}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         )}
-        
+
+        {/* Sales User Selection */}
+        <FormField
+          control={form.control}
+          name="salesUserId"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel required>Sales User</FormLabel>
+              {disabled ? (
+                <FormControl>
+                  <Input
+                    value={selectedSalesUser ? `${selectedSalesUser.firstName} ${selectedSalesUser.lastName}` : ""}
+                    disabled
+                  />
+                </FormControl>
+              ) : (
+                <Popover open={salesUserSearchOpen} onOpenChange={setSalesUserSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                        disabled={isLoadingSalesUsers}
+                      >
+                        {selectedSalesUser
+                          ? `${selectedSalesUser.firstName} ${selectedSalesUser.lastName}`
+                          : isLoadingSalesUsers
+                            ? "Loading..."
+                            : "Select sales user..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0">
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Search sales users..."
+                        value={salesUserSearchQuery}
+                        onValueChange={setSalesUserSearchQuery}
+                      />
+                      <CommandList>
+                        {filteredSalesUsers.length === 0 ? (
+                          <CommandEmpty>
+                            {salesUserSearchQuery ? "No sales users found." : "No sales users available."}
+                          </CommandEmpty>
+                        ) : (
+                          <CommandGroup>
+                            {filteredSalesUsers.map((user) => (
+                              <CommandItem
+                                value={user.id}
+                                key={user.id}
+                                onSelect={() => {
+                                  field.onChange(user.id);
+                                  setSalesUserSearchOpen(false);
+                                  setSalesUserSearchQuery("");
+                                }}
+                              >
+                                <Check
+                                  className={cn("mr-2 h-4 w-4", user.id === field.value ? "opacity-100" : "opacity-0")}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {user.firstName} {user.lastName}
+                                  </span>
+                                  <span className="text-muted-foreground text-xs">
+                                    {user.email}
+                                    {user.phoneNumber && ` • ${user.phoneNumber}`}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Source and Status */}
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -132,7 +469,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Source</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={disabled}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={disabled}>
                   <FormControl>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select source" />
@@ -154,191 +491,39 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
           <FormField
             control={form.control}
             name="status"
-            render={({ field }) => {
-              const handleStatusChange = (newStatus: string) => {
-                const currentStatus = initialData?.status || field.value || "NEW";
-
-                // If status hasn't changed, do nothing
-                if (currentStatus === newStatus) {
-                  return;
-                }
-
-                // When creating new lead, only allow NEW status
-                if (!initialData && mode === "create" && newStatus !== "NEW") {
-                  return;
-                }
-
-                // Validate status change for existing leads
-                const validation = validateStatusChange(currentStatus, newStatus, hasActiveBookings);
-
-                if (!validation.allowed) {
-                  // Show warning but don't allow change
-                  if (validation.warning) {
-                    alert(validation.warning);
-                  }
-                  return;
-                }
-
-                // If validation requires dialog (warning or reason), show dialog
-                if (validation.warning || validation.requiresReason) {
-                  setStatusChangeDialog({
-                    open: true,
-                    currentStatus,
-                    newStatus,
-                    validation,
-                  });
-                  setPendingStatusChange(newStatus);
-                } else {
-                  // Allow direct change
-                  field.onChange(newStatus);
-                }
-              };
-
-              // In create mode, only allow NEW status
-              // In edit mode, filter out system statuses if has active bookings
-              const availableStatuses =
-                mode === "create" && !initialData
-                  ? LEAD_STATUS_VALUES.filter((status) => status === "NEW")
-                  : hasActiveBookings
-                  ? [...MANUAL_LEAD_STATUSES]
-                  : LEAD_STATUS_VALUES.filter((status) => status !== "ABANDONED"); // Never allow manual ABANDONED
-
-              return (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={handleStatusChange} value={field.value} disabled={disabled || hasActiveBookings}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {availableStatuses.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {LEAD_STATUS_LABELS[status]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              );
-            }}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={disabled}>
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {LEAD_STATUS_VALUES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {LEAD_STATUS_LABELS[status]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="customerId"
-          render={({ field }) => (
-            <FormItem className="col-span-2 flex flex-col">
-              <FormLabel>Customer</FormLabel>
-              {disabled ? (
-                <FormControl>
-                  <Input
-                    value={
-                      selectedCustomer
-                        ? `${selectedCustomer.firstNameTh} ${selectedCustomer.lastNameTh} (${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn})`
-                        : ""
-                    }
-                    disabled
-                  />
-                </FormControl>
-              ) : (
-                <Popover open={customerSearchOpen} onOpenChange={setCustomerSearchOpen}>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
-                      >
-                        {selectedCustomer
-                          ? `${selectedCustomer.firstNameTh} ${selectedCustomer.lastNameTh} (${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn})`
-                          : "Search for a customer..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0">
-                    <Command shouldFilter={false}>
-                      <CommandInput
-                        placeholder="Search customers by name, email, or phone..."
-                        value={customerSearchQuery}
-                        onValueChange={setCustomerSearchQuery}
-                      />
-                      <CommandList>
-                        {isSearching ? (
-                          <div className="text-muted-foreground py-6 text-center text-sm">Searching...</div>
-                        ) : searchResults.length === 0 ? (
-                          <CommandEmpty>
-                            {customerSearchQuery ? "No customers found." : "Start typing to search..."}
-                          </CommandEmpty>
-                        ) : (
-                          <CommandGroup>
-                            {searchResults.map((customer) => (
-                              <CommandItem
-                                value={customer.id}
-                                key={customer.id}
-                                onSelect={() => {
-                                  field.onChange(customer.id);
-                                  setCustomerSearchOpen(false);
-                                  setCustomerSearchQuery("");
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    customer.id === field.value ? "opacity-100" : "opacity-0",
-                                  )}
-                                />
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {customer.firstNameTh} {customer.lastNameTh}
-                                  </span>
-                                  <span className="text-muted-foreground text-xs">
-                                    {customer.firstNameEn} {customer.lastNameEn}
-                                    {customer.email && ` • ${customer.email}`}
-                                    {customer.phone && ` • ${customer.phone}`}
-                                  </span>
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        )}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="destinationInterest"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Destination Interest</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g. Japan, Europe" {...field} disabled={disabled} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
+        {/* Trip Interest and Pax */}
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="potentialValue"
+            name="tripInterest"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Potential Value (THB)</FormLabel>
+                <FormLabel required>Trip Interest</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="0.00" {...field} disabled={disabled} />
+                  <Input placeholder="e.g. Japan, Europe" {...field} disabled={disabled} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -347,62 +532,57 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
 
           <FormField
             control={form.control}
-            name="travelDateEstimate"
+            name="pax"
             render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Estimated Travel Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !field.value && "text-muted-foreground",
-                        )}
-                        disabled={disabled}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {field.value ? format(new Date(field.value), "dd MMM yyyy") : "Pick a date"}
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      captionLayout="dropdown"
-                      mode="single"
-                      selected={field.value ? new Date(field.value) : undefined}
-                      onSelect={(date) => {
-                        field.onChange(date ? format(date, "yyyy-MM-dd") : "");
-                      }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+              <FormItem>
+                <FormLabel>Pax</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min="1"
+                    placeholder="1"
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                    value={field.value}
+                    disabled={disabled}
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notes</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Any additional details..."
-                  className="resize-none"
-                  {...field}
-                  disabled={disabled}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Notes */}
+        <div className="grid grid-cols-1 gap-4">
+          <FormField
+            control={form.control}
+            name="leadNote"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Lead Note</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Lead notes..." className="resize-none" {...field} disabled={disabled} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="sourceNote"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Source Note</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Source notes..." className="resize-none" {...field} disabled={disabled} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         {mode !== "view" && (
           <div className="flex justify-end space-x-4">
@@ -412,50 +592,11 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
               </Button>
             )}
             <Button type="submit" disabled={isLoading}>
-              {isLoading
-                ? mode === "create"
-                  ? "Creating..."
-                  : "Saving..."
-                : mode === "create"
-                  ? "Create Lead"
-                  : "Save Changes"}
+              {isLoading ? (mode === "create" ? "Creating..." : "Saving...") : mode === "create" ? "Create Lead" : "Save Changes"}
             </Button>
           </div>
         )}
       </form>
-
-      {/* Status Change Dialog */}
-      {statusChangeDialog && (
-        <StatusChangeDialog
-          open={statusChangeDialog.open}
-          onOpenChange={(open) => {
-            if (!open) {
-              setStatusChangeDialog(null);
-              setPendingStatusChange(null);
-            }
-          }}
-          onConfirm={(reason) => {
-            if (pendingStatusChange) {
-              form.setValue("status", pendingStatusChange);
-              // Optionally store reason in notes if provided
-              if (reason) {
-                const currentNotes = form.getValues("notes") || "";
-                const timestamp = new Date().toLocaleString("th-TH");
-                const statusChangeNote = `\n\n[${timestamp}] เปลี่ยน status: ${reason}`;
-                form.setValue("notes", currentNotes + statusChangeNote);
-              }
-            }
-            setStatusChangeDialog(null);
-            setPendingStatusChange(null);
-          }}
-          currentStatus={statusChangeDialog.currentStatus}
-          newStatus={statusChangeDialog.newStatus}
-          warning={statusChangeDialog.validation.warning}
-          requiresReason={statusChangeDialog.validation.requiresReason}
-          description={getStatusChangeDescription(statusChangeDialog.currentStatus, statusChangeDialog.newStatus)}
-          isChanging={isLoading}
-        />
-      )}
     </Form>
   );
 }

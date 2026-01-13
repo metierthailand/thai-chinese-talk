@@ -120,7 +120,7 @@ export function BookingForm({
   const customerId = form.watch("customerId");
   
   // Fetch leads for the selected customer
-  const { data: leadsResponse } = useLeads(1, 100, undefined, undefined, undefined, undefined, undefined, customerId);
+  const { data: leadsResponse } = useLeads(1, 100, undefined, undefined, customerId);
   const customerLeads = leadsResponse?.data || [];
 
   const { data: searchResults = [], isLoading: isSearching } = useSearchCustomers(

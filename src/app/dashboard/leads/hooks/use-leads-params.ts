@@ -8,10 +8,8 @@ const leadsDefaults = {
   page: 1,
   pageSize: 10,
   search: "",
-  status: "ALL", // ALL | NEW | QUOTED | FOLLOW_UP | CLOSED_WON | CLOSED_LOST
-  source: "ALL", // ALL | WEBSITE | WALKIN | REFERRAL | SOCIAL | LINE | OTHER
-  minPotential: "",
-  maxPotential: "",
+  status: "ALL", // ALL | INTERESTED | BOOKED | COMPLETED | CANCELLED
+  source: "ALL", // ALL | FACEBOOK | YOUTUBE | TIKTOK | FRIEND
   customerId: "",
 } satisfies ListQueryDefaults;
 
@@ -21,7 +19,7 @@ export function useLeadsParams() {
 }
 
 export function mapLeadsParamsToQuery(params: LeadsListParams) {
-  const { page, pageSize, search, status, source, minPotential, maxPotential, customerId } = params;
+  const { page, pageSize, search, status, source, customerId } = params;
 
   return {
     page,
@@ -29,8 +27,6 @@ export function mapLeadsParamsToQuery(params: LeadsListParams) {
     search: search || undefined,
     status: status === "ALL" ? undefined : status,
     source: source === "ALL" ? undefined : source,
-    minPotential: minPotential || undefined,
-    maxPotential: maxPotential || undefined,
     customerId: customerId || undefined,
   };
 }

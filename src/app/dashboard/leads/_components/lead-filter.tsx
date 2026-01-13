@@ -19,8 +19,6 @@ type UpdateParams = {
   search?: string;
   status?: string;
   source?: string;
-  minPotential?: string;
-  maxPotential?: string;
 };
 
 export function LeadFilter({ onFilterChange }: LeadFilterProps) {
@@ -31,20 +29,14 @@ export function LeadFilter({ onFilterChange }: LeadFilterProps) {
   const searchQuery = searchParams.get("search") || "";
   const statusFilter = searchParams.get("status") || "ALL";
   const sourceFilter = searchParams.get("source") || "ALL";
-  const minPotentialQuery = searchParams.get("minPotential") || "";
-  const maxPotentialQuery = searchParams.get("maxPotential") || "";
 
   // Local state
   const [searchInput, setSearchInput] = useState(searchQuery);
   const [status, setStatus] = useState(statusFilter || "ALL");
   const [source, setSource] = useState(sourceFilter || "ALL");
-  const [minPotential, setMinPotential] = useState(minPotentialQuery);
-  const [maxPotential, setMaxPotential] = useState(maxPotentialQuery);
 
   // Debounced values
   const debouncedSearch = useDebounce(searchInput, 500);
-  const debouncedMinPotential = useDebounce(minPotential, 500);
-  const debouncedMaxPotential = useDebounce(maxPotential, 500);
 
   // Helper: build query string from current params + updates
   const buildQueryString = (updates: UpdateParams) => {
@@ -66,8 +58,6 @@ export function LeadFilter({ onFilterChange }: LeadFilterProps) {
     setParam("search", updates.search);
     setParam("status", updates.status, "ALL");
     setParam("source", updates.source, "ALL");
-    setParam("minPotential", updates.minPotential);
-    setParam("maxPotential", updates.maxPotential);
 
     const qs = params.toString();
     return qs ? `?${qs}` : "";
@@ -86,28 +76,12 @@ export function LeadFilter({ onFilterChange }: LeadFilterProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch, searchQuery]);
 
-  // 🔹 2) Sync debounced budget range → URL
-  useEffect(() => {
-    const sameMin = debouncedMinPotential === minPotentialQuery;
-    const sameMax = debouncedMaxPotential === maxPotentialQuery;
-    if (sameMin && sameMax) return;
-
-    pushWithParams({
-      minPotential: debouncedMinPotential || undefined,
-      maxPotential: debouncedMaxPotential || undefined,
-      page: 1,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedMinPotential, debouncedMaxPotential, minPotentialQuery, maxPotentialQuery]);
-
-  // 🔹 3) Sync URL → local state (รองรับ back/forward / external change)
+  // 🔹 2) Sync URL → local state (รองรับ back/forward / external change)
   useEffect(() => {
     setSearchInput(searchQuery);
     setStatus(statusFilter || "ALL");
     setSource(sourceFilter || "ALL");
-    setMinPotential(minPotentialQuery);
-    setMaxPotential(maxPotentialQuery);
-  }, [searchQuery, statusFilter, sourceFilter, minPotentialQuery, maxPotentialQuery]);
+  }, [searchQuery, statusFilter, sourceFilter]);
 
   const handleClearSearch = () => {
     setSearchInput("");
@@ -158,31 +132,12 @@ export function LeadFilter({ onFilterChange }: LeadFilterProps) {
         </SelectContent>
       </Select>
 
-      {/* Budget range filter (potentialValue) */}
-      <div className="flex items-center gap-2">
-        <Input
-          type="number"
-          className="w-24"
-          placeholder="Min ฿"
-          value={minPotential}
-          onChange={(e) => setMinPotential(e.target.value)}
-        />
-        <span className="text-muted-foreground text-sm">-</span>
-        <Input
-          type="number"
-          className="w-24"
-          placeholder="Max ฿"
-          value={maxPotential}
-          onChange={(e) => setMaxPotential(e.target.value)}
-        />
-      </div>
-
       {/* Search by customer name */}
-      <div className="relative w-80">
+      <div className="relative w-100">
         <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           type="text"
-          placeholder="Search customer name (TH/EN)..."
+          placeholder="Search by name, trip interest, or sales name..."
           className="pr-9 pl-9"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}

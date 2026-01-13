@@ -11,13 +11,10 @@ export interface StatusChangeResult {
 
 // Status order for validation (manual states only)
 const STATUS_ORDER: Record<string, number> = {
-  NEW: 0,
-  CONTACTED: 1,
-  QUOTED: 2,
-  NEGOTIATING: 3,
-  CLOSED_WON: 4,
-  CLOSED_LOST: 4, // Same level as CLOSED_WON
-  ABANDONED: 4, // Same level as closed statuses
+  INTERESTED: 0,
+  BOOKED: 1,
+  COMPLETED: 2,
+  CANCELLED: 0, // Can be set from any status
 };
 
 /**
@@ -83,29 +80,30 @@ export function validateStatusChange(
     };
   }
 
-  // Moving to CLOSED_LOST from any status
-  if (next === "CLOSED_LOST") {
+  // Moving to CANCELLED from any status
+  if (String(next) === "CANCELLED") {
     return {
       allowed: true,
-      warning: "คุณกำลังปิด lead แบบ Lost กรุณาระบุเหตุผล",
+      warning: "คุณกำลังยกเลิก lead กรุณาระบุเหตุผล",
       requiresReason: true,
     };
   }
 
-  // Moving to CLOSED_WON - should be automatic via booking
-  if (next === "CLOSED_WON") {
+  // Moving to BOOKED - should be automatic via booking
+  if (String(next) === "BOOKED") {
     return {
       allowed: true,
-      warning: "Normally, CLOSED_WON is set automatically when a booking is created. Are you sure you want to set this manually?",
+      warning: "Normally, BOOKED is set automatically when a booking is created. Are you sure you want to set this manually?",
       requiresReason: true,
     };
   }
 
-  // Moving to ABANDONED - should be automatic
-  if (next === "ABANDONED") {
+  // Moving to COMPLETED - should be automatic
+  if (String(next) === "COMPLETED") {
     return {
-      allowed: false,
-      warning: "ABANDONED status is set automatically by the system for leads with no activity > 30 days.",
+      allowed: true,
+      warning: "Normally, COMPLETED is set automatically when all bookings are completed. Are you sure you want to set this manually?",
+      requiresReason: true,
     };
   }
 
@@ -120,15 +118,10 @@ export function getStatusChangeDescription(
   newStatus: LeadStatus | string
 ): string {
   const descriptions: Record<string, string> = {
-    "NEW → CONTACTED": "ติดต่อลูกค้าแล้ว",
-    "CONTACTED → QUOTED": "ส่งใบเสนอราคาให้ลูกค้า",
-    "QUOTED → NEGOTIATING": "เจรจากับลูกค้า",
-    "NEGOTIATING → CLOSED_WON": "ปิดการขายสำเร็จ",
-    "NEGOTIATING → CLOSED_LOST": "ปิด lead แบบไม่สำเร็จ",
-    "QUOTED → CLOSED_WON": "ปิดการขายสำเร็จ",
-    "QUOTED → CLOSED_LOST": "ปิด lead แบบไม่สำเร็จ",
-    "NEW → QUOTED": "ส่งใบเสนอราคาโดยตรง",
-    "CONTACTED → NEGOTIATING": "เข้าสู่การเจรจา",
+    "INTERESTED → BOOKED": "จองทริปแล้ว",
+    "BOOKED → COMPLETED": "ทริปเสร็จสมบูรณ์",
+    "INTERESTED → CANCELLED": "ยกเลิก lead",
+    "BOOKED → CANCELLED": "ยกเลิกการจอง",
   };
 
   const key = `${currentStatus} → ${newStatus}`;

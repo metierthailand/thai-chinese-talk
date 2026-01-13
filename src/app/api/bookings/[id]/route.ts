@@ -69,7 +69,6 @@ export async function PUT(
       customerId,
       tripId,
       totalAmount,
-      paidAmount,
       status,
       visaStatus,
     } = body;
@@ -149,7 +148,7 @@ export async function PUT(
       if (currentBooking?.leadId && updateData.status) {
         const newStatus = updateData.status;
         
-        // If booking is cancelled or refunded, check if lead should be CLOSED_LOST
+        // If booking is cancelled or refunded, check if lead should be CANCELLED
         if (["CANCELLED", "REFUNDED"].includes(newStatus)) {
           // Check if there are other active bookings for this lead
           const activeBookings = await tx.booking.count({
@@ -162,26 +161,31 @@ export async function PUT(
             },
           });
 
-          // If no other active bookings, mark lead as CLOSED_LOST
+          // If no other active bookings, mark lead as CANCELLED
           if (activeBookings === 0) {
             await tx.lead.update({
               where: { id: currentBooking.leadId },
               data: {
-                status: "CLOSED_LOST",
-                closedAt: new Date(),
-                lastActivityAt: new Date(),
+                status: "CANCELLED",
               },
             });
           }
         }
-        // If booking is confirmed, mark lead as CLOSED_WON
+        // If booking is confirmed, mark lead as BOOKED
         else if (newStatus === "CONFIRMED" && currentBooking.status !== "CONFIRMED") {
           await tx.lead.update({
             where: { id: currentBooking.leadId },
             data: {
-              status: "CLOSED_WON",
-              closedAt: new Date(),
-              lastActivityAt: new Date(),
+              status: "BOOKED",
+            },
+          });
+        }
+        // If booking is completed, mark lead as COMPLETED
+        else if (newStatus === "COMPLETED" && currentBooking.status !== "COMPLETED") {
+          await tx.lead.update({
+            where: { id: currentBooking.leadId },
+            data: {
+              status: "COMPLETED",
             },
           });
         }

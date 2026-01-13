@@ -23,7 +23,7 @@ export async function GET() {
       prisma.lead.count({
         where: {
           status: {
-            notIn: ["CLOSED_LOST", "CLOSED_WON"],
+            notIn: ["CANCELLED", "BOOKED"],
           },
         },
       }),

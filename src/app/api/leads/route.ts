@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { LeadSource, LeadStatus, Prisma } from "@prisma/client";
+import { LeadSource, LeadStatus, Prisma, Role } from "@prisma/client";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -19,78 +19,101 @@ export async function GET(request: Request) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
     const source = searchParams.get("source") || "";
-    const minPotential = searchParams.get("minPotential") || "";
-    const maxPotential = searchParams.get("maxPotential") || "";
     const customerId = searchParams.get("customerId") || "";
 
     const nameFilter: Prisma.LeadWhereInput =
       search.trim().length > 0
         ? {
-            customer: {
-              is: {
-                OR: [
-                  {
-                    firstNameTh: {
-                      contains: search,
-                      mode: "insensitive",
-                    },
+            OR: [
+              // Search in customer name (if customer exists)
+              {
+                customer: {
+                  is: {
+                    OR: [
+                      {
+                        firstNameTh: {
+                          contains: search,
+                          mode: "insensitive",
+                        },
+                      },
+                      {
+                        lastNameTh: {
+                          contains: search,
+                          mode: "insensitive",
+                        },
+                      },
+                      {
+                        firstNameEn: {
+                          contains: search,
+                          mode: "insensitive",
+                        },
+                      },
+                      {
+                        lastNameEn: {
+                          contains: search,
+                          mode: "insensitive",
+                        },
+                      },
+                    ],
                   },
-                  {
-                    lastNameTh: {
-                      contains: search,
-                      mode: "insensitive",
-                    },
-                  },
-                  {
-                    firstNameEn: {
-                      contains: search,
-                      mode: "insensitive",
-                    },
-                  },
-                  {
-                    lastNameEn: {
-                      contains: search,
-                      mode: "insensitive",
-                    },
-                  },
-                ],
+                },
               },
-            },
+              // Search in new customer fields (if newCustomer = true)
+              {
+                firstName: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+              {
+                lastName: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+              {
+                tripInterest: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+              // Search in sales user name
+              {
+                salesUser: {
+                  is: {
+                    OR: [
+                      {
+                        firstName: {
+                          contains: search,
+                          mode: "insensitive",
+                        },
+                      },
+                      {
+                        lastName: {
+                          contains: search,
+                          mode: "insensitive",
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
           }
         : {};
 
-    const customerFilter: Prisma.LeadWhereInput = customerId
-      ? { customerId }
-      : {};
+    const customerFilter: Prisma.LeadWhereInput = customerId ? { customerId } : {};
 
     const { LEAD_STATUS_VALUES, LEAD_SOURCE_VALUES } = await import("@/lib/constants/lead");
-    
+
     const statusFilter: Prisma.LeadWhereInput =
-      status && LEAD_STATUS_VALUES.includes(status as LeadStatus)
-        ? { status: status as LeadStatus }
-        : {};
+      status && LEAD_STATUS_VALUES.includes(status as LeadStatus) ? { status: status as LeadStatus } : {};
 
     const sourceFilter: Prisma.LeadWhereInput =
-      source && LEAD_SOURCE_VALUES.includes(source as LeadSource)
-        ? { source: source as LeadSource }
-        : {};
-
-    const potentialFilter: Prisma.LeadWhereInput =
-      minPotential || maxPotential
-        ? {
-            potentialValue: {
-              ...(minPotential
-                ? { gte: parseFloat(minPotential) }
-                : {}),
-              ...(maxPotential
-                ? { lte: parseFloat(maxPotential) }
-                : {}),
-            },
-          }
-        : {};
+      source && LEAD_SOURCE_VALUES.includes(source as LeadSource) ? { source: source as LeadSource } : {};
 
     const where: Prisma.LeadWhereInput = {
-      AND: [nameFilter, customerFilter, statusFilter, sourceFilter, potentialFilter],
+      AND: [nameFilter, customerFilter, statusFilter, sourceFilter].filter(Boolean),
     };
 
     const total = await prisma.lead.count({ where });
@@ -103,9 +126,28 @@ export async function GET(request: Request) {
         updatedAt: "desc",
       },
       include: {
-        customer: true,
+        customer: {
+          select: {
+            id: true,
+            firstNameTh: true,
+            lastNameTh: true,
+            firstNameEn: true,
+            lastNameEn: true,
+            email: true,
+            phoneNumber: true,
+          },
+        },
         agent: {
           select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        salesUser: {
+          select: {
+            id: true,
             firstName: true,
             lastName: true,
             email: true,
@@ -137,29 +179,123 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const {
+      newCustomer,
       customerId,
+      firstName,
+      lastName,
+      phoneNumber,
+      email,
+      lineId,
+      salesUserId,
       source,
       status,
-      potentialValue,
-      destinationInterest,
-      travelDateEstimate,
-      notes,
+      tripInterest,
+      pax,
+      leadNote,
+      sourceNote,
     } = body;
 
-    if (!customerId) {
-      return new NextResponse("Customer ID is required", { status: 400 });
+    // Validation: newCustomer logic
+    if (newCustomer === true) {
+      // If newCustomer = true, firstName and lastName are required
+      if (!firstName || !lastName) {
+        return new NextResponse("First name and last name are required for new customers", { status: 400 });
+      }
+      // customerId should not be provided
+      if (customerId) {
+        return new NextResponse("Customer ID should not be provided for new customers", { status: 400 });
+      }
+    } else {
+      // If newCustomer = false, customerId is required
+      if (!customerId) {
+        return new NextResponse("Customer ID is required for existing customers", { status: 400 });
+      }
+      // firstName and lastName should not be provided
+      if (firstName || lastName) {
+        return new NextResponse("First name and last name should not be provided for existing customers", {
+          status: 400,
+        });
+      }
     }
+
+    // Validate salesUserId exists and has SALES role
+    if (!salesUserId) {
+      return new NextResponse("Sales user ID is required", { status: 400 });
+    }
+
+    const salesUser = await prisma.user.findUnique({
+      where: { id: salesUserId },
+      select: { role: true },
+    });
+
+    if (!salesUser) {
+      return new NextResponse("Sales user not found", { status: 404 });
+    }
+
+    if (salesUser.role !== Role.SALES) {
+      return new NextResponse("Selected user must have SALES role", { status: 400 });
+    }
+
+    // Validate tripInterest is required
+    if (!tripInterest) {
+      return new NextResponse("Trip interest is required", { status: 400 });
+    }
+
+    // Validate source and status enums
+    const validSource =
+      source && Object.values(LeadSource).includes(source as LeadSource) ? (source as LeadSource) : LeadSource.FACEBOOK;
+
+    const validStatus =
+      status && Object.values(LeadStatus).includes(status as LeadStatus)
+        ? (status as LeadStatus)
+        : LeadStatus.INTERESTED;
 
     const lead = await prisma.lead.create({
       data: {
-        customerId,
-        agentId: session.user.id, // Assign to current user
-        source: source || "WEBSITE",
-        status: status || "NEW",
-        potentialValue: potentialValue ? parseFloat(potentialValue) : null,
-        destinationInterest,
-        travelDateEstimate: travelDateEstimate ? new Date(travelDateEstimate) : null,
-        notes,
+        newCustomer: newCustomer || false,
+        customerId: newCustomer ? null : customerId,
+        firstName: newCustomer ? firstName : null,
+        lastName: newCustomer ? lastName : null,
+        phoneNumber: phoneNumber || null,
+        email: email || null,
+        lineId: lineId || null,
+        agentId: session.user.id, // Agent who created the lead
+        salesUserId,
+        source: validSource,
+        status: validStatus,
+        tripInterest,
+        pax: pax || 1,
+        leadNote: leadNote || null,
+        sourceNote: sourceNote || null,
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            firstNameTh: true,
+            lastNameTh: true,
+            firstNameEn: true,
+            lastNameEn: true,
+            email: true,
+            phoneNumber: true,
+          },
+        },
+        agent: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        salesUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
     });
 

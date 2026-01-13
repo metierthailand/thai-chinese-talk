@@ -7,20 +7,17 @@ export const LEAD_STATUS_VALUES = Object.values(LeadStatus) as LeadStatus[];
 
 // LeadStatus display labels mapping
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
-  NEW: "New",
-  CONTACTED: "Contacted",
-  QUOTED: "Quoted",
-  NEGOTIATING: "Negotiating",
-  CLOSED_WON: "Closed Won",
-  CLOSED_LOST: "Closed Lost",
-  ABANDONED: "Abandoned",
+  INTERESTED: "Interested",
+  BOOKED: "Booked",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
 };
 
 // Manual Lead Statuses (Agent can control)
-export const MANUAL_LEAD_STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "QUOTED", "NEGOTIATING"];
+export const MANUAL_LEAD_STATUSES: LeadStatus[] = ["INTERESTED", "CANCELLED"];
 
 // System Lead Statuses (System manages automatically)
-export const SYSTEM_LEAD_STATUSES: LeadStatus[] = ["CLOSED_WON", "CLOSED_LOST", "ABANDONED"];
+export const SYSTEM_LEAD_STATUSES: LeadStatus[] = ["BOOKED", "COMPLETED"];
 
 // Helper function to get lead status label
 export function getLeadStatusLabel(status: string): string {
@@ -42,12 +39,10 @@ export const LEAD_SOURCE_VALUES = Object.values(LeadSource) as LeadSource[];
 
 // LeadSource display labels mapping
 export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
-  WEBSITE: "Website",
-  WALKIN: "Walk-in",
-  REFERRAL: "Referral",
-  SOCIAL: "Social Media",
-  LINE: "LINE",
-  OTHER: "Other",
+  FACEBOOK: "Facebook",
+  YOUTUBE: "YouTube",
+  TIKTOK: "TikTok",
+  FRIEND: "Friend",
 };
 
 // Helper function to get lead source label

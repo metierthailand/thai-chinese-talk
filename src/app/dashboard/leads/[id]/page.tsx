@@ -24,17 +24,13 @@ import { format } from "date-fns";
 import { formatDecimal, cn } from "@/lib/utils";
 import Link from "next/link";
 import { Loading } from "@/components/page/loading";
-import { getLeadSourceLabel, getLeadStatusLabel, isSystemLeadStatus } from "@/lib/constants/lead";
-import { UserCog, MessageSquare, Handshake, AlertTriangle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getLeadSourceLabel, getLeadStatusLabel } from "@/lib/constants/lead";
 
 const LEAD_STATUSES = [
-  { value: "NEW", label: "New", icon: Circle },
-  { value: "CONTACTED", label: "Contacted", icon: MessageSquare },
-  { value: "QUOTED", label: "Quoted", icon: FileText },
-  { value: "NEGOTIATING", label: "Negotiating", icon: Handshake },
-  { value: "CLOSED_WON", label: "Closed Won", icon: CheckCircle2 },
-  { value: "CLOSED_LOST", label: "Closed Lost", icon: XCircle },
+  { value: "INTERESTED", label: "Interested", icon: Circle },
+  { value: "BOOKED", label: "Booked", icon: CheckCircle2 },
+  { value: "COMPLETED", label: "Completed", icon: CheckCircle2 },
+  { value: "CANCELLED", label: "Cancelled", icon: XCircle },
 ] as const;
 
 const getStatusIndex = (status: string): number => {
@@ -43,20 +39,14 @@ const getStatusIndex = (status: string): number => {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case "NEW":
+    case "INTERESTED":
       return "bg-blue-500";
-    case "CONTACTED":
-      return "bg-cyan-500";
-    case "QUOTED":
-      return "bg-yellow-500";
-    case "NEGOTIATING":
-      return "bg-purple-500";
-    case "CLOSED_WON":
+    case "BOOKED":
       return "bg-green-500";
-    case "CLOSED_LOST":
+    case "COMPLETED":
+      return "bg-emerald-500";
+    case "CANCELLED":
       return "bg-red-500";
-    case "ABANDONED":
-      return "bg-gray-500";
     default:
       return "bg-gray-500";
   }
@@ -110,27 +100,6 @@ export default function LeadViewPage() {
           <CardDescription>Current progress in the sales pipeline</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Alert for system-managed status */}
-          {isSystemLeadStatus(lead.status) && lead.bookings && lead.bookings.length > 0 && (
-            <Alert className="mb-4">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                This lead status is automatically managed by the system based on booking status.
-                {lead.status === "CLOSED_WON" && " Lead is marked as won because there are active bookings."}
-                {lead.status === "CLOSED_LOST" && " Lead is marked as lost because all bookings were cancelled."}
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {/* Special alert for ABANDONED status */}
-          {lead.status === "ABANDONED" && (
-            <Alert className="mb-4 border-yellow-500">
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
-              <AlertDescription>
-                This lead has been marked as abandoned due to no activity for over 30 days.
-              </AlertDescription>
-            </Alert>
-          )}
 
           <div className="flex items-center justify-between">
             {LEAD_STATUSES.map((status, index) => {
@@ -138,7 +107,7 @@ export default function LeadViewPage() {
               const isActive = index <= currentStatusIndex;
               const isCurrent = index === currentStatusIndex;
               const isLast = index === LEAD_STATUSES.length - 1;
-              const isClosedLost = lead.status === "CLOSED_LOST";
+              const isCancelled = lead.status === "CANCELLED";
 
               // Determine colors based on status
               let iconBgColor = "bg-muted text-muted-foreground";
@@ -147,7 +116,7 @@ export default function LeadViewPage() {
               if (isActive) {
                 if (isCurrent) {
                   // Current status
-                  if (isClosedLost) {
+                  if (isCancelled) {
                     iconBgColor = "bg-red-500 text-white";
                   } else {
                     iconBgColor = "bg-primary text-primary-foreground";
@@ -160,8 +129,8 @@ export default function LeadViewPage() {
 
               // Line color logic
               if (index < currentStatusIndex) {
-                // If the next status is CLOSED_LOST, make the line red
-                if (isClosedLost && index === currentStatusIndex - 1) {
+                // If the next status is CANCELLED, make the line red
+                if (isCancelled && index === currentStatusIndex - 1) {
                   lineColor = "bg-red-500";
                 } else {
                   lineColor = "bg-green-500";
@@ -208,29 +177,30 @@ export default function LeadViewPage() {
               <p className="text-muted-foreground text-sm font-medium">Status</p>
               <Badge className={cn("mt-1", getStatusColor(lead.status))}>{getLeadStatusLabel(lead.status)}</Badge>
             </div>
-            {lead.potentialValue && (
-              <div>
-                <p className="text-muted-foreground text-sm font-medium">Potential Value</p>
-                <p className="mt-1 text-lg font-semibold">{formatDecimal(lead.potentialValue)}</p>
-              </div>
-            )}
-            {lead.destinationInterest && (
-              <div>
-                <p className="text-muted-foreground text-sm font-medium">Destination Interest</p>
-                <p className="mt-1 text-base">{lead.destinationInterest}</p>
-              </div>
-            )}
-            {lead.travelDateEstimate && (
-              <div>
-                <p className="text-muted-foreground text-sm font-medium">Estimated Travel Date</p>
-                <p className="mt-1 text-base">{format(new Date(lead.travelDateEstimate), "dd MMM yyyy")}</p>
-              </div>
-            )}
+            <div>
+              <p className="text-muted-foreground text-sm font-medium">Trip Interest</p>
+              <p className="mt-1 text-base">{lead.tripInterest}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-sm font-medium">Pax</p>
+              <p className="mt-1 text-base">{lead.pax}</p>
+            </div>
             {lead.agent && (
               <div>
-                <p className="text-muted-foreground text-sm font-medium">Assigned Agent</p>
-                <p className="mt-1 text-base">{lead.agent.name}</p>
+                <p className="text-muted-foreground text-sm font-medium">Created By (Agent)</p>
+                <p className="mt-1 text-base">
+                  {lead.agent.firstName} {lead.agent.lastName}
+                </p>
                 <p className="text-muted-foreground text-sm">{lead.agent.email}</p>
+              </div>
+            )}
+            {lead.salesUser && (
+              <div>
+                <p className="text-muted-foreground text-sm font-medium">Sales User</p>
+                <p className="mt-1 text-base">
+                  {lead.salesUser.firstName} {lead.salesUser.lastName}
+                </p>
+                <p className="text-muted-foreground text-sm">{lead.salesUser.email}</p>
               </div>
             )}
             <div>
@@ -253,40 +223,78 @@ export default function LeadViewPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <p className="text-muted-foreground text-sm font-medium">Name (Thai)</p>
-              <p className="text-base font-semibold">
-                {lead.customer.firstNameTh} {lead.customer.lastNameTh}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-sm font-medium">Name (English)</p>
-              <p className="text-base font-semibold">
-                {lead.customer.firstNameEn} {lead.customer.lastNameEn}
-              </p>
-            </div>
-            {lead.customer.email && (
-              <div className="flex items-center gap-2">
-                <Mail className="text-muted-foreground h-4 w-4" />
-                <a href={`mailto:${lead.customer.email}`} className="text-primary text-sm hover:underline">
-                  {lead.customer.email}
-                </a>
-              </div>
+            {lead.newCustomer ? (
+              <>
+                <Badge variant="outline" className="w-fit">New Customer</Badge>
+                <div>
+                  <p className="text-muted-foreground text-sm font-medium">Name</p>
+                  <p className="text-base font-semibold">
+                    {lead.firstName} {lead.lastName}
+                  </p>
+                </div>
+                {lead.email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="text-muted-foreground h-4 w-4" />
+                    <a href={`mailto:${lead.email}`} className="text-primary text-sm hover:underline">
+                      {lead.email}
+                    </a>
+                  </div>
+                )}
+                {lead.phoneNumber && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="text-muted-foreground h-4 w-4" />
+                    <a href={`tel:${lead.phoneNumber}`} className="text-primary text-sm hover:underline">
+                      {lead.phoneNumber}
+                    </a>
+                  </div>
+                )}
+                {lead.lineId && (
+                  <div>
+                    <p className="text-muted-foreground text-sm font-medium">LINE ID</p>
+                    <p className="text-base">{lead.lineId}</p>
+                  </div>
+                )}
+              </>
+            ) : lead.customer ? (
+              <>
+                <div>
+                  <p className="text-muted-foreground text-sm font-medium">Name (Thai)</p>
+                  <p className="text-base font-semibold">
+                    {lead.customer.firstNameTh} {lead.customer.lastNameTh}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-sm font-medium">Name (English)</p>
+                  <p className="text-base font-semibold">
+                    {lead.customer.firstNameEn} {lead.customer.lastNameEn}
+                  </p>
+                </div>
+                {lead.customer.email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="text-muted-foreground h-4 w-4" />
+                    <a href={`mailto:${lead.customer.email}`} className="text-primary text-sm hover:underline">
+                      {lead.customer.email}
+                    </a>
+                  </div>
+                )}
+                {lead.customer.phoneNumber && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="text-muted-foreground h-4 w-4" />
+                    <a href={`tel:${lead.customer.phoneNumber}`} className="text-primary text-sm hover:underline">
+                      {lead.customer.phoneNumber}
+                    </a>
+                  </div>
+                )}
+                <Separator />
+                <Link href={`/dashboard/customers/${lead.customer.id}`}>
+                  <Button variant="outline" className="w-full">
+                    View Customer Profile
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <p className="text-muted-foreground">No customer information</p>
             )}
-            {lead.customer.phone && (
-              <div className="flex items-center gap-2">
-                <Phone className="text-muted-foreground h-4 w-4" />
-                <a href={`tel:${lead.customer.phone}`} className="text-primary text-sm hover:underline">
-                  {lead.customer.phone}
-                </a>
-              </div>
-            )}
-            <Separator />
-            <Link href={`/dashboard/customers/${lead.customer.id}`}>
-              <Button variant="outline" className="w-full">
-                View Customer Profile
-              </Button>
-            </Link>
           </CardContent>
         </Card>
 
@@ -295,8 +303,16 @@ export default function LeadViewPage() {
           <CardHeader>
             <CardTitle>Notes</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm whitespace-pre-wrap">{lead.notes ?? "No notes"}</p>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-muted-foreground text-sm font-medium mb-2">Lead Note</p>
+              <p className="text-sm whitespace-pre-wrap">{lead.leadNote ?? "No lead notes"}</p>
+            </div>
+            <Separator />
+            <div>
+              <p className="text-muted-foreground text-sm font-medium mb-2">Source Note</p>
+              <p className="text-sm whitespace-pre-wrap">{lead.sourceNote ?? "No source notes"}</p>
+            </div>
           </CardContent>
         </Card>
       </div>

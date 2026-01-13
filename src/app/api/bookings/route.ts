@@ -227,11 +227,13 @@ export async function POST(req: Request) {
           data: {
             customerId: finalCustomerId,
             agentId,
-            source: "WALKIN",
-            status: "CLOSED_WON",
-            notes: "Auto-created from walk-in booking",
-            lastActivityAt: new Date(),
-            closedAt: new Date(),
+            source: "FACEBOOK",
+            status: "BOOKED",
+            leadNote: "Auto-created from booking",
+            sourceNote: "Auto-created from booking",
+            tripInterest: "Auto-created from booking",
+            salesUserId: session.user.id,
+            pax: 1,
           },
         });
         finalLeadId = newLead.id;
@@ -277,9 +279,7 @@ export async function POST(req: Request) {
         await tx.lead.update({
           where: { id: finalLeadId },
           data: {
-            status: "CLOSED_WON",
-            closedAt: new Date(),
-            lastActivityAt: new Date(),
+            status: "BOOKED",
           },
         });
       }

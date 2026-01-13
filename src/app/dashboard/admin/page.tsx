@@ -18,73 +18,6 @@ import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { formatDecimal } from "@/lib/utils";
 import { useInvalidateUsers, useUsers } from "./hooks/use-users-query";
 
-// --------------------
-// columns
-// --------------------
-const userColumns: ColumnDef<User>[] = [
-  {
-    accessorKey: "name",
-    header: "Name",
-    cell: ({ row }) => {
-      const user = row.original;
-      return (
-        <div className="font-medium">
-          {user.firstName} {user.lastName}
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "email",
-    header: "Email",
-    cell: ({ row }) => <div>{row.original.email}</div>,
-  },
-  {
-    accessorKey: "phoneNumber",
-    header: "Phone Number",
-    cell: ({ row }) => <div>{row.original.phoneNumber || "-"}</div>,
-  },
-  {
-    accessorKey: "role",
-    header: "Role",
-    cell: ({ row }) => <Badge variant="outline">{row.original.role}</Badge>,
-  },
-  {
-    accessorKey: "commissionPerHead",
-    header: () => <div className="text-right">Commission Per Head</div>,
-    cell: ({ row }) => {
-      const commission = row.original.commissionPerHead;
-      return <div className="text-right">{commission ? formatDecimal(commission) : "-"}</div>;
-    },
-  },
-  {
-    accessorKey: "isActive",
-    header: "Status",
-    cell: ({ row }) => {
-      const isActive = row.original.isActive;
-      return <Badge variant={isActive ? "default" : "destructive"}>{isActive ? "Active" : "Inactive"}</Badge>;
-    },
-  },
-  {
-    id: "actions",
-    header: () => <div className="text-right">Actions</div>,
-    cell: ({ row }) => (
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            // Row click will be handled by onRowClick in DataTable
-          }}
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
-      </div>
-    ),
-  },
-];
-
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
@@ -98,18 +31,6 @@ export default function AdminPage() {
   // --------------------
   const { data: users = [], isLoading, error } = useUsers(search || undefined);
 
-  // --------------------
-  // table instance
-  // --------------------
-  const table = useDataTableInstance({
-    data: users,
-    columns: userColumns,
-    enableRowSelection: false,
-    manualPagination: false, // Client-side pagination since API doesn't support it
-    defaultPageSize: 10,
-    getRowId: (row) => row.id,
-  });
-
   const handleCreateUser = () => {
     setSelectedUser(null);
     setIsDialogOpen(true);
@@ -121,6 +42,85 @@ export default function AdminPage() {
   }, []);
 
   const invalidateUsers = useInvalidateUsers();
+
+  // --------------------
+  // columns
+  // --------------------
+  const userColumns: ColumnDef<User>[] = [
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => {
+        const user = row.original;
+        return (
+          <div className="font-medium">
+            {user.firstName} {user.lastName}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "email",
+      header: "Email",
+      cell: ({ row }) => <div>{row.original.email}</div>,
+    },
+    {
+      accessorKey: "phoneNumber",
+      header: "Phone Number",
+      cell: ({ row }) => <div>{row.original.phoneNumber || "-"}</div>,
+    },
+    {
+      accessorKey: "role",
+      header: "Role",
+      cell: ({ row }) => <Badge variant="outline">{row.original.role}</Badge>,
+    },
+    {
+      accessorKey: "commissionPerHead",
+      header: () => <div className="text-right">Commission Per Head</div>,
+      cell: ({ row }) => {
+        const commission = row.original.commissionPerHead;
+        return <div className="text-right">{commission ? formatDecimal(commission) : "-"}</div>;
+      },
+    },
+    {
+      accessorKey: "isActive",
+      header: "Status",
+      cell: ({ row }) => {
+        const isActive = row.original.isActive;
+        return <Badge variant={isActive ? "default" : "destructive"}>{isActive ? "Active" : "Inactive"}</Badge>;
+      },
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right">Actions</div>,
+      cell: ({ row }) => (
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditUser(row.original);
+            }}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  // --------------------
+  // table instance
+  // --------------------
+  const table = useDataTableInstance({
+    data: users,
+    columns: userColumns,
+    enableRowSelection: false,
+    manualPagination: false, // Client-side pagination since API doesn't support it
+    defaultPageSize: 10,
+    getRowId: (row) => row.id,
+  });
 
   const handleUserSaved = () => {
     setIsDialogOpen(false);
@@ -179,7 +179,7 @@ export default function AdminPage() {
 
       <div className="relative flex flex-col gap-4 overflow-auto">
         <div className="overflow-hidden rounded-md border">
-          <DataTable table={table} columns={userColumns} onRowClick={handleEditUser} />
+          <DataTable table={table} columns={userColumns} />
         </div>
         <DataTablePagination
           table={table}
