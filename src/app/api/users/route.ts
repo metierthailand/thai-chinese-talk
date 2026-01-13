@@ -85,14 +85,14 @@ export async function POST(req: Request) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
-    const existingUser = await prisma.user.findUnique({
+    const existingEmail = await prisma.user.findUnique({
       where: {
         email,
       },
     });
 
-    if (existingUser) {
-      return new NextResponse("User already exists", { status: 409 });
+    if (existingEmail) {
+      return new NextResponse("This email already exists.", { status: 409 });
     }
 
     const existingPhoneNumber = await prisma.user.findUnique({
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
     });
 
     if (existingPhoneNumber) {
-      return new NextResponse("Phone number already exists", { status: 409 });
+      return new NextResponse("This phone number already exists.", { status: 409 });
     }
 
     // Generate reset token

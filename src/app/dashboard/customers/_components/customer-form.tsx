@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -11,19 +11,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown, Trash2, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { countries } from "@/lib/countries";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { customerFormSchema, CustomerFormValues } from "../hooks/use-customers";
+import { getProvinces, getDistrict, getSubDistrict, getPostCode } from "@/utils/thailand-geography";
+import { DragDropUpload } from "@/components/upload-image";
+import { X } from "lucide-react";
+import Image from "next/image";
+import { toast } from "sonner";
 
 interface Tag {
   id: string;
@@ -40,24 +39,44 @@ interface CustomerFormProps {
   selectedTagIds?: string[];
 }
 
-export function CustomerForm({ mode, initialData, onSubmit, onCancel, isLoading = false, availableTags = [], selectedTagIds = [] }: CustomerFormProps) {
+export function CustomerForm({
+  mode,
+  initialData,
+  onSubmit,
+  onCancel,
+  isLoading = false,
+  availableTags = [],
+  selectedTagIds = [],
+}: CustomerFormProps) {
+  const [isAddressesOpen, setIsAddressesOpen] = useState(true);
+  const [isPassportsOpen, setIsPassportsOpen] = useState(true);
+  const [isFoodAllergiesOpen, setIsFoodAllergiesOpen] = useState(true);
+
   const form = useForm<CustomerFormValues>({
-    resolver: zodResolver(customerFormSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(customerFormSchema) as any,
     defaultValues: {
       firstNameTh: initialData?.firstNameTh ?? "",
       lastNameTh: initialData?.lastNameTh ?? "",
       firstNameEn: initialData?.firstNameEn ?? "",
       lastNameEn: initialData?.lastNameEn ?? "",
       title: initialData?.title ?? undefined,
-      nickname: initialData?.nickname || "",
       email: initialData?.email ?? "",
       phone: initialData?.phone ?? "",
       lineId: initialData?.lineId ?? "",
-      nationality: initialData?.nationality ?? "",
       dateOfBirth: initialData?.dateOfBirth ?? "",
-      preferences: initialData?.preferences ?? "",
-      type: initialData?.type ?? "INDIVIDUAL",
+      note: initialData?.note ?? "",
       tagIds: initialData?.tagIds ?? selectedTagIds,
+      addresses: initialData?.addresses ?? [],
+      passports:
+        initialData?.passports?.map((p) => ({
+          ...p,
+          issuingDate: p.issuingDate ? new Date(p.issuingDate) : new Date(),
+          expiryDate: p.expiryDate ? new Date(p.expiryDate) : new Date(),
+          imageUrl: p.imageUrl ?? null,
+          isPrimary: p.isPrimary ?? false,
+        })) ?? [],
+      foodAllergies: initialData?.foodAllergies ?? [],
     },
   });
 
@@ -70,15 +89,22 @@ export function CustomerForm({ mode, initialData, onSubmit, onCancel, isLoading 
         firstNameEn: initialData.firstNameEn ?? "",
         lastNameEn: initialData.lastNameEn ?? "",
         title: initialData.title || undefined,
-        nickname: initialData.nickname || "",
         email: initialData.email || "",
         phone: initialData.phone || "",
         lineId: initialData.lineId || "",
-        nationality: initialData.nationality || "",
         dateOfBirth: initialData.dateOfBirth || "",
-        preferences: initialData.preferences || "",
-        type: initialData.type || "INDIVIDUAL",
+        note: initialData.note || "",
         tagIds: initialData.tagIds || selectedTagIds,
+        addresses: initialData.addresses || [],
+        passports:
+          initialData.passports?.map((p) => ({
+            ...p,
+            issuingDate: p.issuingDate ? new Date(p.issuingDate) : new Date(),
+            expiryDate: p.expiryDate ? new Date(p.expiryDate) : new Date(),
+            imageUrl: p.imageUrl ?? null,
+            isPrimary: p.isPrimary ?? false,
+          })) || [],
+        foodAllergies: initialData.foodAllergies || [],
       });
     }
   }, [initialData, form, selectedTagIds]);
@@ -92,19 +118,93 @@ export function CustomerForm({ mode, initialData, onSubmit, onCancel, isLoading 
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <FormField
           control={form.control}
-          name="type"
+          name="tagIds"
+          render={({ field }) => {
+            const selectedTags = availableTags.filter((tag) => field.value?.includes(tag.id));
+            return (
+              <FormItem className="flex flex-col">
+                <FormLabel>Tags</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          "w-full justify-between",
+                          (!field.value || field.value.length === 0) && "text-muted-foreground",
+                        )}
+                      >
+                        <span className="flex flex-1 flex-wrap items-center gap-1">
+                          {field.value && field.value.length > 0 ? (
+                            selectedTags.map((tag) => (
+                              <Badge key={tag.id} variant="outline">
+                                {tag.name}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground">Select tags</span>
+                          )}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search tags..." />
+                      <CommandList>
+                        <CommandEmpty>No tags found.</CommandEmpty>
+                        <CommandGroup>
+                          {availableTags.map((tag) => {
+                            const isSelected = field.value?.includes(tag.id);
+                            return (
+                              <CommandItem
+                                value={tag.name}
+                                key={tag.id}
+                                onSelect={() => {
+                                  const currentValue = field.value || [];
+                                  const newValue = isSelected
+                                    ? currentValue.filter((id) => id !== tag.id)
+                                    : [...currentValue, tag.id];
+                                  form.setValue("tagIds", newValue);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
+                                {tag.name}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <FormDescription>Select one or more tags to categorize this customer.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            );
+          }}
+        />
+
+        <FormField
+          control={form.control}
+          name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Customer Type</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormLabel required>Title</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || ""}>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a customer type" />
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select title" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="INDIVIDUAL">Individual</SelectItem>
-                  <SelectItem value="CORPORATE">Corporate</SelectItem>
+                  <SelectItem value="MR">Mr. (นาย)</SelectItem>
+                  <SelectItem value="MRS">Mrs. (นาง)</SelectItem>
+                  <SelectItem value="MISS">Miss. (นางสาว)</SelectItem>
+                  <SelectItem value="MASTER">Master (เด็กชาย)</SelectItem>
+                  <SelectItem value="OTHER">Other (อื่นๆ)</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -112,102 +212,28 @@ export function CustomerForm({ mode, initialData, onSubmit, onCancel, isLoading 
           )}
         />
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Thai Name</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="firstNameTh"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>First Name (Thai) *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="ชื่อ" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="lastNameTh"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Last Name (Thai) *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="นามสกุล" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">English Name</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="firstNameEn"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>First Name (English) *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="First Name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="lastNameEn"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Last Name (English) *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Last Name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="title"
+            name="firstNameEn"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Title</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select title" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="MR">Mr.</SelectItem>
-                    <SelectItem value="MRS">Mrs.</SelectItem>
-                    <SelectItem value="MS">Ms.</SelectItem>
-                    <SelectItem value="OTHER">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormLabel required>First Name (English)</FormLabel>
+                <FormControl>
+                  <Input placeholder="First Name" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
           <FormField
             control={form.control}
-            name="nickname"
+            name="lastNameEn"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nickname</FormLabel>
+                <FormLabel required>Last Name (English)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Johnny" {...field} />
+                  <Input placeholder="Last Name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -215,115 +241,42 @@ export function CustomerForm({ mode, initialData, onSubmit, onCancel, isLoading 
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input placeholder="john@example.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Phone</FormLabel>
-              <FormControl>
-                <Input placeholder="0912345678" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="lineId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>LINE ID</FormLabel>
-              <FormControl>
-                <Input placeholder="@johndoe" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="firstNameTh"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First Name (Thai)</FormLabel>
+                <FormControl>
+                  <Input placeholder="ชื่อ" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="lastNameTh"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last Name (Thai)</FormLabel>
+                <FormControl>
+                  <Input placeholder="นามสกุล" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
-         <FormField
-                  control={form.control}
-                  name="nationality"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Issuing Country</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className={cn(
-                                "w-full justify-between",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value
-                                ? countries.find(
-                                    (country) => country.value === field.value
-                                  )?.label
-                                : "Select country"}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-0">
-                          <Command>
-                            <CommandInput placeholder="Search country..." />
-                            <CommandList>
-                              <CommandEmpty>No country found.</CommandEmpty>
-                              <CommandGroup>
-                                {countries.map((country) => (
-                                  <CommandItem
-                                    value={country.label}
-                                    key={country.value}
-                                    onSelect={() => {
-                                      form.setValue("nationality", country.value);
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        country.value === field.value
-                                          ? "opacity-100"
-                                          : "opacity-0"
-                                      )}
-                                    />
-                                    {country.label}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
           <FormField
             control={form.control}
             name="dateOfBirth"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>Date of Birth</FormLabel>
+                <FormLabel required>Date of Birth</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -353,14 +306,55 @@ export function CustomerForm({ mode, initialData, onSubmit, onCancel, isLoading 
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="0912345678" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         <FormField
           control={form.control}
-          name="preferences"
+          name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Preferences</FormLabel>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input placeholder="john@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="lineId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>LINE ID</FormLabel>
+              <FormControl>
+                <Input placeholder="@johndoe" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="note"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Note</FormLabel>
               <FormDescription>Dietary requirements, seat preferences, etc.</FormDescription>
               <FormControl>
                 <Textarea placeholder="Vegetarian, Window seat preferred..." className="resize-none" {...field} />
@@ -370,82 +364,639 @@ export function CustomerForm({ mode, initialData, onSubmit, onCancel, isLoading 
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="tagIds"
-          render={({ field }) => {
-            const selectedTags = availableTags.filter((tag) => field.value?.includes(tag.id));
-            return (
-              <FormItem className="flex flex-col">
-                <FormLabel>Tags</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className={cn(
-                          "w-full justify-between",
-                          (!field.value || field.value.length === 0) && "text-muted-foreground"
-                        )}
-                      >
-                        <span className="flex flex-1 items-center gap-1 flex-wrap">
-                          {field.value && field.value.length > 0 ? (
-                            selectedTags.map((tag) => (
-                              <Badge key={tag.id} variant="outline">
-                                {tag.name}
-                              </Badge>
-                            ))
+        {/* Address Section */}
+        <Collapsible open={isAddressesOpen} onOpenChange={setIsAddressesOpen} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                type="button"
+                className="flex items-center gap-2 p-0 text-lg font-semibold hover:bg-transparent"
+              >
+                <ChevronDown className={cn("h-4 w-4 transition-transform", !isAddressesOpen && "-rotate-90")} />
+                Addresses
+              </Button>
+            </CollapsibleTrigger>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                form.setValue("addresses", [
+                  ...(form.getValues("addresses") || []),
+                  { address: "", province: "", district: "", subDistrict: "", postalCode: "" },
+                ]);
+                setIsAddressesOpen(true);
+              }}
+            >
+              Add Address
+            </Button>
+          </div>
+          <CollapsibleContent className="space-y-4">
+            {useWatch({ control: form.control, name: "addresses" })?.map((_, index) => (
+              <div key={index} className="relative grid grid-cols-2 gap-4 rounded-md border p-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                  onClick={() => {
+                    const current = form.getValues("addresses") || [];
+                    form.setValue(
+                      "addresses",
+                      current.filter((_, i) => i !== index),
+                    );
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <FormField
+                  control={form.control}
+                  name={`addresses.${index}.address`}
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="123 Main St" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`addresses.${index}.province`}
+                  render={({ field }) => {
+                    return (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Province (จังหวัด)</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                              >
+                                {field.value || "Select province"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[300px] p-0">
+                            <Command>
+                              <CommandInput placeholder="Search province..." />
+                              <CommandList>
+                                <CommandEmpty>No province found.</CommandEmpty>
+                                <CommandGroup>
+                                  {getProvinces().map((province) => (
+                                    <CommandItem
+                                      value={province}
+                                      key={province}
+                                      onSelect={() => {
+                                        form.setValue(`addresses.${index}.province`, province);
+                                        form.setValue(`addresses.${index}.district`, "");
+                                        form.setValue(`addresses.${index}.subDistrict`, "");
+                                        form.setValue(`addresses.${index}.postalCode`, "");
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          province === field.value ? "opacity-100" : "opacity-0",
+                                        )}
+                                      />
+                                      {province}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+                <FormField
+                  control={form.control}
+                  name={`addresses.${index}.district`}
+                  render={({ field }) => {
+                    const provinceValue = form.watch(`addresses.${index}.province`);
+                    const districts = provinceValue ? getDistrict(provinceValue) : [];
+                    return (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>District (อำเภอ/เขต)</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                disabled={!provinceValue}
+                                className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                              >
+                                {field.value || "Select district"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[300px] p-0">
+                            <Command>
+                              <CommandInput placeholder="Search district..." />
+                              <CommandList>
+                                <CommandEmpty>No district found.</CommandEmpty>
+                                <CommandGroup>
+                                  {districts.map((district) => (
+                                    <CommandItem
+                                      value={district}
+                                      key={district}
+                                      onSelect={() => {
+                                        form.setValue(`addresses.${index}.district`, district);
+                                        form.setValue(`addresses.${index}.subDistrict`, "");
+                                        form.setValue(`addresses.${index}.postalCode`, "");
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          district === field.value ? "opacity-100" : "opacity-0",
+                                        )}
+                                      />
+                                      {district}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+                <FormField
+                  control={form.control}
+                  name={`addresses.${index}.subDistrict`}
+                  render={({ field }) => {
+                    const provinceValue = form.watch(`addresses.${index}.province`);
+                    const districtValue = form.watch(`addresses.${index}.district`);
+                    const subDistricts =
+                      provinceValue && districtValue ? getSubDistrict(provinceValue, districtValue) : [];
+                    return (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Sub-District (ตำบล/แขวง)</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                disabled={!provinceValue || !districtValue}
+                                className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                              >
+                                {field.value || "Select sub-district"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[300px] p-0">
+                            <Command>
+                              <CommandInput placeholder="Search sub-district..." />
+                              <CommandList>
+                                <CommandEmpty>No sub-district found.</CommandEmpty>
+                                <CommandGroup>
+                                  {subDistricts.map((subDistrict) => (
+                                    <CommandItem
+                                      value={subDistrict}
+                                      key={subDistrict}
+                                      onSelect={() => {
+                                        form.setValue(`addresses.${index}.subDistrict`, subDistrict);
+                                        // Auto-fill postal code
+                                        if (provinceValue && districtValue) {
+                                          const postCodes = getPostCode(provinceValue, districtValue, subDistrict);
+                                          if (postCodes && postCodes.length > 0) {
+                                            // Get unique postal codes and use the first one
+                                            const uniquePostCodes = [...new Set(postCodes)];
+                                            form.setValue(`addresses.${index}.postalCode`, uniquePostCodes[0]);
+                                          }
+                                        }
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          subDistrict === field.value ? "opacity-100" : "opacity-0",
+                                        )}
+                                      />
+                                      {subDistrict}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+                <FormField
+                  control={form.control}
+                  name={`addresses.${index}.postalCode`}
+                  render={({ field }) => {
+                    const provinceValue = form.watch(`addresses.${index}.province`);
+                    const districtValue = form.watch(`addresses.${index}.district`);
+                    const subDistrictValue = form.watch(`addresses.${index}.subDistrict`);
+                    const availablePostCodes =
+                      provinceValue && districtValue && subDistrictValue
+                        ? getPostCode(provinceValue, districtValue, subDistrictValue)
+                        : [];
+                    const uniquePostCodes = [...new Set(availablePostCodes)];
+                    const hasMultiplePostCodes = uniquePostCodes.length > 1;
+
+                    return (
+                      <FormItem>
+                        <FormLabel>Postal Code (รหัสไปรษณีย์)</FormLabel>
+                        <FormControl>
+                          {hasMultiplePostCodes ? (
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select postal code" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {uniquePostCodes.map((code) => (
+                                  <SelectItem key={code} value={code}>
+                                    {code}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           ) : (
-                            <span className="text-muted-foreground">Select tags</span>
+                            <Input {...field} placeholder="" readOnly />
                           )}
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search tags..." />
-                    <CommandList>
-                      <CommandEmpty>No tags found.</CommandEmpty>
-                      <CommandGroup>
-                        {availableTags.map((tag) => {
-                          const isSelected = field.value?.includes(tag.id);
-                          return (
-                            <CommandItem
-                              value={tag.name}
-                              key={tag.id}
-                              onSelect={() => {
-                                const currentValue = field.value || [];
-                                const newValue = isSelected
-                                  ? currentValue.filter((id) => id !== tag.id)
-                                  : [...currentValue, tag.id];
-                                form.setValue("tagIds", newValue);
-                              }}
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              </div>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Passport Section */}
+        <Collapsible
+          open={isPassportsOpen}
+          onOpenChange={setIsPassportsOpen}
+          className={cn("space-y-4", form.formState.errors.passports && "ring-destructive rounded-lg p-2 ring-2")}
+        >
+          <div className="flex items-center justify-between">
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                type="button"
+                className="flex items-center gap-2 p-0 text-lg font-semibold hover:bg-transparent"
+              >
+                <ChevronDown className={cn("h-4 w-4 transition-transform", !isPassportsOpen && "-rotate-90")} />
+                Passports
+              </Button>
+            </CollapsibleTrigger>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                form.setValue("passports", [
+                  ...(form.getValues("passports") || []),
+                  {
+                    passportNumber: "",
+                    issuingCountry: "",
+                    issuingDate: new Date(),
+                    expiryDate: new Date(),
+                    imageUrl: null,
+                    isPrimary: false,
+                  },
+                ]);
+                setIsPassportsOpen(true);
+              }}
+            >
+              Add Passport
+            </Button>
+          </div>
+          <CollapsibleContent className="space-y-4">
+            {form.formState.errors.passports && (
+              <p className="text-destructive text-sm">{form.formState.errors.passports.message as string}</p>
+            )}
+            {useWatch({ control: form.control, name: "passports" })?.map((_, index) => (
+              <div key={index} className="relative grid grid-cols-2 gap-4 rounded-md border p-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                  onClick={() => {
+                    const current = form.getValues("passports") || [];
+                    form.setValue(
+                      "passports",
+                      current.filter((_, i) => i !== index),
+                    );
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <FormField
+                  control={form.control}
+                  name={`passports.${index}.passportNumber`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>Passport Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="A12345678" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`passports.${index}.issuingCountry`}
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel required>Issuing Country</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
                             >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  isSelected ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {tag.name}
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              <FormDescription>
-                Select one or more tags to categorize this customer.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}}
-        />
+                              {field.value
+                                ? countries.find((country) => country.value === field.value)?.label
+                                : "Select country"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[200px] p-0">
+                          <Command>
+                            <CommandInput placeholder="Search country..." />
+                            <CommandList>
+                              <CommandEmpty>No country found.</CommandEmpty>
+                              <CommandGroup>
+                                {countries.map((country) => (
+                                  <CommandItem
+                                    value={country.label}
+                                    key={country.value}
+                                    onSelect={() => {
+                                      form.setValue(`passports.${index}.issuingCountry`, country.value);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        country.value === field.value ? "opacity-100" : "opacity-0",
+                                      )}
+                                    />
+                                    {country.label}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`passports.${index}.issuingDate`}
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel required>Issuing Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground",
+                              )}
+                            >
+                              {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            captionLayout="dropdown"
+                            mode="single"
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={(date) => field.onChange(date)}
+                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`passports.${index}.expiryDate`}
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel required>Expiry Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground",
+                              )}
+                            >
+                              {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            captionLayout="dropdown"
+                            mode="single"
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={(date) => field.onChange(date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`passports.${index}.imageUrl`}
+                  render={({ field }) => {
+                    const imageUrl = field.value;
+                    const firstName = form.watch("firstNameEn") || "unknown";
+                    const lastName = form.watch("lastNameEn") || "unknown";
+                    const customerName = `${firstName}_${lastName}`;
+                    // Sanitize folder name: remove special characters, replace spaces with underscores
+                    const sanitizedName = customerName
+                      .replace(/[^a-zA-Z0-9ก-๙\s_]/g, "")
+                      .replace(/\s+/g, "_")
+                      .toLowerCase();
+                    const folderName = `passports/${sanitizedName}`;
+
+                    return (
+                      <FormItem className="col-span-2">
+                        <FormLabel>Passport Image</FormLabel>
+                        {imageUrl ? (
+                          <div className="space-y-2">
+                            <div className="bg-muted relative h-48 w-full overflow-hidden rounded-md border">
+                              <Image src={imageUrl} alt="Passport" fill className="object-contain" unoptimized />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-2 right-2"
+                                onClick={() => field.onChange(null)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <p className="text-muted-foreground text-xs">Image uploaded successfully</p>
+                          </div>
+                        ) : (
+                          <DragDropUpload
+                            acceptedFileTypes={["image/jpeg", "image/png", "image/jpg", ".jpg", ".jpeg", ".png"]}
+                            maxFileSize={5 * 1024 * 1024} // 5MB
+                            folderName={folderName}
+                            multiple={false}
+                            onUploadSuccess={(url) => {
+                              field.onChange(url);
+                            }}
+                            onUploadError={(error) => {
+                              toast.error(error);
+                            }}
+                            className="w-full"
+                          />
+                        )}
+                        <FormDescription>Upload a clear image of the passport (max 5MB, JPG/PNG only)</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              </div>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Food Allergy Section */}
+        <Collapsible open={isFoodAllergiesOpen} onOpenChange={setIsFoodAllergiesOpen} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                type="button"
+                className="flex items-center gap-2 p-0 text-lg font-semibold hover:bg-transparent"
+              >
+                <ChevronDown className={cn("h-4 w-4 transition-transform", !isFoodAllergiesOpen && "-rotate-90")} />
+                Food Allergies
+              </Button>
+            </CollapsibleTrigger>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                form.setValue("foodAllergies", [...(form.getValues("foodAllergies") || []), { types: [], note: "" }]);
+                setIsFoodAllergiesOpen(true);
+              }}
+            >
+              Add Allergy Info
+            </Button>
+          </div>
+          <CollapsibleContent className="space-y-4">
+            {useWatch({ control: form.control, name: "foodAllergies" })?.map((_, index) => (
+              <div key={index} className="relative grid grid-cols-1 gap-4 rounded-md border p-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                  onClick={() => {
+                    const current = form.getValues("foodAllergies") || [];
+                    form.setValue(
+                      "foodAllergies",
+                      current.filter((_, i) => i !== index),
+                    );
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <FormField
+                  control={form.control}
+                  name={`foodAllergies.${index}.types`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Allergy Types</FormLabel>
+                      <div className="flex flex-wrap gap-2">
+                        {(["DIARY", "EGGS", "FISH", "CRUSTACEAN", "GLUTEN", "PEANUT_AND_NUTS", "OTHER"] as const).map(
+                          (type) => {
+                            const isSelected = field.value?.includes(type);
+                            return (
+                              <Badge
+                                key={type}
+                                variant={isSelected ? "default" : "outline"}
+                                className="cursor-pointer"
+                                onClick={() => {
+                                  const current = field.value || [];
+                                  const next = isSelected ? current.filter((t) => t !== type) : [...current, type];
+                                  field.onChange(next);
+                                }}
+                              >
+                                {type.replace("_", " ")}
+                              </Badge>
+                            );
+                          },
+                        )}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`foodAllergies.${index}.note`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Note</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Specific details about allergy..." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
 
         <div className="flex justify-end space-x-4">
           {onCancel && (
@@ -467,4 +1018,3 @@ export function CustomerForm({ mode, initialData, onSubmit, onCancel, isLoading 
     </Form>
   );
 }
-

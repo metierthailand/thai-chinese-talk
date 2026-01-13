@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PassportManager } from "@/app/dashboard/customers/_components/passport-manager";
 import { CustomerTabs } from "./_components/customer-tabs";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Calendar, MapPin, UtensilsCrossed, FileText } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useCustomer } from "@/app/dashboard/customers/hooks/use-customers";
@@ -16,8 +16,6 @@ export default function CustomerDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const { data: customer, isLoading, error } = useCustomer(id);
-
-  console.log("customer", customer);
 
   if (isLoading) {
     return <Loading />;
@@ -45,7 +43,6 @@ export default function CustomerDetailPage() {
           </Link>
           <div>
             <div className="text-muted-foreground mt-1 flex items-center gap-2">
-              <Badge variant="outline">{customer.type}</Badge> |
               {customer.tags.map(({ tag }) => (
                 <Badge key={tag.id} className="bg-blue-100 text-blue-800 hover:bg-blue-100">
                   {tag.name}
@@ -53,9 +50,32 @@ export default function CustomerDetailPage() {
               ))}
             </div>
             <div className="flex items-end gap-2">
-              <h2 className="text-3xl font-bold tracking-tight">{`${customer.firstNameTh} ${customer.lastNameTh}`}</h2>
-              <p className="text-muted-foreground mt-1 text-sm">{`${customer.firstNameEn} ${customer.lastNameEn}${customer.nickname ? ` (${customer.nickname})` : ""}`}</p>
+              <h2 className="text-3xl font-bold tracking-tight">
+                {customer.title && (
+                  <span className="text-muted-foreground mr-2 text-lg font-normal">
+                    {customer.title === "MR"
+                      ? "Mr."
+                      : customer.title === "MRS"
+                        ? "Mrs."
+                        : customer.title === "MISS"
+                          ? "Miss"
+                          : customer.title === "MASTER"
+                            ? "Master"
+                            : ""}
+                  </span>
+                )}
+                {customer.firstNameTh && customer.lastNameTh
+                  ? `${customer.firstNameTh} ${customer.lastNameTh}`
+                  : `${customer.firstNameEn} ${customer.lastNameEn}`}
+              </h2>
             </div>
+            {(customer.firstNameEn || customer.lastNameEn) && (customer.firstNameTh || customer.lastNameTh) && (
+              <p className="text-muted-foreground mt-1 text-sm">
+                {customer.firstNameTh && customer.lastNameTh
+                  ? `${customer.firstNameEn} ${customer.lastNameEn}`
+                  : `${customer.firstNameTh} ${customer.lastNameTh}`}
+              </p>
+            )}
           </div>
         </div>
         <Link href={`/dashboard/customers/${customer.id}/edit`}>
@@ -83,12 +103,6 @@ export default function CustomerDetailPage() {
                 <span className="text-muted-foreground w-4 text-center text-xs font-bold">L</span>
                 <span>{customer.lineId || "-"}</span>
               </div>
-              {customer.nationality && (
-                <div className="flex items-center gap-3">
-                  <MapPin className="text-muted-foreground h-4 w-4" />
-                  <span>{customer.nationality}</span>
-                </div>
-              )}
               {customer.dateOfBirth && (
                 <div className="flex items-center gap-3">
                   <Calendar className="text-muted-foreground h-4 w-4" />
@@ -98,27 +112,72 @@ export default function CustomerDetailPage() {
             </CardContent>
           </Card>
 
-          {customer.preferences && (
+          {customer.addresses && customer.addresses.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Preferences</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Addresses
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {customer.addresses.map((address, index) => (
+                  <div key={address.id || index} className="space-y-1 rounded-lg border p-3">
+                    <p className="text-sm font-medium">{address.address}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {address.subDistrict}, {address.district}, {address.province} {address.postalCode}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {customer.note && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Note
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{customer.preferences}</p>
+                <p className="text-sm whitespace-pre-wrap">{customer.note}</p>
               </CardContent>
             </Card>
           )}
 
           <PassportManager customerId={customer.id} passports={customer.passports} />
+
+          {customer.foodAllergies && customer.foodAllergies.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UtensilsCrossed className="h-4 w-4" />
+                  Food Allergies
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {customer.foodAllergies.map((allergy, index) => (
+                  <div key={allergy.id || index} className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {allergy.types.map((type) => (
+                        <Badge key={type} variant="outline" className="bg-orange-50 text-orange-800">
+                          {type.replace(/_/g, " ")}
+                        </Badge>
+                      ))}
+                    </div>
+                    {allergy.note && <p className="text-muted-foreground text-sm">{allergy.note}</p>}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right Column: Tabs */}
         <div className="md:col-span-2">
-          <CustomerTabs
-            customerId={customer.id}
-            leads={customer.leads}
-            bookings={customer.bookings}
-          />
+          <CustomerTabs customerId={customer.id} leads={customer.leads} bookings={customer.bookings} />
         </div>
       </div>
     </div>

@@ -26,7 +26,6 @@ type UpdateParams = {
   page?: number;
   pageSize?: number;
   search?: string;
-  type?: string;
   passportExpiryFrom?: string;
   passportExpiryTo?: string;
 };
@@ -37,13 +36,11 @@ export function CustomerFilter({ onFilterChange }: CustomerFilterProps) {
 
   // Initial values from URL
   const searchQuery = searchParams.get("search") || "";
-  const typeFilter = searchParams.get("type") || "ALL";
   const passportExpiryFrom = searchParams.get("passportExpiryFrom") || "";
   const passportExpiryTo = searchParams.get("passportExpiryTo") || "";
 
   // Local state (init จาก URL แค่ตอน mount)
   const [searchInput, setSearchInput] = useState(searchQuery);
-  const [type, setType] = useState(typeFilter || "ALL");
   const [expiryFrom, setExpiryFrom] = useState(passportExpiryFrom);
   const [expiryTo, setExpiryTo] = useState(passportExpiryTo);
 
@@ -68,7 +65,6 @@ export function CustomerFilter({ onFilterChange }: CustomerFilterProps) {
     setParam("page", updates.page?.toString(), "1");
     setParam("pageSize", updates.pageSize?.toString(), "10");
     setParam("search", updates.search);
-    setParam("type", updates.type, "ALL");
     setParam("passportExpiryFrom", updates.passportExpiryFrom);
     setParam("passportExpiryTo", updates.passportExpiryTo);
 
@@ -91,24 +87,6 @@ export function CustomerFilter({ onFilterChange }: CustomerFilterProps) {
 
   return (
     <div className="flex items-center justify-end gap-4">
-      {/* Filter: Type */}
-      <Select
-        value={type}
-        onValueChange={(value) => {
-          setType(value);
-          pushWithParams({ type: value, page: 1 });
-        }}
-      >
-        <SelectTrigger className="w-36">
-          <SelectValue placeholder="Filter type" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="ALL">All Types</SelectItem>
-          <SelectItem value="INDIVIDUAL">Individual</SelectItem>
-          <SelectItem value="CORPORATE">Corporate</SelectItem>
-        </SelectContent>
-      </Select>
-
       {/* Filter: Passport expiry range */}
       <Popover>
         <div className="relative">

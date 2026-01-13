@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Plus, Pencil, Eye } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
@@ -33,11 +32,6 @@ const customerColumns: ColumnDef<Customer>[] = [
         </div>
       );
     },
-  },
-  {
-    accessorKey: "type",
-    header: "Type",
-    cell: ({ row }) => <Badge variant="outline">{row.original.type}</Badge>,
   },
   {
     accessorKey: "email",

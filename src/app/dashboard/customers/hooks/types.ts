@@ -67,7 +67,9 @@ export interface Passport {
   customerId: string;
   passportNumber: string;
   issuingCountry: string;
+  issuingDate: string; // ISO date string from API
   expiryDate: string; // ISO date string from API
+  imageUrl?: string | null;
   isPrimary: boolean;
   createdAt: string;
   updatedAt: string;

@@ -2,31 +2,85 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import z from "zod";
 import Decimal from "decimal.js";
-import type { Passport } from "./types";
+import { Passport as PassportType } from "./types";
 
 export const customerFormSchema = z.object({
-  firstNameTh: z.string().min(1, {
-    message: "First name (Thai) is required.",
-  }),
-  lastNameTh: z.string().min(1, {
-    message: "Last name (Thai) is required.",
-  }),
+  firstNameTh: z.string().optional(),
+  lastNameTh: z.string().optional(),
   firstNameEn: z.string().min(1, {
     message: "First name (English) is required.",
   }),
   lastNameEn: z.string().min(1, {
     message: "Last name (English) is required.",
   }),
-  title: z.enum(["MR", "MRS", "MS", "OTHER"]).optional(),
-  nickname: z.string().optional(),
+  title: z
+    .string({
+      message: "Title is required.",
+    })
+    .refine((val) => ["MR", "MRS", "MISS", "MASTER", "OTHER"].includes(val), {
+      message: "Title must be one of: MR, MRS, MISS, MASTER, OTHER",
+    }),
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().optional(),
   lineId: z.string().optional(),
-  nationality: z.string().optional(),
-  dateOfBirth: z.string().optional(),
-  preferences: z.string().optional(),
-  type: z.enum(["INDIVIDUAL", "CORPORATE"]),
+  dateOfBirth: z.string().min(1, {
+    message: "Date of birth is required.",
+  }),
+  note: z.string().optional(),
   tagIds: z.array(z.string()).optional(),
+
+  // New fields
+  addresses: z
+    .array(
+      z.object({
+        address: z.string().min(1, "Address is required"),
+        province: z.string().min(1, "Province is required"),
+        district: z.string().min(1, "District is required"),
+        subDistrict: z.string().min(1, "Sub-district is required"),
+        postalCode: z.string().min(1, "Postal code is required"),
+      }),
+    )
+    .optional(),
+
+  passports: z
+    .array(
+      z.object({
+        passportNumber: z.string().min(1, "Passport number is required"),
+        issuingCountry: z.string().min(1, "Issuing country is required"),
+        issuingDate: z
+          .union([z.string(), z.date()])
+          .refine(
+            (val) => {
+              if (val === null || val === undefined || val === "") return false;
+              if (typeof val === "string" && val.trim() === "") return false;
+              return true;
+            },
+            { message: "Issuing date is required" }
+          ),
+        expiryDate: z
+          .union([z.string(), z.date()])
+          .refine(
+            (val) => {
+              if (val === null || val === undefined || val === "") return false;
+              if (typeof val === "string" && val.trim() === "") return false;
+              return true;
+            },
+            { message: "Expiry date is required" }
+          ),
+        imageUrl: z.string().optional().nullable(),
+        isPrimary: z.boolean(),
+      }),
+    )
+    .min(1, "At least one passport is required"),
+
+  foodAllergies: z
+    .array(
+      z.object({
+        types: z.array(z.enum(["DIARY", "EGGS", "FISH", "CRUSTACEAN", "GLUTEN", "PEANUT_AND_NUTS", "OTHER"])),
+        note: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export type CustomerFormValues = z.infer<typeof customerFormSchema>;
@@ -41,14 +95,31 @@ interface Customer {
   email: string | null;
   phone: string | null;
   type: "INDIVIDUAL" | "CORPORATE";
-  title?: "MR" | "MRS" | "MS" | "OTHER" | null;
+  title?: "MR" | "MRS" | "MISS" | "MASTER" | "OTHER" | null;
   lineId?: string | null;
-  nationality?: string | null;
   dateOfBirth?: string | null;
-  preferences?: string | null;
+  note?: string | null;
   tags: CustomerTag[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Address {
+  id?: string;
+  address: string;
+  province: string;
+  district: string;
+  subDistrict: string;
+  postalCode: string;
+}
+
+// Re-export Passport type from types.ts for consistency
+export type Passport = PassportType;
+
+export interface FoodAllergy {
+  id: string;
+  types: ("DIARY" | "EGGS" | "FISH" | "CRUSTACEAN" | "GLUTEN" | "PEANUT_AND_NUTS" | "OTHER")[];
+  note?: string | null;
 }
 
 interface CustomerTask {
@@ -85,8 +156,10 @@ interface CustomerTag {
 }
 
 interface CustomerDetail extends Customer {
+  addresses: Address[];
   passports: Passport[];
-  interactions: unknown[]; // ถ้ายังไม่ใช้ ปล่อย unknown[] ไปก่อนก็ได้
+  foodAllergies: FoodAllergy[];
+  interactions: unknown[];
   leads: CustomerLeadSummary[];
   bookings: CustomerBookingSummary[];
   tasks: CustomerTask[];
@@ -110,7 +183,7 @@ export const customerKeys = {
     search?: string,
     type?: string,
     passportExpiryFrom?: string,
-    passportExpiryTo?: string
+    passportExpiryTo?: string,
   ) => [...customerKeys.lists(), page, pageSize, search, type, passportExpiryFrom, passportExpiryTo] as const,
   details: () => [...customerKeys.all, "detail"] as const,
   detail: (id: string) => [...customerKeys.details(), id] as const,
@@ -123,7 +196,7 @@ async function fetchCustomers(
   search?: string,
   type?: string,
   passportExpiryFrom?: string,
-  passportExpiryTo?: string
+  passportExpiryTo?: string,
 ): Promise<CustomersResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -224,7 +297,7 @@ export function useCustomers({
   passportExpiryTo,
 }: {
   page: number;
-  pageSize: number; 
+  pageSize: number;
   search?: string;
   type?: string;
   passportExpiryFrom?: string;

@@ -8,7 +8,9 @@ const passportSchema = z.object({
   customerId: z.string(),
   passportNumber: z.string().min(1, "Passport number is required"),
   issuingCountry: z.string().min(1, "Issuing country is required"),
+  issuingDate: z.string(), // ISO date string
   expiryDate: z.string(), // ISO date string
+  imageUrl: z.string().nullable().optional(),
   isPrimary: z.boolean().default(false),
 });
 
@@ -37,7 +39,9 @@ export async function POST(req: Request) {
           customerId: validated.customerId,
           passportNumber: validated.passportNumber,
           issuingCountry: validated.issuingCountry,
+          issuingDate: new Date(validated.issuingDate),
           expiryDate: new Date(validated.expiryDate),
+          imageUrl: validated.imageUrl || null,
           isPrimary: validated.isPrimary,
         },
       });

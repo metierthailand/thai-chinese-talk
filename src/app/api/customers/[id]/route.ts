@@ -19,7 +19,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       },
       include: {
         tags: { include: { tag: true } },
+        addresses: true,
         passports: true,
+        foodAllergies: true,
         interactions: {
           orderBy: { date: "desc" },
           include: { agent: { select: { firstName: true, lastName: true } } },
@@ -76,13 +78,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       title,
       nickname,
       email,
-      phone,
+      phoneNumber,
       lineId,
-      nationality,
       dateOfBirth,
-      preferences,
-      type,
+      note,
       tagIds,
+      addresses,
+      passports,
+      foodAllergies,
     } = body;
 
     if (!firstNameTh || !lastNameTh || !firstNameEn || !lastNameEn) {
@@ -92,7 +95,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     // Use transaction to update customer and tags atomically
     const customer = await prisma.$transaction(async (tx) => {
       // Update customer data
-      const updatedCustomer = await tx.customer.update({
+      await tx.customer.update({
         where: { id },
         data: {
           firstNameTh,
@@ -102,12 +105,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           title: title || null,
           nickname: nickname || null,
           email: email || null,
-          phone: phone || null,
+          phoneNumber: phoneNumber || null,
           lineId: lineId || null,
-          nationality: nationality || null,
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-          preferences: preferences || null,
-          type: type || "INDIVIDUAL",
+          note: note || null,
         },
       });
 
@@ -129,7 +130,77 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
       }
 
-      // Fetch updated customer with tags
+      // Handle addresses updates if addresses is provided
+      if (addresses !== undefined) {
+        // Delete existing addresses
+        await tx.address.deleteMany({
+          where: { customerId: id },
+        });
+
+        // Create new addresses
+        if (addresses.length > 0) {
+          await tx.address.createMany({
+            data: addresses.map((addr: any) => ({
+              customerId: id,
+              address: addr.address,
+              province: addr.province,
+              district: addr.district,
+              subDistrict: addr.subDistrict,
+              postalCode: addr.postalCode,
+            })),
+          });
+        }
+      }
+
+      // Handle passports updates if passports is provided
+      if (passports !== undefined) {
+        // Delete existing passports
+        await tx.passport.deleteMany({
+          where: { customerId: id },
+        });
+
+        // Create new passports
+        if (passports.length > 0) {
+          // If setting any as primary, unset others first
+          const hasPrimary = passports.some((p: any) => p.isPrimary);
+          if (hasPrimary) {
+            // This is handled in the create below
+          }
+
+          await tx.passport.createMany({
+            data: passports.map((p: any) => ({
+              customerId: id,
+              passportNumber: p.passportNumber,
+              issuingCountry: p.issuingCountry,
+              issuingDate: new Date(p.issuingDate),
+              expiryDate: new Date(p.expiryDate),
+              imageUrl: p.imageUrl || null,
+              isPrimary: p.isPrimary || false,
+            })),
+          });
+        }
+      }
+
+      // Handle food allergies updates if foodAllergies is provided
+      if (foodAllergies !== undefined) {
+        // Delete existing food allergies
+        await tx.foodAllergy.deleteMany({
+          where: { customerId: id },
+        });
+
+        // Create new food allergies
+        if (foodAllergies.length > 0) {
+          await tx.foodAllergy.createMany({
+            data: foodAllergies.map((fa: any) => ({
+              customerId: id,
+              types: fa.types,
+              note: fa.note || null,
+            })),
+          });
+        }
+      }
+
+      // Fetch updated customer with all relations
       return await tx.customer.findUnique({
         where: { id },
         include: {
@@ -138,6 +209,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
               tag: true,
             },
           },
+          addresses: true,
+          passports: true,
+          foodAllergies: true,
         },
       });
     });

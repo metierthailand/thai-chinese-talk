@@ -37,15 +37,40 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
         firstNameEn: customer.firstNameEn || "",
         lastNameEn: customer.lastNameEn || "",
         title: customer.title || undefined,
-        nickname: customer.nickname || "",
         email: customer.email || "",
         phone: customer.phone || "",
         lineId: customer.lineId || "",
-        nationality: customer.nationality || "",
-        dateOfBirth: customer.dateOfBirth ? format(new Date(customer.dateOfBirth), "yyyy-MM-dd") : "",
-        preferences: customer.preferences || "",
-        type: customer.type || "INDIVIDUAL",
+        dateOfBirth: customer.dateOfBirth
+          ? typeof customer.dateOfBirth === "string"
+            ? customer.dateOfBirth.includes("T")
+              ? format(new Date(customer.dateOfBirth), "yyyy-MM-dd")
+              : customer.dateOfBirth
+            : format(new Date(customer.dateOfBirth), "yyyy-MM-dd")
+          : "",
+        note: customer.note || "",
         tagIds: selectedTagIds,
+        addresses:
+          customer.addresses?.map((addr) => ({
+            address: addr.address || "",
+            province: addr.province || "",
+            district: addr.district || "",
+            subDistrict: addr.subDistrict || "",
+            postalCode: addr.postalCode || "",
+          })) || [],
+        passports:
+          customer.passports?.map((p) => ({
+            passportNumber: p.passportNumber || "",
+            issuingCountry: p.issuingCountry || "",
+            issuingDate: p.issuingDate ? format(new Date(p.issuingDate), "yyyy-MM-dd") : "",
+            expiryDate: p.expiryDate ? format(new Date(p.expiryDate), "yyyy-MM-dd") : "",
+            imageUrl: p.imageUrl || null,
+            isPrimary: p.isPrimary || false,
+          })) || [],
+        foodAllergies:
+          customer.foodAllergies?.map((fa) => ({
+            types: fa.types || [],
+            note: fa.note || "",
+          })) || [],
       }
     : undefined;
 

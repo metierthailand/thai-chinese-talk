@@ -9,6 +9,9 @@ import {
   type LucideIcon,
   UserStar,
   User,
+  CreditCard,
+  ListTodo,
+  MapPin,
 } from "lucide-react";
 
 export interface NavSubItem {
@@ -40,7 +43,7 @@ export interface NavGroup {
 export const sidebarItems: NavGroup[] = [
   {
     id: 1,
-    label: "Main",
+    label: "Main Will be remove",
     items: [
       {
         title: "Dashboard",
@@ -109,6 +112,54 @@ export const sidebarItems: NavGroup[] = [
         title: "Trip",
         url: "/dashboard/trips",
         icon: Plane,
+      },
+    ],
+  },
+  {
+    id: 4,
+    label: "Sales pipeline",
+    items: [
+      {
+        title: "Lead",
+        url: "/dashboard/leads",
+        icon: Target,
+      },
+      {
+        title: "Booking",
+        url: "/dashboard/bookings",
+        icon: Calendar,
+      },
+      {
+        title: "Commission",
+        url: "/dashboard/commissions",
+        icon: CreditCard,
+      },
+    ],
+  },
+  {
+    id: 5,
+    label: "Task & Interaction",
+    items: [
+      {
+        title: "Task",
+        url: "/dashboard/tasks",
+        icon: ListTodo,
+      },
+    ],
+  },
+  {
+    id: 6,
+    label: "Master data",
+    items: [
+      {
+        title: "Tag",
+        url: "/dashboard/tags",
+        icon: Tag,
+      },
+      {
+        title: "IATA code",
+        url: "/dashboard/iata-codes",
+        icon: MapPin,
       },
     ],
   },

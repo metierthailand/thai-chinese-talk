@@ -57,18 +57,13 @@ export async function GET(request: Request) {
                 },
               },
               {
-                phone: {
+                phoneNumber: {
                   contains: search,
                   mode: "insensitive" as const,
                 },
               },
             ],
           }
-        : {};
-
-    const typeFilter: Prisma.CustomerWhereInput =
-      type === "INDIVIDUAL" || type === "CORPORATE"
-        ? { type }
         : {};
 
     const passportFilter: Prisma.CustomerWhereInput =
@@ -78,12 +73,8 @@ export async function GET(request: Request) {
               some: {
                 isPrimary: true,
                 expiryDate: {
-                  ...(passportExpiryFrom
-                    ? { gte: new Date(passportExpiryFrom) }
-                    : {}),
-                  ...(passportExpiryTo
-                    ? { lte: new Date(passportExpiryTo) }
-                    : {}),
+                  ...(passportExpiryFrom ? { gte: new Date(passportExpiryFrom) } : {}),
+                  ...(passportExpiryTo ? { lte: new Date(passportExpiryTo) } : {}),
                 },
               },
             },
@@ -91,7 +82,7 @@ export async function GET(request: Request) {
         : {};
 
     const where: Prisma.CustomerWhereInput = {
-      AND: [searchFilter, typeFilter, passportFilter],
+      AND: [searchFilter, passportFilter],
     };
 
     // Get total count for pagination
@@ -144,13 +135,14 @@ export async function POST(req: Request) {
       title,
       nickname,
       email,
-      phone,
+      phoneNumber,
       lineId,
-      nationality,
       dateOfBirth,
-      preferences,
-      type,
+      note,
       tagIds,
+      addresses,
+      passports,
+      foodAllergies,
     } = body;
 
     if (!firstNameTh || !lastNameTh || !firstNameEn || !lastNameEn) {
@@ -166,17 +158,43 @@ export async function POST(req: Request) {
         title: title || undefined,
         nickname: nickname || undefined,
         email: email || undefined,
-        phone: phone || undefined,
+        phoneNumber: phoneNumber || undefined,
         lineId: lineId || undefined,
-        nationality: nationality || undefined,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-        preferences: preferences || undefined,
-        type: type || "INDIVIDUAL",
-        tags: tagIds && tagIds.length > 0 ? {
-          create: tagIds.map((tagId: string) => ({
-            tagId,
-          })),
-        } : undefined,
+        note: note || undefined,
+        tags:
+          tagIds && tagIds.length > 0
+            ? {
+                create: tagIds.map((tagId: string) => ({
+                  tagId,
+                })),
+              }
+            : undefined,
+        addresses:
+          addresses && addresses.length > 0
+            ? {
+                create: addresses,
+              }
+            : undefined,
+        passports:
+          passports && passports.length > 0
+            ? {
+                create: passports.map((p: any) => ({
+                  passportNumber: p.passportNumber,
+                  issuingCountry: p.issuingCountry,
+                  issuingDate: new Date(p.issuingDate),
+                  expiryDate: new Date(p.expiryDate),
+                  imageUrl: p.imageUrl || null,
+                  isPrimary: p.isPrimary || false,
+                })),
+              }
+            : undefined,
+        foodAllergies:
+          foodAllergies && foodAllergies.length > 0
+            ? {
+                create: foodAllergies,
+              }
+            : undefined,
       },
       include: {
         tags: {
@@ -184,6 +202,9 @@ export async function POST(req: Request) {
             tag: true,
           },
         },
+        addresses: true,
+        passports: true,
+        foodAllergies: true,
       },
     });
 

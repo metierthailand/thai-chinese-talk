@@ -43,53 +43,92 @@ model User {
 }
 
 // 2. Customer Management
-enum CustomerType {
-  INDIVIDUAL
-  CORPORATE
-}
-
 enum Title {
   MR
   MRS
-  MS
+  MISS
+  MASTER
+  OTHER
+}
+
+enum FoodAllergyType {
+  DIARY
+  EGGS
+  FISH
+  CRUSTACEAN
+  GLUTEN
+  PEANUT_AND_NUTS
   OTHER
 }
 
 model Customer {
-  id          String       @id @default(uuid())
-  type        CustomerType @default(INDIVIDUAL)
-  title       Title?
-  firstNameTh String
-  lastNameTh  String
+  id String @id @default(uuid())
+
+  title Title?
+
   firstNameEn String
   lastNameEn  String
+  firstNameTh String?
+  lastNameTh  String?
 
-  nickname    String?
-  email       String?
-  phone       String?
+  dateOfBirth DateTime 
+  phoneNumber String?
+  email    String?
   lineId      String?
-  nationality String?
-  dateOfBirth DateTime?
-  preferences String?   @db.Text // Dietary, Seat, etc.
+
+  note     String? @db.Text
 
   tags         CustomerTag[]
-  passports    Passport[]
   interactions Interaction[]
   leads        Lead[]
   bookings     Booking[]
+
+  addresses     Address[]
+  passports     Passport[]
+  foodAllergies FoodAllergy[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Address {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  address     String
+  province    String
+  district    String
+  subDistrict String
+  postalCode  String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Passport {
-  id             String   @id @default(uuid())
-  customerId     String
-  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
   passportNumber String
   issuingCountry String
+  issuingDate    DateTime
   expiryDate     DateTime
+  imageUrl       String?
   isPrimary      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FoodAllergy {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  note  String?
+  types FoodAllergyType[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -100,6 +139,9 @@ model Tag {
   name      String        @unique
   order     Int           @default(0)
   customers CustomerTag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CustomerTag {

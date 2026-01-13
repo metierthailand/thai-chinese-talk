@@ -1,0 +1,213 @@
+# คู่มือการตั้งค่า Google Drive API
+
+## วิธีหาค่า Environment Variables
+
+### 1. GOOGLE_DRIVE_PROJECT_ID
+
+**หาจากไหน:**
+- เปิดไฟล์ JSON ที่ดาวน์โหลดจาก Google Cloud Console
+- หา key `project_id` ในไฟล์ JSON
+- ตัวอย่าง: `"project_id": "my-project-123456"` → ใช้ `my-project-123456`
+
+**หรือหาจาก Google Cloud Console:**
+- ไปที่ [Google Cloud Console](https://console.cloud.google.com/)
+- ดูที่ dropdown ด้านบน (แสดง Project ID)
+- หรือไปที่ "IAM & Admin" > "Settings" จะเห็น Project ID
+
+### 2. GOOGLE_DRIVE_CLIENT_EMAIL
+
+**หาจากไหน:**
+- เปิดไฟล์ JSON ที่ดาวน์โหลดจาก Google Cloud Console
+- หา key `client_email` ในไฟล์ JSON
+- ตัวอย่าง: `"client_email": "my-service@my-project.iam.gserviceaccount.com"`
+
+**หรือหาจาก Google Cloud Console:**
+- ไปที่ "IAM & Admin" > "Service Accounts"
+- คลิกที่ Service Account ที่สร้างไว้
+- จะเห็น email address ด้านบน (Format: `name@project-id.iam.gserviceaccount.com`)
+
+### 3. GOOGLE_DRIVE_PRIVATE_KEY
+
+**หาจากไหน:**
+- เปิดไฟล์ JSON ที่ดาวน์โหลดจาก Google Cloud Console
+- หา key `private_key` ในไฟล์ JSON
+- **สำคัญ**: คัดลอกทั้งค่า รวมถึง `-----BEGIN PRIVATE KEY-----` และ `-----END PRIVATE KEY-----`
+- ตัวอย่าง:
+```json
+"private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...\n-----END PRIVATE KEY-----\n"
+```
+
+**วิธีคัดลอก:**
+1. เปิดไฟล์ JSON ด้วย text editor
+2. หา `"private_key":`
+3. คัดลอกค่าทั้งหมดที่อยู่ใน quotes (รวมถึง BEGIN และ END)
+4. วางใน `.env.local` โดยใส่ใน double quotes
+
+## ตัวอย่างไฟล์ JSON
+
+```json
+{
+  "type": "service_account",
+  "project_id": "my-awesome-project-123456",          ← GOOGLE_DRIVE_PROJECT_ID
+  "private_key_id": "abc123def456...",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...\n-----END PRIVATE KEY-----\n",  ← GOOGLE_DRIVE_PRIVATE_KEY
+  "client_email": "drive-uploader@my-awesome-project-123456.iam.gserviceaccount.com",  ← GOOGLE_DRIVE_CLIENT_EMAIL
+  "client_id": "123456789",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "..."
+}
+```
+
+## ตัวอย่างไฟล์ .env.local
+
+```env
+# Google Drive API Configuration
+GOOGLE_DRIVE_PROJECT_ID=my-awesome-project-123456
+GOOGLE_DRIVE_CLIENT_EMAIL=drive-uploader@my-awesome-project-123456.iam.gserviceaccount.com
+GOOGLE_DRIVE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...\n-----END PRIVATE KEY-----\n"
+GOOGLE_DRIVE_ROOT_FOLDER_ID=1a2b3c4d5e6f7g8h9i0j
+```
+
+**หมายเหตุ:** `GOOGLE_DRIVE_ROOT_FOLDER_ID` คือ Folder ID ของโฟลเดอร์ที่แชร์กับ Service Account แล้ว (ดูขั้นตอนที่ 7)
+
+## ⚠️ ข้อควรระวัง
+
+1. **อย่า commit ไฟล์ JSON หรือ .env.local ลง Git!**
+   - เพิ่ม `.env.local` ใน `.gitignore`
+   - เพิ่ม `*.json` (สำหรับไฟล์ key) ใน `.gitignore`
+
+2. **Private Key ต้องอยู่ใน double quotes**
+   - เพราะมี newline characters (`\n`)
+   - ต้องคัดลอกทั้งค่า รวมถึง BEGIN และ END lines
+
+3. **แชร์ Google Drive Folder กับ Service Account (สำคัญมาก!)**
+   - ⚠️ Service Account **ไม่มี storage quota เอง** ต้องแชร์โฟลเดอร์ก่อน!
+   - ดูขั้นตอนที่ 7 ด้านล่าง
+
+### ขั้นตอนที่ 7: แชร์ Google Drive Folder กับ Service Account (สำคัญมาก!)
+
+**⚠️ Service Account ไม่มี storage quota เอง ต้องแชร์โฟลเดอร์กับ Service Account!**
+
+#### วิธีที่ 1: แชร์โฟลเดอร์กับ Service Account (แนะนำ)
+
+**⚠️ สำคัญ:** Service Account **ไม่สามารถ** ใช้ "Anyone with the link" ได้ ต้องเพิ่ม Service Account email ใน "People with access" โดยตรง!
+
+1. ไปที่ [Google Drive](https://drive.google.com/)
+2. สร้างโฟลเดอร์ใหม่ (หรือใช้โฟลเดอร์ที่มีอยู่)
+   - ตัวอย่าง: สร้างโฟลเดอร์ชื่อ "The Trip Uploads"
+3. คลิกขวาที่โฟลเดอร์ > **"Share"** (หรือคลิกที่ไอคอน Share)
+4. **ในส่วน "People with access"** (ไม่ใช่ "General access"):
+   - คลิก **"Add people and groups"**
+   - ใส่ email ของ Service Account (ค่า `client_email` จาก JSON)
+   - ตัวอย่าง: `drive-uploader@your-project-id-123456.iam.gserviceaccount.com`
+   - ตั้งสิทธิ์เป็น **"Editor"** (ต้องเป็น Editor เพื่อให้อัปโหลดและสร้างโฟลเดอร์ย่อยได้)
+   - คลิก **"Send"** (หรือ **"Share"**)
+5. **ตรวจสอบว่า Service Account อยู่ในรายการ:**
+   - หลังจากแชร์แล้ว Service Account email ควรปรากฏใน "People with access"
+   - ถ้าไม่เห็น แสดงว่าแชร์ไม่สำเร็จ
+6. **หาค่า Folder ID:**
+   - เปิดโฟลเดอร์ที่แชร์แล้ว
+   - ดูที่ URL: `https://drive.google.com/drive/folders/1a2b3c4d5e6f7g8h9i0j`
+   - **คัดลอกเฉพาะส่วนหลัง `/folders/` จนถึงก่อน `?` (ถ้ามี)**
+   - ตัวอย่าง: ถ้า URL เป็น `https://drive.google.com/drive/folders/1a2b3c4d5e6f7g8h9i0j?usp=drive_link`
+   - ให้ใช้เฉพาะ: `1a2b3c4d5e6f7g8h9i0j` (ไม่รวม `?usp=drive_link`)
+7. เพิ่มใน `.env.local`:
+   ```env
+   GOOGLE_DRIVE_ROOT_FOLDER_ID=1a2b3c4d5e6f7g8h9i0j
+   ```
+   **⚠️ อย่าใส่ query string (`?usp=drive_link`) ใน Folder ID!**
+
+#### วิธีที่ 2: ใช้ Shared Drive (Team Drive)
+
+1. สร้าง Shared Drive ใน Google Workspace (ถ้ามี)
+2. แชร์ Shared Drive กับ Service Account email
+3. ตั้งสิทธิ์เป็น **"Content Manager"** หรือ **"Contributor"**
+4. ใช้ Shared Drive ID เป็น `GOOGLE_DRIVE_ROOT_FOLDER_ID`
+
+#### วิธีที่ 3: ใช้ Folder ID โดยตรงใน Component
+
+- ถ้าต้องการอัปโหลดไปยังโฟลเดอร์เฉพาะ
+- ใช้ Folder ID เป็น `folderName` ใน component
+- ตัวอย่าง: `folderName="1a2b3c4d5e6f7g8h9i0j"`
+
+**หมายเหตุสำคัญ:**
+- Service Account **ไม่สามารถ** สร้างไฟล์ใน My Drive ของตัวเองได้
+- **ต้อง** แชร์โฟลเดอร์หรือ Shared Drive กับ Service Account ก่อน
+- ถ้าไม่แชร์ จะเจอ error: **"Service Accounts do not have storage quota"**
+
+## 💰 ค่าใช้จ่าย (Pricing)
+
+### ✅ Google Drive API ใช้ฟรี!
+
+**Google Drive API ไม่มีค่าใช้จ่าย:**
+- ✅ การเรียกใช้ API ฟรี 100%
+- ✅ ไม่มีค่าใช้จ่ายต่อจำนวน requests
+- ✅ แม้จะเกิน quota limits ก็ไม่เสียเงิน (แต่จะถูก rate limit)
+
+### 📊 Usage Limits (Quotas)
+
+Google Drive API มี limits ดังนี้:
+
+| Operation | Free Tier Limit |
+|-----------|----------------|
+| **Requests per 100 seconds per user** | 1,000 requests |
+| **Requests per 100 seconds** | 10,000 requests |
+| **Upload quota per day** | 750 GB uploads |
+| **Download quota per day** | 10 TB downloads |
+
+**หมายเหตุ:**
+- ถ้าเกิน limits จะถูก rate limit (ชั่วคราว) แต่ไม่เสียเงิน
+- สามารถขอเพิ่ม quota ได้ถ้าจำเป็น
+
+### 💾 Storage Costs
+
+**สำคัญ:** ไฟล์ที่อัปโหลดจะใช้ Google Drive storage space
+
+**Google Drive Free Tier:**
+- ✅ 15 GB ฟรี (รวม Gmail + Google Photos + Google Drive)
+- ✅ ใช้ได้ฟรีสำหรับการใช้งานทั่วไป
+
+**ถ้าต้องการ storage เพิ่ม:**
+- Google One Plans:
+  - 100 GB: ~฿79/เดือน
+  - 200 GB: ~฿119/เดือน
+  - 2 TB: ~฿399/เดือน
+
+### 🎯 สรุปค่าใช้จ่าย
+
+| รายการ | ค่าใช้จ่าย |
+|--------|-----------|
+| **Google Drive API** | **ฟรี** ✅ |
+| **API Requests** | **ฟรี** ✅ |
+| **Storage (15 GB)** | **ฟรี** ✅ |
+| **Storage เพิ่มเติม** | ต้องจ่าย (ถ้าใช้เกิน 15 GB) |
+
+### 💡 คำแนะนำ
+
+1. **สำหรับการใช้งานทั่วไป:**
+   - ใช้ฟรีได้เลย ไม่มีค่าใช้จ่าย
+   - 15 GB เพียงพอสำหรับไฟล์จำนวนมาก
+
+2. **ถ้าต้องการ storage เพิ่ม:**
+   - ใช้ Google One (ถ้าต้องการ)
+   - หรือใช้ Google Workspace (ถ้ามี)
+
+3. **ตรวจสอบการใช้งาน:**
+   - ไปที่ [Google Cloud Console](https://console.cloud.google.com/) > APIs & Services > Dashboard
+   - ดู quota usage และ requests
+
+### ⚠️ ข้อควรระวัง
+
+- **Service Account Storage:** ไฟล์ที่อัปโหลดผ่าน Service Account จะใช้ storage ของ Google Account ที่สร้าง Service Account
+- **ถ้าใช้เกิน 15 GB:** จะต้องอัปเกรด Google One หรือลบไฟล์เก่า
+- **ไม่มีค่าใช้จ่ายซ่อน:** Google Drive API ฟรีจริงๆ ไม่มีค่าใช้จ่ายแอบแฝง
+
+## 🔗 ลิงก์ที่เกี่ยวข้อง
+
+- [Google Cloud Console](https://console.cloud.google.com/)
+- [Google Drive API Documentation](https://developers.google.com/drive/api)
+- [Google Drive API Limits](https://developers.google.com/drive/api/guides/limits)
+- [Service Accounts Guide](https://cloud.google.com/iam/docs/service-accounts)
+- [Google One Pricing](https://one.google.com/about/plans)
