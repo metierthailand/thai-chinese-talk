@@ -24,36 +24,56 @@ export default function EditBookingPage({
     ? {
         customerId: booking.customerId || "",
         tripId: booking.tripId || "",
-        totalAmount: booking.totalAmount.toString(),
-        paidAmount: booking.paidAmount.toString(),
-        status: booking.status || "PENDING",
-        visaStatus: booking.visaStatus || "NOT_REQUIRED",
+        salesUserId: booking.salesUserId || "",
+        companionCustomerIds: booking.companionCustomers?.map((c) => c.id) || [],
+        agentId: booking.agentId || "",
+        note: booking.note || "",
+        extraPriceForSingleTraveller: booking.extraPriceForSingleTraveller?.toString() || "",
+        roomType: booking.roomType || "DOUBLE_BED",
+        extraBed: booking.extraBed || false,
+        extraPricePerBed: booking.extraPricePerBed?.toString() || "0",
+        roomNote: booking.roomNote || "",
+        seatType: booking.seatType || "WINDOW",
+        seatClass: booking.seatClass || undefined,
+        extraPricePerSeat: booking.extraPricePerSeat?.toString() || "",
+        seatNote: booking.seatNote || "",
+        extraPricePerBag: booking.extraPricePerBag?.toString() || "",
+        bagNote: booking.bagNote || "",
+        discountPrice: booking.discountPrice?.toString() || "",
+        discountNote: booking.discountNote || "",
+        paymentStatus: booking.paymentStatus || "DEPOSIT_PENDING",
+        firstPaymentRatio: booking.firstPaymentRatio || "FIRST_PAYMENT_50",
+        firstPaymentAmount: booking.firstPayment?.amount.toString() || "",
       }
     : undefined;
 
   async function handleSubmit(values: BookingFormValues) {
     try {
-      const updateData: {
-        customerId?: string;
-        tripId?: string;
-        totalAmount?: number;
-        paidAmount?: number;
-        status?: string;
-        visaStatus?: string;
-      } = {
+      const updateData = {
         customerId: values.customerId,
         tripId: values.tripId,
-        totalAmount: parseFloat(values.totalAmount),
-        paidAmount: parseFloat(values.paidAmount || "0"),
+        salesUserId: values.salesUserId,
+        companionCustomerIds: values.companionCustomerIds,
+        agentId: values.agentId,
+        note: values.note,
+        extraPriceForSingleTraveller: values.extraPriceForSingleTraveller
+          ? parseFloat(values.extraPriceForSingleTraveller)
+          : undefined,
+        roomType: values.roomType,
+        extraBed: values.extraBed,
+        extraPricePerBed: values.extraPricePerBed ? parseFloat(values.extraPricePerBed) : undefined,
+        roomNote: values.roomNote,
+        seatType: values.seatType,
+        seatClass: values.seatClass,
+        extraPricePerSeat: values.extraPricePerSeat ? parseFloat(values.extraPricePerSeat) : undefined,
+        seatNote: values.seatNote,
+        extraPricePerBag: values.extraPricePerBag ? parseFloat(values.extraPricePerBag) : undefined,
+        bagNote: values.bagNote,
+        discountPrice: values.discountPrice ? parseFloat(values.discountPrice) : undefined,
+        discountNote: values.discountNote,
+        paymentStatus: values.paymentStatus,
+        firstPaymentRatio: values.firstPaymentRatio,
       };
-
-      // Only include status and visaStatus if they have valid values (not empty string)
-      if (values.status && values.status.trim() !== "") {
-        updateData.status = values.status;
-      }
-      if (values.visaStatus && values.visaStatus.trim() !== "") {
-        updateData.visaStatus = values.visaStatus;
-      }
 
       await updateBookingMutation.mutateAsync({
         id: bookingId,

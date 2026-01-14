@@ -31,12 +31,13 @@ model User {
   resetToken        String?   @unique
   resetTokenExpiry  DateTime?
 
-  leadsAsAgent    Lead[] @relation("AgentLeads")
-  leadsAsSales    Lead[] @relation("SalesLeads")
-  tasks           Task[]
-  notifications   Notification[]
-  bookings        Booking[] @relation("AgentBookings")
-  commissions     Commission[]
+  leadsAsAgent  Lead[]         @relation("AgentLeads")
+  leadsAsSales  Lead[]         @relation("SalesLeads")
+  tasks         Task[]
+  notifications Notification[]
+  bookings      Booking[]      @relation("AgentBookings")
+  salesBookings Booking[]      @relation("SalesBookings")
+  commissions   Commission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -78,9 +79,10 @@ model Customer {
 
   note String? @db.Text
 
-  tags     CustomerTag[]
-  leads    Lead[]
-  bookings Booking[]
+  tags              CustomerTag[]
+  leads             Lead[]
+  bookings          Booking[]     @relation("CustomerBookings")
+  companionBookings Booking[]     @relation("CompanionCustomers")
 
   addresses     Address[]
   passports     Passport[]
@@ -170,13 +172,13 @@ enum LeadStatus {
 }
 
 model Lead {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   customerId  String?
   customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
   agentId     String
-  agent       User     @relation("AgentLeads", fields: [agentId], references: [id])
+  agent       User      @relation("AgentLeads", fields: [agentId], references: [id])
   salesUserId String
-  salesUser   User     @relation("SalesLeads", fields: [salesUserId], references: [id])
+  salesUser   User      @relation("SalesLeads", fields: [salesUserId], references: [id])
 
   source LeadSource @default(FACEBOOK)
   status LeadStatus @default(INTERESTED)
@@ -196,32 +198,45 @@ model Lead {
   leadNote   String? @db.Text
   sourceNote String? @db.Text
 
-  bookings    Booking[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   commissions Commission[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 // 4. Trip & Booking Management
+enum RoomType {
+  DOUBLE_BED
+  TWIN_BED
+}
+
+enum SeatType {
+  WINDOW
+  MIDDLE
+  AISLE
+}
+
+enum SeatClass {
+  FIRST_CLASS
+  BUSINESS_CLASS
+  LONG_LEG
+}
+
 enum TripType {
   GROUP_TOUR
   PRIVATE_TOUR
 }
 
-enum BookingStatus {
-  PENDING
-  CONFIRMED
+enum PaymentStatus {
+  DEPOSIT_PENDING
+  DEPOSIT_PAID
+  FULLY_PAID
   CANCELLED
-  COMPLETED
-  REFUNDED
 }
 
-enum VisaStatus {
-  NOT_REQUIRED
-  PENDING
-  APPROVED
-  REJECTED
+enum PaymentRatio {
+  FIRST_PAYMENT_100
+  FIRST_PAYMENT_50
+  FIRST_PAYMENT_30
 }
 
 model Trip {
@@ -258,25 +273,47 @@ model Trip {
 }
 
 model Booking {
-  id         String   @id @default(uuid())
-  customerId String
-  customer   Customer @relation(fields: [customerId], references: [id])
-  leadId     String?
-  lead       Lead?    @relation(fields: [leadId], references: [id])
+  id                 String     @id @default(uuid())
+  customerId         String
+  customer           Customer   @relation("CustomerBookings", fields: [customerId], references: [id])
+  salesUserId        String
+  salesUser          User       @relation("SalesBookings", fields: [salesUserId], references: [id])
+  tripId             String
+  trip               Trip       @relation(fields: [tripId], references: [id])
+  companionCustomers Customer[] @relation("CompanionCustomers")
+  agentId            String?
+  agent              User?      @relation("AgentBookings", fields: [agentId], references: [id])
 
-  tripId String
-  trip   Trip          @relation(fields: [tripId], references: [id])
-  status BookingStatus @default(PENDING)
+  note String? @db.Text
 
-  totalAmount    Decimal    @db.Decimal(10, 2)
-  paidAmount     Decimal    @default(0) @db.Decimal(10, 2)
-  paymentDueDate DateTime?
-  visaStatus     VisaStatus @default(NOT_REQUIRED)
+  extraPriceForSingleTraveller Decimal? @db.Decimal(10, 2)
+  roomType                     RoomType @default(DOUBLE_BED)
 
-  agentId String?
-  agent   User?   @relation("AgentBookings", fields: [agentId], references: [id])
+  extraPricePerBed Decimal @default(0) @db.Decimal(10, 2)
+  roomNote         String? @db.Text
 
-  payments    Payment[]
+  seatType          SeatType   @default(WINDOW)
+  seatClass         SeatClass?
+  extraPricePerSeat Decimal?   @db.Decimal(10, 2)
+  seatNote          String?    @db.Text
+
+  extraPricePerBag Decimal? @db.Decimal(10, 2)
+  bagNote          String?  @db.Text
+
+  discountPrice Decimal? @db.Decimal(10, 2)
+  discountNote  String?  @db.Text
+
+  paymentStatus PaymentStatus @default(DEPOSIT_PENDING)
+
+  firstPaymentRatio PaymentRatio @default(FIRST_PAYMENT_50)
+  firstPaymentId    String?      @unique
+  firstPayment      Payment?     @relation("FirstPayment", fields: [firstPaymentId], references: [id], onDelete: Cascade)
+  secondPaymentId   String?      @unique
+  secondPayment     Payment?     @relation("SecondPayment", fields: [secondPaymentId], references: [id], onDelete: Cascade)
+  thirdPaymentId    String?      @unique
+  thirdPayment      Payment?     @relation("ThirdPayment", fields: [thirdPaymentId], references: [id], onDelete: Cascade)
+
+  payments    Payment[]    @relation("BookingPayments")
   commissions Commission[]
 
   createdAt DateTime @default(now())
@@ -344,24 +381,20 @@ model Notification {
 }
 
 // 7. Finance & Commission
-enum PaymentMethod {
-  CASH
-  BANK_TRANSFER
-  CREDIT_CARD
-  OTHER
-}
-
 model Payment {
   id        String  @id @default(uuid())
   bookingId String
-  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking   Booking @relation("BookingPayments", fields: [bookingId], references: [id], onDelete: Cascade)
 
-  amount Decimal       @db.Decimal(10, 2)
-  paidAt DateTime      @default(now())
-  method PaymentMethod
-  note   String?       @db.Text
+  amount         Decimal  @db.Decimal(10, 2)
+  proofOfPayment String?
+  paidAt         DateTime @default(now())
 
-  createdAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  firstPayment  Booking? @relation("FirstPayment")
+  secondPayment Booking? @relation("SecondPayment")
+  thirdPayment  Booking? @relation("ThirdPayment")
 }
 
 enum CommissionStatus {

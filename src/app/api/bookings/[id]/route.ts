@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { Prisma, Role } from "@prisma/client";
+import { syncLeadStatusFromBooking } from "@/lib/services/lead-sync";
 
 export async function GET(
   req: Request,
@@ -30,11 +32,66 @@ export async function GET(
             email: true,
           },
         },
+        salesUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        agent: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        companionCustomers: {
+          select: {
+            id: true,
+            firstNameTh: true,
+            lastNameTh: true,
+            firstNameEn: true,
+            lastNameEn: true,
+          },
+        },
         trip: {
           select: {
             name: true,
             startDate: true,
             endDate: true,
+            standardPrice: true,
+          },
+        },
+        firstPayment: {
+          select: {
+            id: true,
+            amount: true,
+            paidAt: true,
+          },
+        },
+        secondPayment: {
+          select: {
+            id: true,
+            amount: true,
+            paidAt: true,
+          },
+        },
+        thirdPayment: {
+          select: {
+            id: true,
+            amount: true,
+            paidAt: true,
+          },
+        },
+        payments: {
+          select: {
+            id: true,
+            amount: true,
+            paidAt: true,
+            proofOfPayment: true,
           },
         },
       },
@@ -68,62 +125,115 @@ export async function PUT(
     const {
       customerId,
       tripId,
-      totalAmount,
-      status,
-      visaStatus,
+      salesUserId,
+      companionCustomerIds,
+      agentId,
+      note,
+      extraPriceForSingleTraveller,
+      roomType,
+      extraBed,
+      extraPricePerBed,
+      roomNote,
+      seatType,
+      seatClass,
+      extraPricePerSeat,
+      seatNote,
+      extraPricePerBag,
+      bagNote,
+      discountPrice,
+      discountNote,
+      paymentStatus,
+      firstPaymentRatio,
     } = body;
 
-    const updateData: {
-      customerId?: string;
-      tripId?: string;
-      totalAmount?: number;
-      // paidAmount?: number; // Removed: paidAmount should be updated via Payment transactions
-      status?: string;
-      visaStatus?: string;
-      agentId?: string;
-    } = {};
+    // Get current booking to check existing data
+    const currentBooking = await prisma.booking.findUnique({
+      where: { id },
+      select: {
+        tripId: true,
+        salesUserId: true,
+        paymentStatus: true,
+      },
+    });
 
-    if (customerId !== undefined && customerId !== "") updateData.customerId = customerId;
-    if (tripId !== undefined && tripId !== "") updateData.tripId = tripId;
-    // if (paidAmount !== undefined) updateData.paidAmount = parseFloat(paidAmount);
-    if (status !== undefined && status !== "") updateData.status = status;
-    if (visaStatus !== undefined && visaStatus !== "") updateData.visaStatus = visaStatus;
-    if (body.agentId !== undefined) updateData.agentId = body.agentId;
+    if (!currentBooking) {
+      return new NextResponse("Booking not found", { status: 404 });
+    }
 
-    // Handle totalAmount: use trip.price if not provided
-    if (totalAmount !== undefined && parseFloat(totalAmount) > 0) {
-      updateData.totalAmount = parseFloat(totalAmount);
-    } else if (tripId !== undefined && tripId !== "") {
-      // If tripId is being updated and totalAmount is not provided, use trip.price
-      const trip = await prisma.trip.findUnique({
-        where: { id: tripId },
-        select: { standardPrice: true },
+    // Validate salesUserId if provided
+    if (salesUserId) {
+      const salesUser = await prisma.user.findUnique({
+        where: { id: salesUserId },
+        select: { role: true, isActive: true },
       });
-      if (trip && trip.standardPrice) {
-        updateData.totalAmount = Number(trip.standardPrice);
+
+      if (!salesUser || salesUser.role !== Role.SALES || !salesUser.isActive) {
+        return new NextResponse("Invalid salesUserId: must be an active user with SALES role", { status: 400 });
       }
     }
 
-    const booking = await prisma.$transaction(async (tx) => {
-      // Get current booking to check leadId
-      const currentBooking = await tx.booking.findUnique({
-        where: { id },
-        select: { leadId: true, status: true },
+    // Validate companion customers if provided
+    const finalTripId = tripId || currentBooking.tripId;
+    if (companionCustomerIds && Array.isArray(companionCustomerIds) && companionCustomerIds.length > 0 && finalTripId) {
+      const companionBookings = await prisma.booking.findMany({
+        where: {
+          tripId: finalTripId,
+          customerId: { in: companionCustomerIds },
+        },
+        select: { customerId: true },
       });
 
+      const bookedCompanionIds = companionBookings.map((b) => b.customerId);
+      const invalidCompanions = companionCustomerIds.filter((id: string) => !bookedCompanionIds.includes(id));
+
+      if (invalidCompanions.length > 0) {
+        return new NextResponse(
+          `Invalid companion customers: ${invalidCompanions.join(", ")} must be booked in the same trip first`,
+          { status: 400 },
+        );
+      }
+    }
+
+    // Build update data
+    const updateData: Prisma.BookingUpdateInput = {};
+
+    if (customerId !== undefined && customerId !== "") updateData.customer = { connect: { id: customerId } };
+    if (salesUserId !== undefined && salesUserId !== "") updateData.salesUser = { connect: { id: salesUserId } };
+    if (tripId !== undefined && tripId !== "") updateData.trip = { connect: { id: tripId } };
+    if (agentId !== undefined) updateData.agent = { connect: { id: agentId } };
+
+    if (companionCustomerIds !== undefined) {
+      updateData.companionCustomers = {
+        set: companionCustomerIds?.map((id: string) => ({ id })) || [],
+      };
+    }
+
+    if (note !== undefined) updateData.note = note || null;
+    if (extraPriceForSingleTraveller !== undefined)
+      updateData.extraPriceForSingleTraveller = extraPriceForSingleTraveller ? Number(extraPriceForSingleTraveller) : null;
+    if (roomType !== undefined) updateData.roomType = roomType;
+    if (extraPricePerBed !== undefined) updateData.extraPricePerBed = extraPricePerBed ? Number(extraPricePerBed) : 0;
+    if (roomNote !== undefined) updateData.roomNote = roomNote || null;
+    if (seatType !== undefined) updateData.seatType = seatType;
+    if (seatClass !== undefined) updateData.seatClass = seatClass || null;
+    if (extraPricePerSeat !== undefined)
+      updateData.extraPricePerSeat = extraPricePerSeat ? Number(extraPricePerSeat) : null;
+    if (seatNote !== undefined) updateData.seatNote = seatNote || null;
+    if (extraPricePerBag !== undefined)
+      updateData.extraPricePerBag = extraPricePerBag ? Number(extraPricePerBag) : null;
+    if (bagNote !== undefined) updateData.bagNote = bagNote || null;
+    if (discountPrice !== undefined) updateData.discountPrice = discountPrice ? Number(discountPrice) : null;
+    if (discountNote !== undefined) updateData.discountNote = discountNote || null;
+    if (paymentStatus !== undefined)
+      updateData.paymentStatus = paymentStatus as "DEPOSIT_PENDING" | "DEPOSIT_PAID" | "FULLY_PAID" | "CANCELLED";
+    if (firstPaymentRatio !== undefined)
+      updateData.firstPaymentRatio = firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30";
+
+    const booking = await prisma.$transaction(async (tx) => {
       // Update booking
       const updatedBooking = await tx.booking.update({
-        where: {
-          id: id,
-        },
-        data: updateData as {
-          customerId?: string;
-          tripId?: string;
-          totalAmount?: number;
-          status?: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "REFUNDED";
-          visaStatus?: "NOT_REQUIRED" | "PENDING" | "APPROVED" | "REJECTED";
-          agentId?: string;
-        },
+        where: { id },
+        data: updateData as unknown as Prisma.BookingUpdateInput,
         include: {
           customer: {
             select: {
@@ -134,60 +244,84 @@ export async function PUT(
               email: true,
             },
           },
+          salesUser: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          agent: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          companionCustomers: {
+            select: {
+              id: true,
+              firstNameTh: true,
+              lastNameTh: true,
+              firstNameEn: true,
+              lastNameEn: true,
+            },
+          },
           trip: {
             select: {
               name: true,
               startDate: true,
               endDate: true,
+              standardPrice: true,
+            },
+          },
+          firstPayment: {
+            select: {
+              id: true,
+              amount: true,
+              paidAt: true,
+            },
+          },
+          secondPayment: {
+            select: {
+              id: true,
+              amount: true,
+              paidAt: true,
+            },
+          },
+          thirdPayment: {
+            select: {
+              id: true,
+              amount: true,
+              paidAt: true,
+            },
+          },
+          payments: {
+            select: {
+              id: true,
+              amount: true,
+              paidAt: true,
+              proofOfPayment: true,
             },
           },
         },
       });
 
-      // Handle Lead status sync based on booking status changes
-      if (currentBooking?.leadId && updateData.status) {
-        const newStatus = updateData.status;
-        
-        // If booking is cancelled or refunded, check if lead should be CANCELLED
-        if (["CANCELLED", "REFUNDED"].includes(newStatus)) {
-          // Check if there are other active bookings for this lead
-          const activeBookings = await tx.booking.count({
-            where: {
-              leadId: currentBooking.leadId,
-              id: { not: id }, // Exclude current booking
-              status: {
-                in: ["PENDING", "CONFIRMED", "COMPLETED"],
-              },
-            },
-          });
+      // Handle Lead status sync based on paymentStatus changes
+      if (updateData.paymentStatus && currentBooking.paymentStatus !== updateData.paymentStatus) {
+        // Find leads associated with this booking's customer
+        const leads = await tx.lead.findMany({
+          where: {
+            customerId: updatedBooking.customerId,
+          },
+          select: { id: true },
+        });
 
-          // If no other active bookings, mark lead as CANCELLED
-          if (activeBookings === 0) {
-            await tx.lead.update({
-              where: { id: currentBooking.leadId },
-              data: {
-                status: "CANCELLED",
-              },
-            });
-          }
-        }
-        // If booking is confirmed, mark lead as BOOKED
-        else if (newStatus === "CONFIRMED" && currentBooking.status !== "CONFIRMED") {
-          await tx.lead.update({
-            where: { id: currentBooking.leadId },
-            data: {
-              status: "BOOKED",
-            },
-          });
-        }
-        // If booking is completed, mark lead as COMPLETED
-        else if (newStatus === "COMPLETED" && currentBooking.status !== "COMPLETED") {
-          await tx.lead.update({
-            where: { id: currentBooking.leadId },
-            data: {
-              status: "COMPLETED",
-            },
-          });
+        // Sync lead status for each associated lead
+        for (const lead of leads) {
+          await syncLeadStatusFromBooking(lead.id);
         }
       }
 

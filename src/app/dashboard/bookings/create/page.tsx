@@ -18,11 +18,28 @@ export default function NewBookingPage() {
       await createBookingMutation.mutateAsync({
         customerId: values.customerId,
         tripId: values.tripId,
-        leadId: values.leadId,
-        totalAmount: parseFloat(values.totalAmount),
-        paidAmount: parseFloat(values.paidAmount || "0"),
-        status: values.status,
-        visaStatus: values.visaStatus,
+        salesUserId: values.salesUserId,
+        companionCustomerIds: values.companionCustomerIds,
+        agentId: values.agentId,
+        note: values.note,
+        extraPriceForSingleTraveller: values.extraPriceForSingleTraveller
+          ? parseFloat(values.extraPriceForSingleTraveller)
+          : undefined,
+        roomType: values.roomType,
+        extraPricePerBed: values.extraPricePerBed ? parseFloat(values.extraPricePerBed) : undefined,
+        roomNote: values.roomNote,
+        seatType: values.seatType,
+        seatClass: values.seatClass,
+        extraPricePerSeat: values.extraPricePerSeat ? parseFloat(values.extraPricePerSeat) : undefined,
+        seatNote: values.seatNote,
+        extraPricePerBag: values.extraPricePerBag ? parseFloat(values.extraPricePerBag) : undefined,
+        bagNote: values.bagNote,
+        discountPrice: values.discountPrice ? parseFloat(values.discountPrice) : undefined,
+        discountNote: values.discountNote,
+        paymentStatus: values.paymentStatus,
+        firstPaymentRatio: values.firstPaymentRatio,
+        firstPaymentAmount: parseFloat(values.firstPaymentAmount),
+        firstPaymentProof: values.firstPaymentProof,
       });
       router.push("/dashboard/bookings");
       router.refresh();

@@ -44,47 +44,6 @@ export interface NavGroup {
 export const sidebarItems: NavGroup[] = [
   {
     id: 1,
-    label: "Main Will be remove",
-    items: [
-      {
-        title: "Dashboard",
-        url: "/dashboard",
-        icon: LayoutDashboard,
-      },
-      {
-        title: "Customers",
-        url: "/dashboard/customers",
-        icon: Users,
-      },
-      {
-        title: "Tags",
-        url: "/dashboard/tags",
-        icon: Tag,
-      },
-      {
-        title: "Leads",
-        url: "/dashboard/leads",
-        icon: Target,
-      },
-      {
-        title: "Bookings",
-        url: "/dashboard/bookings",
-        icon: Calendar,
-      },
-      {
-        title: "Trips",
-        url: "/dashboard/trips",
-        icon: Plane,
-      },
-      {
-        title: "Notifications",
-        url: "/dashboard/notifications",
-        icon: Bell,
-      },
-    ],
-  },
-  {
-    id: 2,
     label: "User management",
     items: [
       {
@@ -106,7 +65,7 @@ export const sidebarItems: NavGroup[] = [
     ],
   },
   {
-    id: 3,
+    id: 2,
     label: "Trip management",
     items: [
       {
@@ -117,7 +76,7 @@ export const sidebarItems: NavGroup[] = [
     ],
   },
   {
-    id: 4,
+    id: 3,
     label: "Sales pipeline",
     items: [
       {
@@ -138,7 +97,7 @@ export const sidebarItems: NavGroup[] = [
     ],
   },
   {
-    id: 5,
+    id: 4,
     label: "Task & Interaction",
     items: [
       {
@@ -149,7 +108,7 @@ export const sidebarItems: NavGroup[] = [
     ],
   },
   {
-    id: 6,
+    id: 5,
     label: "Master data",
     items: [
       {

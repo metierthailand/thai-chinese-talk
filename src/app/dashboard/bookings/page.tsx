@@ -42,8 +42,7 @@ export default function BookingsPage() {
   const isClearing = useRef(false);
 
   // Local state for filters
-  const [status, setStatus] = useState(statusQuery || "ALL");
-  const [visaStatus, setVisaStatus] = useState(visaStatusQuery || "ALL");
+  const [paymentStatus, setPaymentStatus] = useState(statusQuery || "ALL");
   const [tripStartDateFrom, setTripStartDateFrom] = useState(tripStartDateFromQuery);
   const [tripStartDateTo, setTripStartDateTo] = useState(tripStartDateToQuery);
 
@@ -53,8 +52,7 @@ export default function BookingsPage() {
       page?: number;
       pageSize?: number;
       search?: string;
-      status?: string;
-      visaStatus?: string;
+      paymentStatus?: string;
       tripStartDateFrom?: string;
       tripStartDateTo?: string;
     }) => {
@@ -84,19 +82,11 @@ export default function BookingsPage() {
         }
       }
 
-      if (updates.status !== undefined) {
-        if (updates.status === "ALL" || updates.status === "") {
+      if (updates.paymentStatus !== undefined) {
+        if (updates.paymentStatus === "ALL" || updates.paymentStatus === "") {
           params.delete("status");
         } else {
-          params.set("status", updates.status);
-        }
-      }
-
-      if (updates.visaStatus !== undefined) {
-        if (updates.visaStatus === "ALL" || updates.visaStatus === "") {
-          params.delete("visaStatus");
-        } else {
-          params.set("visaStatus", updates.visaStatus);
+          params.set("status", updates.paymentStatus);
         }
       }
 
@@ -137,11 +127,8 @@ export default function BookingsPage() {
     if (!isClearing.current && searchQuery !== searchInput) {
       setSearchInput(searchQuery);
     }
-    if (statusQuery !== status) {
-      setStatus(statusQuery || "ALL");
-    }
-    if (visaStatusQuery !== visaStatus) {
-      setVisaStatus(visaStatusQuery || "ALL");
+    if (statusQuery !== paymentStatus) {
+      setPaymentStatus(statusQuery || "ALL");
     }
     if (tripStartDateFromQuery !== tripStartDateFrom) {
       setTripStartDateFrom(tripStartDateFromQuery);
@@ -153,34 +140,39 @@ export default function BookingsPage() {
       isClearing.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, statusQuery, visaStatusQuery, tripStartDateFromQuery, tripStartDateToQuery]);
+  }, [searchQuery, statusQuery, tripStartDateFromQuery, tripStartDateToQuery]);
 
-  const getStatusColor = (status: string) => {
+  const getPaymentStatusColor = (status: string) => {
     switch (status) {
-      case "CONFIRMED":
+      case "FULLY_PAID":
         return "bg-green-500";
-      case "PENDING":
+      case "DEPOSIT_PAID":
+        return "bg-blue-500";
+      case "DEPOSIT_PENDING":
         return "bg-yellow-500";
       case "CANCELLED":
         return "bg-red-500";
-      case "COMPLETED":
-        return "bg-blue-500";
       default:
         return "bg-gray-500";
     }
   };
 
-  const getVisaStatusColor = (status: string) => {
-    switch (status) {
-      case "APPROVED":
-        return "bg-green-100 text-green-800 hover:bg-green-100";
-      case "PENDING":
-        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100";
-      case "REJECTED":
-        return "bg-red-100 text-red-800 hover:bg-red-100";
-      default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100";
-    }
+  // Calculate total amount and paid amount from booking data
+  const calculateBookingAmounts = (booking: Booking) => {
+    const basePrice = booking.trip?.standardPrice || 0;
+    const extraSingle = booking.extraPriceForSingleTraveller || 0;
+    const extraBedPrice = booking.extraBed && booking.extraPricePerBed ? booking.extraPricePerBed : 0;
+    const extraSeatPrice = booking.extraPricePerSeat || 0;
+    const extraBagPrice = booking.extraPricePerBag || 0;
+    const discount = booking.discountPrice || 0;
+    const totalAmount = basePrice + extraSingle + extraBedPrice + extraSeatPrice + extraBagPrice - discount;
+
+    const firstAmount = booking.firstPayment?.amount || 0;
+    const secondAmount = booking.secondPayment?.amount || 0;
+    const thirdAmount = booking.thirdPayment?.amount || 0;
+    const paidAmount = firstAmount + secondAmount + thirdAmount;
+
+    return { totalAmount, paidAmount };
   };
 
   const columns: ColumnDef<Booking>[] = useMemo(
@@ -200,7 +192,21 @@ export default function BookingsPage() {
         cell: ({ row }) => (
           <div className="flex flex-col">
             <span>{row.original.trip.name}</span>
-            <span className="text-muted-foreground text-xs">{row.original.trip.destination}</span>
+            <span className="text-muted-foreground text-xs">
+              {format(new Date(row.original.trip.startDate), "dd MMM")} -{" "}
+              {format(new Date(row.original.trip.endDate), "dd MMM")}
+            </span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "salesUser",
+        header: "Sales",
+        cell: ({ row }) => (
+          <div className="text-sm">
+            {row.original.salesUser
+              ? `${row.original.salesUser.firstName} ${row.original.salesUser.lastName}`
+              : "-"}
           </div>
         ),
       },
@@ -210,32 +216,28 @@ export default function BookingsPage() {
         cell: ({ row }) => format(new Date(row.original.trip.startDate), "dd MMM yyyy"),
       },
       {
-        accessorKey: "status",
-        header: "Status",
-        cell: ({ row }) => <Badge className={getStatusColor(row.original.status)}>{row.original.status}</Badge>,
-      },
-      {
-        accessorKey: "visaStatus",
-        header: "Visa",
+        accessorKey: "paymentStatus",
+        header: "Payment Status",
         cell: ({ row }) => (
-          <Badge variant="outline" className={getVisaStatusColor(row.original.visaStatus)}>
-            {row.original.visaStatus.replace("_", " ")}
+          <Badge className={getPaymentStatusColor(row.original.paymentStatus)}>
+            {row.original.paymentStatus.replace(/_/g, " ")}
           </Badge>
         ),
       },
       {
         accessorKey: "payment",
         header: "Payment",
-        cell: ({ row }) => (
-          <div className="flex flex-col text-sm">
-            <span>Total: {row.original.totalAmount.toLocaleString()}</span>
-            <span
-              className={row.original.paidAmount >= row.original.totalAmount ? "text-green-600" : "text-yellow-600"}
-            >
-              Paid: {row.original.paidAmount.toLocaleString()}
-            </span>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const { totalAmount, paidAmount } = calculateBookingAmounts(row.original);
+          return (
+            <div className="flex flex-col text-sm">
+              <span>Total: {totalAmount.toLocaleString()}</span>
+              <span className={paidAmount >= totalAmount ? "text-green-600" : "text-yellow-600"}>
+                Paid: {paidAmount.toLocaleString()}
+              </span>
+            </div>
+          );
+        },
       },
       {
         id: "actions",
@@ -268,8 +270,8 @@ export default function BookingsPage() {
     page,
     pageSize,
     searchQuery || undefined,
-    status !== "ALL" ? status : undefined,
-    visaStatus !== "ALL" ? visaStatus : undefined,
+    paymentStatus !== "ALL" ? paymentStatus : undefined,
+    undefined, // visaStatus removed
     tripStartDateFrom || undefined,
     tripStartDateTo || undefined,
   );
@@ -355,44 +357,23 @@ export default function BookingsPage() {
 
       {/* Search form */}
       <div className="flex items-center justify-end gap-4">
-        {/* Filter: Status */}
+        {/* Filter: Payment Status */}
         <Select
-          value={status}
+          value={paymentStatus}
           onValueChange={(value) => {
-            setStatus(value);
+            setPaymentStatus(value);
             updateSearchParams({ status: value, page: 1 });
           }}
         >
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Filter status" />
+            <SelectValue placeholder="Filter payment status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Status</SelectItem>
-            <SelectItem value="PENDING">Pending</SelectItem>
-            <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+            <SelectItem value="DEPOSIT_PENDING">Deposit Pending</SelectItem>
+            <SelectItem value="DEPOSIT_PAID">Deposit Paid</SelectItem>
+            <SelectItem value="FULLY_PAID">Fully Paid</SelectItem>
             <SelectItem value="CANCELLED">Cancelled</SelectItem>
-            <SelectItem value="COMPLETED">Completed</SelectItem>
-            <SelectItem value="REFUNDED">Refunded</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Filter: Visa Status */}
-        <Select
-          value={visaStatus}
-          onValueChange={(value) => {
-            setVisaStatus(value);
-            updateSearchParams({ visaStatus: value, page: 1 });
-          }}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Filter visa status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Visa Status</SelectItem>
-            <SelectItem value="NOT_REQUIRED">Not Required</SelectItem>
-            <SelectItem value="PENDING">Pending</SelectItem>
-            <SelectItem value="APPROVED">Approved</SelectItem>
-            <SelectItem value="REJECTED">Rejected</SelectItem>
           </SelectContent>
         </Select>
 

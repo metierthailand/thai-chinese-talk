@@ -70,17 +70,16 @@ export async function getCommissionAgent(booking: Booking): Promise<{
 
 /**
  * Calculate and create commission for a booking
+ * Commission is calculated when paymentStatus is FULLY_PAID
  */
 export async function calculateCommission(bookingId: string) {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    select: {
-      id: true,
-      leadId: true,
-      agentId: true,
-      totalAmount: true,
-      paidAmount: true,
-      status: true,
+    include: {
+      trip: { select: { standardPrice: true } },
+      firstPayment: { select: { amount: true } },
+      secondPayment: { select: { amount: true } },
+      thirdPayment: { select: { amount: true } },
     },
   });
 
@@ -88,9 +87,9 @@ export async function calculateCommission(bookingId: string) {
     throw new Error("Booking not found");
   }
 
-  // Commission is only calculated for COMPLETED bookings
-  if (booking.status !== "COMPLETED") {
-    console.log(`Booking ${bookingId} is not COMPLETED, skipping commission calculation`);
+  // Commission is only calculated for FULLY_PAID bookings
+  if (booking.paymentStatus !== "FULLY_PAID") {
+    console.log(`Booking ${bookingId} is not FULLY_PAID (status: ${booking.paymentStatus}), skipping commission calculation`);
     return null;
   }
 
@@ -104,38 +103,62 @@ export async function calculateCommission(bookingId: string) {
     return existingCommission;
   }
 
-  // Get commission agent
-  const commissionInfo = await getCommissionAgent(booking);
+  // Calculate total amount from trip + extras - discount
+  const basePrice = Number(booking.trip.standardPrice) || 0;
+  const extraSingle = booking.extraPriceForSingleTraveller ? Number(booking.extraPriceForSingleTraveller) : 0;
+  const extraBedPrice = booking.extraPricePerBed ? Number(booking.extraPricePerBed) : 0;
+  const extraSeatPrice = booking.extraPricePerSeat ? Number(booking.extraPricePerSeat) : 0;
+  const extraBagPrice = booking.extraPricePerBag ? Number(booking.extraPricePerBag) : 0;
+  const discount = booking.discountPrice ? Number(booking.discountPrice) : 0;
+  const totalAmount = basePrice + extraSingle + extraBedPrice + extraSeatPrice + extraBagPrice - discount;
 
-  if (!commissionInfo) {
-    console.log(`No agent found for commission on booking ${bookingId}`);
+  // Calculate paid amount
+  const firstAmount = booking.firstPayment ? Number(booking.firstPayment.amount) : 0;
+  const secondAmount = booking.secondPayment ? Number(booking.secondPayment.amount) : 0;
+  const thirdAmount = booking.thirdPayment ? Number(booking.thirdPayment.amount) : 0;
+  const paidAmount = firstAmount + secondAmount + thirdAmount;
+
+  // Get commission agent - use salesUserId (SALES role user)
+  const salesUser = await prisma.user.findUnique({
+    where: { id: booking.salesUserId },
+    select: {
+      id: true,
+      commissionPerHead: true,
+    },
+  });
+
+  if (!salesUser) {
+    console.log(`Sales user not found for booking ${bookingId}`);
     return null;
   }
 
-  const { agentId, commissionRate, type } = commissionInfo;
+  const commissionRate = salesUser.commissionPerHead
+    ? new Decimal(salesUser.commissionPerHead.toString()).toNumber()
+    : 0;
+
+  if (commissionRate === 0) {
+    console.log(`Sales user ${salesUser.id} has no commission rate, skipping commission calculation`);
+    return null;
+  }
 
   // Calculate commission amount
   // commissionPerHead is a fixed amount per booking (not a percentage)
-  // Use commissionPerHead as fixed amount per completed booking
   const amount = new Decimal(commissionRate);
 
-  // Determine initial status based on payment
-  const totalAmount = new Decimal(booking.totalAmount.toString());
-  const paidAmount = new Decimal(booking.paidAmount.toString());
-  const isFullyPaid = paidAmount.gte(totalAmount);
-  const status: CommissionStatus = isFullyPaid ? "APPROVED" : "PENDING";
+  // Commission status is APPROVED when fully paid
+  const status: CommissionStatus = "APPROVED";
 
   // Create commission
   const commission = await prisma.commission.create({
     data: {
       bookingId,
-      agentId,
-      leadId: booking.leadId,
-      type,
+      agentId: salesUser.id,
+      leadId: null, // New schema doesn't have leadId
+      type: "SALES",
       rate: commissionRate,
       amount: amount.toNumber(),
       status,
-      note: `Auto-generated commission (${type})`,
+      note: `Auto-generated commission for sales user (FULLY_PAID)`,
     },
   });
 
@@ -143,15 +166,16 @@ export async function calculateCommission(bookingId: string) {
 }
 
 /**
- * Update commission status based on booking payment
+ * Update commission status based on booking payment status
  */
 export async function updateCommissionStatus(bookingId: string) {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    select: {
-      totalAmount: true,
-      paidAmount: true,
-      status: true,
+    include: {
+      trip: { select: { standardPrice: true } },
+      firstPayment: { select: { amount: true } },
+      secondPayment: { select: { amount: true } },
+      thirdPayment: { select: { amount: true } },
     },
   });
 
@@ -168,9 +192,21 @@ export async function updateCommissionStatus(bookingId: string) {
     return null;
   }
 
-  const totalAmount = new Decimal(booking.totalAmount.toString());
-  const paidAmount = new Decimal(booking.paidAmount.toString());
-  const isFullyPaid = paidAmount.gte(totalAmount);
+  // Calculate total amount and paid amount
+  const basePrice = Number(booking.trip.standardPrice) || 0;
+  const extraSingle = booking.extraPriceForSingleTraveller ? Number(booking.extraPriceForSingleTraveller) : 0;
+  const extraBedPrice = booking.extraPricePerBed ? Number(booking.extraPricePerBed) : 0;
+  const extraSeatPrice = booking.extraPricePerSeat ? Number(booking.extraPricePerSeat) : 0;
+  const extraBagPrice = booking.extraPricePerBag ? Number(booking.extraPricePerBag) : 0;
+  const discount = booking.discountPrice ? Number(booking.discountPrice) : 0;
+  const totalAmount = basePrice + extraSingle + extraBedPrice + extraSeatPrice + extraBagPrice - discount;
+
+  const firstAmount = booking.firstPayment ? Number(booking.firstPayment.amount) : 0;
+  const secondAmount = booking.secondPayment ? Number(booking.secondPayment.amount) : 0;
+  const thirdAmount = booking.thirdPayment ? Number(booking.thirdPayment.amount) : 0;
+  const paidAmount = firstAmount + secondAmount + thirdAmount;
+
+  const isFullyPaid = booking.paymentStatus === "FULLY_PAID";
 
   // Update commission status
   let newStatus: CommissionStatus = commission.status;
@@ -181,8 +217,8 @@ export async function updateCommissionStatus(bookingId: string) {
     newStatus = "PENDING";
   }
 
-  // If booking is cancelled/refunded, keep commission as PENDING (not eligible for payment)
-  if (["CANCELLED", "REFUNDED"].includes(booking.status)) {
+  // If booking is cancelled, keep commission as PENDING (not eligible for payment)
+  if (booking.paymentStatus === "CANCELLED") {
     newStatus = "PENDING";
   }
 

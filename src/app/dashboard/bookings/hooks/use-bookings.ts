@@ -1,11 +1,13 @@
+import { Payment } from "@prisma/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export interface Booking {
   id: string;
   customerId: string;
+  salesUserId: string;
   tripId: string;
-  leadId?: string | null;
+  agentId?: string | null;
   customer: {
     firstNameTh: string;
     lastNameTh: string;
@@ -13,16 +15,71 @@ export interface Booking {
     lastNameEn: string;
     email: string;
   };
+  salesUser?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  agent?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  companionCustomers?: Array<{
+    id: string;
+    firstNameTh: string;
+    lastNameTh: string;
+    firstNameEn: string;
+    lastNameEn: string;
+  }>;
   trip: {
     name: string;
-    destination: string;
     startDate: string;
     endDate: string;
+    standardPrice?: number;
   };
-  status: string;
-  visaStatus: string;
-  totalAmount: number;
-  paidAmount: number;
+  note?: string | null;
+  extraPriceForSingleTraveller?: number | null;
+  roomType?: string;
+  extraBed?: boolean;
+  extraPricePerBed?: number;
+  roomNote?: string | null;
+  seatType?: string;
+  seatClass?: string | null;
+  extraPricePerSeat?: number | null;
+  seatNote?: string | null;
+  extraPricePerBag?: number | null;
+  bagNote?: string | null;
+  discountPrice?: number | null;
+  discountNote?: string | null;
+  paymentStatus: string;
+  firstPaymentRatio?: string;
+  firstPaymentId?: string | null;
+  firstPayment?: {
+    id: string;
+    amount: number;
+    paidAt: string;
+  };
+  secondPaymentId?: string | null;
+  secondPayment?: {
+    id: string;
+    amount: number;
+    paidAt: string;
+  } | null;
+  thirdPaymentId?: string | null;
+  thirdPayment?: {
+    id: string;
+    amount: number;
+    paidAt: string;
+  } | null;
+  payments?: Array<{
+    id: string;
+    amount: number;
+    paidAt: string;
+    proofOfPayment?: string | null;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,10 +101,10 @@ export const bookingKeys = {
     pageSize: number,
     search?: string,
     status?: string,
-    visaStatus?: string,
+    _visaStatus?: string, // Deprecated, kept for backward compatibility
     tripStartDateFrom?: string,
     tripStartDateTo?: string,
-    tripId?: string
+    tripId?: string,
   ) =>
     [
       ...bookingKeys.lists(),
@@ -55,7 +112,6 @@ export const bookingKeys = {
       pageSize,
       search,
       status,
-      visaStatus,
       tripStartDateFrom,
       tripStartDateTo,
       tripId,
@@ -70,10 +126,10 @@ async function fetchBookings(
   pageSize: number = 10,
   search?: string,
   status?: string,
-  visaStatus?: string,
+  _visaStatus?: string, // Deprecated, kept for backward compatibility
   tripStartDateFrom?: string,
   tripStartDateTo?: string,
-  tripId?: string
+  tripId?: string,
 ): Promise<BookingsResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -85,9 +141,6 @@ async function fetchBookings(
   }
   if (status) {
     params.set("status", status);
-  }
-  if (visaStatus) {
-    params.set("visaStatus", visaStatus);
   }
   if (tripStartDateFrom) {
     params.set("tripStartDateFrom", tripStartDateFrom);
@@ -107,10 +160,41 @@ async function fetchBookings(
   // Convert Decimal fields to numbers
   return {
     ...data,
-    data: data.data.map((booking: Booking & { totalAmount: string | number; paidAmount: string | number }) => ({
+    data: data.data.map((booking: Booking) => ({
       ...booking,
-      totalAmount: Number(booking.totalAmount),
-      paidAmount: Number(booking.paidAmount),
+      extraPriceForSingleTraveller: booking.extraPriceForSingleTraveller
+        ? Number(booking.extraPriceForSingleTraveller)
+        : null,
+      extraPricePerBed: booking.extraPricePerBed ? Number(booking.extraPricePerBed) : 0,
+      extraPricePerSeat: booking.extraPricePerSeat ? Number(booking.extraPricePerSeat) : null,
+      extraPricePerBag: booking.extraPricePerBag ? Number(booking.extraPricePerBag) : null,
+      discountPrice: booking.discountPrice ? Number(booking.discountPrice) : null,
+      trip: {
+        ...booking.trip,
+        standardPrice: booking.trip.standardPrice ? Number(booking.trip.standardPrice) : 0,
+      },
+      firstPayment: booking.firstPayment
+        ? {
+            ...booking.firstPayment,
+            amount: Number(booking.firstPayment.amount),
+          }
+        : undefined,
+      secondPayment: booking.secondPayment
+        ? {
+            ...booking.secondPayment,
+            amount: Number(booking.secondPayment.amount),
+          }
+        : null,
+      thirdPayment: booking.thirdPayment
+        ? {
+            ...booking.thirdPayment,
+            amount: Number(booking.thirdPayment.amount),
+          }
+        : null,
+      payments: booking.payments?.map((p) => ({
+        ...p,
+        amount: Number(p.amount),
+      })),
     })),
   };
 }
@@ -125,8 +209,37 @@ async function fetchBooking(id: string): Promise<Booking> {
   // Convert Decimal fields to numbers
   return {
     ...data,
-    totalAmount: Number(data.totalAmount),
-    paidAmount: Number(data.paidAmount),
+    extraPriceForSingleTraveller: data.extraPriceForSingleTraveller ? Number(data.extraPriceForSingleTraveller) : null,
+    extraPricePerBed: data.extraPricePerBed ? Number(data.extraPricePerBed) : 0,
+    extraPricePerSeat: data.extraPricePerSeat ? Number(data.extraPricePerSeat) : null,
+    extraPricePerBag: data.extraPricePerBag ? Number(data.extraPricePerBag) : null,
+    discountPrice: data.discountPrice ? Number(data.discountPrice) : null,
+    trip: {
+      ...data.trip,
+      standardPrice: data.trip.standardPrice ? Number(data.trip.standardPrice) : 0,
+    },
+    firstPayment: data.firstPayment
+      ? {
+          ...data.firstPayment,
+          amount: Number(data.firstPayment.amount),
+        }
+      : undefined,
+    secondPayment: data.secondPayment
+      ? {
+          ...data.secondPayment,
+          amount: Number(data.secondPayment.amount),
+        }
+      : null,
+    thirdPayment: data.thirdPayment
+      ? {
+          ...data.thirdPayment,
+          amount: Number(data.thirdPayment.amount),
+        }
+      : null,
+    payments: data.payments?.map((p: Payment) => ({
+      ...p,
+      amount: Number(p.amount),
+    })),
   };
 }
 
@@ -134,11 +247,27 @@ async function fetchBooking(id: string): Promise<Booking> {
 async function createBooking(data: {
   customerId: string;
   tripId: string;
-  leadId?: string;
-  totalAmount?: number;
-  paidAmount?: number;
-  status?: string;
-  visaStatus?: string;
+  salesUserId: string;
+  companionCustomerIds?: string[];
+  agentId?: string;
+  note?: string;
+  extraPriceForSingleTraveller?: number;
+  roomType?: string;
+  extraBed?: boolean;
+  extraPricePerBed?: number;
+  roomNote?: string;
+  seatType?: string;
+  seatClass?: string;
+  extraPricePerSeat?: number;
+  seatNote?: string;
+  extraPricePerBag?: number;
+  bagNote?: string;
+  discountPrice?: number;
+  discountNote?: string;
+  paymentStatus?: string;
+  firstPaymentRatio: string;
+  firstPaymentAmount: number;
+  firstPaymentProof?: string;
 }): Promise<Booking> {
   const res = await fetch("/api/bookings", {
     method: "POST",
@@ -165,11 +294,25 @@ async function updateBooking({
   data: {
     customerId?: string;
     tripId?: string;
-    leadId?: string;
-    totalAmount?: number;
-    paidAmount?: number;
-    status?: string;
-    visaStatus?: string;
+    salesUserId?: string;
+    companionCustomerIds?: string[];
+    agentId?: string;
+    note?: string;
+    extraPriceForSingleTraveller?: number;
+    roomType?: string;
+    extraBed?: boolean;
+    extraPricePerBed?: number;
+    roomNote?: string;
+    seatType?: string;
+    seatClass?: string;
+    extraPricePerSeat?: number;
+    seatNote?: string;
+    extraPricePerBag?: number;
+    bagNote?: string;
+    discountPrice?: number;
+    discountNote?: string;
+    paymentStatus?: string;
+    firstPaymentRatio?: string;
   };
 }): Promise<Booking> {
   const res = await fetch(`/api/bookings/${id}`, {
@@ -210,33 +353,15 @@ export function useBookings(
   pageSize: number,
   search?: string,
   status?: string,
-  visaStatus?: string,
+  _visaStatus?: string, // Deprecated, kept for backward compatibility
   tripStartDateFrom?: string,
   tripStartDateTo?: string,
-  tripId?: string
+  tripId?: string,
 ) {
   return useQuery({
-    queryKey: bookingKeys.list(
-      page,
-      pageSize,
-      search,
-      status,
-      visaStatus,
-      tripStartDateFrom,
-      tripStartDateTo,
-      tripId
-    ),
+    queryKey: bookingKeys.list(page, pageSize, search, status, _visaStatus, tripStartDateFrom, tripStartDateTo, tripId),
     queryFn: () =>
-      fetchBookings(
-        page,
-        pageSize,
-        search,
-        status,
-        visaStatus,
-        tripStartDateFrom,
-        tripStartDateTo,
-        tripId
-      ),
+      fetchBookings(page, pageSize, search, status, _visaStatus, tripStartDateFrom, tripStartDateTo, tripId),
     staleTime: 30 * 1000, // 30 seconds
   });
 }
@@ -303,4 +428,3 @@ export function useDeleteBooking() {
     },
   });
 }
-

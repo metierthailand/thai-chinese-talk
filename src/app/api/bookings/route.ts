@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { BookingStatus, Prisma, VisaStatus } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import { calculateCommission } from "@/lib/services/commission-calculator";
-import { autoUpdateLeadToClosedWon } from "@/lib/services/lead-sync";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -19,7 +18,6 @@ export async function GET(request: Request) {
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
-    const visaStatus = searchParams.get("visaStatus") || "";
     const tripStartDateFrom = searchParams.get("tripStartDateFrom") || "";
     const tripStartDateTo = searchParams.get("tripStartDateTo") || "";
     const tripId = searchParams.get("tripId") || "";
@@ -62,14 +60,9 @@ export async function GET(request: Request) {
           }
         : {};
 
-    // Build where clause for status filter
-    const statusFilter: Prisma.BookingWhereInput = status
-      ? { status: status as BookingStatus }
-      : {};
-
-    // Build where clause for visa status filter
-    const visaStatusFilter: Prisma.BookingWhereInput = visaStatus
-      ? { visaStatus: visaStatus as VisaStatus }
+    // Build where clause for payment status filter
+    const paymentStatusFilter: Prisma.BookingWhereInput = status
+      ? ({ paymentStatus: status } as unknown as Prisma.BookingWhereInput)
       : {};
 
     // Build where clause for trip start date range filter
@@ -88,13 +81,11 @@ export async function GET(request: Request) {
         : {};
 
     // Build where clause for tripId filter
-    const tripIdFilter: Prisma.BookingWhereInput = tripId
-      ? { tripId }
-      : {};
+    const tripIdFilter: Prisma.BookingWhereInput = tripId ? { tripId } : {};
 
     // Combine all filters
     const where: Prisma.BookingWhereInput = {
-      AND: [searchFilter, statusFilter, visaStatusFilter, tripDateFilter, tripIdFilter],
+      AND: [searchFilter, paymentStatusFilter, tripDateFilter, tripIdFilter],
     };
 
     // Get total count for pagination
@@ -120,11 +111,58 @@ export async function GET(request: Request) {
             email: true,
           },
         },
+        salesUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        agent: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        companionCustomers: {
+          select: {
+            id: true,
+            firstNameTh: true,
+            lastNameTh: true,
+            firstNameEn: true,
+            lastNameEn: true,
+          },
+        },
         trip: {
           select: {
             name: true,
             startDate: true,
             endDate: true,
+            standardPrice: true,
+          },
+        },
+        firstPayment: {
+          select: {
+            id: true,
+            amount: true,
+            paidAt: true,
+          },
+        },
+        secondPayment: {
+          select: {
+            id: true,
+            amount: true,
+            paidAt: true,
+          },
+        },
+        thirdPayment: {
+          select: {
+            id: true,
+            amount: true,
+            paidAt: true,
           },
         },
       },
@@ -155,35 +193,77 @@ export async function POST(req: Request) {
     const {
       customerId,
       tripId,
-      leadId,
-      totalAmount,
-      paidAmount,
-      status,
-      visaStatus,
+      salesUserId,
+      companionCustomerIds,
+      agentId,
+      note,
+      extraPriceForSingleTraveller,
+      roomType,
+      extraPricePerBed,
+      roomNote,
+      seatType,
+      seatClass,
+      extraPricePerSeat,
+      seatNote,
+      extraPricePerBag,
+      bagNote,
+      discountPrice,
+      discountNote,
+      paymentStatus,
+      firstPaymentRatio,
+      firstPaymentAmount,
+      firstPaymentProof,
     } = body;
 
-    let finalCustomerId = customerId;
-    let finalLeadId = leadId;
+    if (!customerId || !tripId || !salesUserId) {
+      return new NextResponse("Missing required fields: customerId, tripId, and salesUserId are required", {
+        status: 400,
+      });
+    }
 
-    // If leadId is provided but customerId is missing, try to find customer from lead
-    if (leadId && !finalCustomerId) {
-      const lead = await prisma.lead.findUnique({
-        where: { id: leadId },
+    // Validate salesUserId is a user with SALES role
+    const salesUser = await prisma.user.findUnique({
+      where: { id: salesUserId },
+      select: { role: true, isActive: true },
+    });
+
+    if (!salesUser || salesUser.role !== Role.SALES || !salesUser.isActive) {
+      return new NextResponse("Invalid salesUserId: must be an active user with SALES role", { status: 400 });
+    }
+
+    // Validate companion customers if provided
+    if (companionCustomerIds && Array.isArray(companionCustomerIds) && companionCustomerIds.length > 0) {
+      // Check if companion customers exist and are booked in the same trip
+      const trip = await prisma.trip.findUnique({
+        where: { id: tripId },
+        select: { id: true },
+      });
+
+      if (!trip) {
+        return new NextResponse("Trip not found", { status: 404 });
+      }
+
+      // Validate that companion customers are already booked in this trip
+      const companionBookings = await prisma.booking.findMany({
+        where: {
+          tripId,
+          customerId: { in: companionCustomerIds },
+        },
         select: { customerId: true },
       });
 
-      if (lead) {
-        finalCustomerId = lead.customerId;
-      } else {
-        return new NextResponse("Invalid Lead ID", { status: 400 });
+      const bookedCompanionIds = companionBookings.map((b) => b.customerId);
+      const invalidCompanions = companionCustomerIds.filter((id: string) => !bookedCompanionIds.includes(id));
+
+      if (invalidCompanions.length > 0) {
+        return new NextResponse(
+          `Invalid companion customers: ${invalidCompanions.join(", ")} must be booked in the same trip first`,
+          { status: 400 },
+        );
       }
     }
 
-    if (!finalCustomerId || !tripId) {
-      return new NextResponse("Missing required fields", { status: 400 });
-    }
-
-    // Get trip to use its price if totalAmount is not provided
+    // Get trip to calculate base price
     const trip = await prisma.trip.findUnique({
       where: { id: tripId },
       select: { standardPrice: true },
@@ -193,101 +273,190 @@ export async function POST(req: Request) {
       return new NextResponse("Trip not found", { status: 404 });
     }
 
-    // Use trip.price if totalAmount is not provided or is 0
-    let finalTotalAmount: number;
-    if (totalAmount && parseFloat(totalAmount) > 0) {
-      finalTotalAmount = parseFloat(totalAmount);
-    } else if (trip.standardPrice) {
-      finalTotalAmount = Number(trip.standardPrice);
-    } else {
-      return new NextResponse("Total amount is required (trip has no price)", { status: 400 });
+    // Calculate total amount from trip price + extra prices - discount
+    const basePrice = Number(trip.standardPrice) || 0;
+    const extraSingle = extraPriceForSingleTraveller ? Number(extraPriceForSingleTraveller) : 0;
+    const extraBedPrice = extraPricePerBed ? Number(extraPricePerBed) : 0;
+    const extraSeatPrice = extraPricePerSeat ? Number(extraPricePerSeat) : 0;
+    const extraBagPrice = extraPricePerBag ? Number(extraPricePerBag) : 0;
+    const discount = discountPrice ? Number(discountPrice) : 0;
+    const totalAmount = basePrice + extraSingle + extraBedPrice + extraSeatPrice + extraBagPrice - discount;
+
+    // Validate firstPaymentRatio and firstPaymentAmount
+    if (!firstPaymentRatio) {
+      return new NextResponse("firstPaymentRatio is required", { status: 400 });
     }
 
-    // Determine agentId
-    let agentId = body.agentId;
-    if (!agentId && leadId) {
-      const lead = await prisma.lead.findUnique({
-        where: { id: leadId },
-        select: { agentId: true },
-      });
-      if (lead) {
-        agentId = lead.agentId;
-      }
+    if (!firstPaymentAmount || Number(firstPaymentAmount) <= 0) {
+      return new NextResponse("firstPaymentAmount is required and must be greater than 0", { status: 400 });
     }
-    // If still no agentId, and the creator is an AGENT, assign them
-    if (!agentId && session.user.role === "AGENT") {
-      agentId = session.user.id;
+
+    // Validate firstPaymentAmount matches ratio
+    let expectedFirstPayment: number;
+    switch (firstPaymentRatio) {
+      case "FIRST_PAYMENT_100":
+        expectedFirstPayment = totalAmount;
+        break;
+      case "FIRST_PAYMENT_50":
+        expectedFirstPayment = totalAmount * 0.5;
+        break;
+      case "FIRST_PAYMENT_30":
+        expectedFirstPayment = totalAmount * 0.3;
+        break;
+      default:
+        return new NextResponse("Invalid firstPaymentRatio", { status: 400 });
     }
+
+    const firstPaymentAmountNum = Number(firstPaymentAmount);
+    if (Math.abs(firstPaymentAmountNum - expectedFirstPayment) > 0.01) {
+      return new NextResponse(
+        `firstPaymentAmount (${firstPaymentAmountNum}) does not match firstPaymentRatio (${firstPaymentRatio}). Expected: ${expectedFirstPayment.toFixed(2)}`,
+        { status: 400 },
+      );
+    }
+
+    // Determine agentId (optional, can be null)
+    const finalAgentId = agentId || null;
 
     // Use transaction to ensure data integrity
     const booking = await prisma.$transaction(async (tx) => {
-      // 1. Auto-create Lead for walk-in if no leadId provided
-      if (!finalLeadId && agentId) {
-        const newLead = await tx.lead.create({
-          data: {
-            customerId: finalCustomerId,
-            agentId,
-            source: "FACEBOOK",
-            status: "BOOKED",
-            leadNote: "Auto-created from booking",
-            sourceNote: "Auto-created from booking",
-            tripInterest: "Auto-created from booking",
-            salesUserId: session.user.id,
-            pax: 1,
-          },
-        });
-        finalLeadId = newLead.id;
-      }
-
-      // 2. Create Booking with 0 paidAmount initially
+      // 1. Create Booking first (without firstPaymentId, it's now optional)
       const newBooking = await tx.booking.create({
         data: {
-          customerId: finalCustomerId,
+          customerId,
+          salesUserId,
           tripId,
-          leadId: finalLeadId,
-          agentId,
-          totalAmount: finalTotalAmount,
-          paidAmount: 0, // Will be updated if there's a payment
-          status: status || "PENDING",
-          visaStatus: visaStatus || "NOT_REQUIRED",
+          agentId: finalAgentId,
+          companionCustomers: {
+            connect: companionCustomerIds?.map((id: string) => ({ id })) || [],
+          },
+          note: note || null,
+          extraPriceForSingleTraveller: extraPriceForSingleTraveller ? Number(extraPriceForSingleTraveller) : null,
+          roomType: roomType || "DOUBLE_BED",
+          extraPricePerBed: extraPricePerBed ? Number(extraPricePerBed) : 0,
+          roomNote: roomNote || null,
+          seatType: seatType || "WINDOW",
+          seatClass: seatClass || null,
+          extraPricePerSeat: extraPricePerSeat ? Number(extraPricePerSeat) : null,
+          seatNote: seatNote || null,
+          extraPricePerBag: extraPricePerBag ? Number(extraPricePerBag) : null,
+          bagNote: bagNote || null,
+          discountPrice: discountPrice ? Number(discountPrice) : null,
+          discountNote: discountNote || null,
+          paymentStatus: (paymentStatus || "DEPOSIT_PENDING") as
+            | "DEPOSIT_PENDING"
+            | "DEPOSIT_PAID"
+            | "FULLY_PAID"
+            | "CANCELLED",
+          firstPaymentRatio: firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30",
         },
       });
 
-      // 3. If paidAmount is provided, create a Payment record
-      const initialPaidAmount = parseFloat(paidAmount || 0);
-      if (initialPaidAmount > 0) {
-        await tx.payment.create({
-          data: {
-            bookingId: newBooking.id,
-            amount: initialPaidAmount,
-            method: "OTHER", // Default or need input
-            note: "Initial payment at booking creation",
-          },
-        });
+      // 2. Create first payment with bookingId
+      const firstPayment = await tx.payment.create({
+        data: {
+          bookingId: newBooking.id,
+          amount: firstPaymentAmountNum,
+          proofOfPayment: firstPaymentProof || null,
+        } as unknown as Prisma.PaymentCreateInput,
+      });
 
-        // Update Booking paidAmount
-        await tx.booking.update({
-          where: { id: newBooking.id },
-          data: { paidAmount: initialPaidAmount },
-        });
-        
-        newBooking.paidAmount = new Prisma.Decimal(initialPaidAmount);
+      // 3. Update Booking with firstPaymentId
+      await tx.booking.update({
+        where: { id: newBooking.id },
+        data: { firstPaymentId: firstPayment.id } as unknown as Prisma.BookingUpdateInput,
+      });
+
+      // Return the updated booking
+      const updatedBooking = await tx.booking.findUnique({
+        where: { id: newBooking.id },
+        include: {
+          customer: {
+            select: {
+              firstNameTh: true,
+              lastNameTh: true,
+              firstNameEn: true,
+              lastNameEn: true,
+              email: true,
+            },
+          },
+          salesUser: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          agent: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          companionCustomers: {
+            select: {
+              id: true,
+              firstNameTh: true,
+              lastNameTh: true,
+              firstNameEn: true,
+              lastNameEn: true,
+            },
+          },
+          trip: {
+            select: {
+              name: true,
+              startDate: true,
+              endDate: true,
+              standardPrice: true,
+            },
+          },
+          firstPayment: {
+            select: {
+              id: true,
+              amount: true,
+              paidAt: true,
+            },
+          },
+          secondPayment: {
+            select: {
+              id: true,
+              amount: true,
+              paidAt: true,
+            },
+          },
+          thirdPayment: {
+            select: {
+              id: true,
+              amount: true,
+              paidAt: true,
+            },
+          },
+          payments: {
+            select: {
+              id: true,
+              amount: true,
+              paidAt: true,
+              proofOfPayment: true,
+            },
+          },
+        },
+      });
+
+      if (!updatedBooking) {
+        throw new Error("Failed to fetch created booking");
       }
 
-      // 4. Auto-update Lead status to CLOSED_WON if leadId is provided
-      if (finalLeadId) {
-        await tx.lead.update({
-          where: { id: finalLeadId },
-          data: {
-            status: "BOOKED",
-          },
-        });
-      }
-
-      return newBooking;
+      return updatedBooking;
     });
 
-    // 5. Calculate and create Commission (outside transaction for better error handling)
+    if (!booking) {
+      return new NextResponse("Failed to create booking", { status: 500 });
+    }
+
+    // 4. Calculate and create Commission (outside transaction for better error handling)
     try {
       await calculateCommission(booking.id);
     } catch (commissionError) {
