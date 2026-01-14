@@ -69,7 +69,36 @@ export async function GET() {
       prisma.booking.findMany({
         take: 5,
         orderBy: { createdAt: "desc" },
-        include: { customer: { select: { firstNameTh: true, lastNameTh: true } } },
+        include: {
+          customer: {
+            select: {
+              firstNameTh: true,
+              lastNameTh: true,
+              firstNameEn: true,
+              lastNameEn: true,
+            },
+          },
+          trip: {
+            select: {
+              name: true,
+            },
+          },
+          firstPayment: {
+            select: {
+              amount: true,
+            },
+          },
+          secondPayment: {
+            select: {
+              amount: true,
+            },
+          },
+          thirdPayment: {
+            select: {
+              amount: true,
+            },
+          },
+        },
       }),
     ]);
 
@@ -81,13 +110,25 @@ export async function GET() {
       return sum + firstAmount + secondAmount + thirdAmount;
     }, 0);
 
+    // Calculate total amount for each recent booking
+    const recentBookingsWithTotal = recentBookings.map((booking) => {
+      const firstAmount = booking.firstPayment ? Number(booking.firstPayment.amount) : 0;
+      const secondAmount = booking.secondPayment ? Number(booking.secondPayment.amount) : 0;
+      const thirdAmount = booking.thirdPayment ? Number(booking.thirdPayment.amount) : 0;
+      const totalAmount = firstAmount + secondAmount + thirdAmount;
+      return {
+        ...booking,
+        totalAmount,
+      };
+    });
+
     return NextResponse.json({
       customerCount,
       activeLeadsCount,
       pendingBookingsCount,
       totalRevenue,
       recentLeads,
-      recentBookings,
+      recentBookings: recentBookingsWithTotal,
     });
   } catch (error) {
     console.error("[DASHBOARD_GET]", error);

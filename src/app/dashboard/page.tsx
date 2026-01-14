@@ -1,19 +1,43 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, FileText, Plane, DollarSign, LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { Users, FileText, Plane, DollarSign } from "lucide-react";
+
+interface RecentLead {
+  id: string;
+  tripInterest?: string;
+  status: string;
+  customer?: {
+    firstNameTh?: string;
+    lastNameTh?: string;
+  } | null;
+  firstName?: string | null;
+  lastName?: string | null;
+}
+
+interface RecentBooking {
+  id: string;
+  totalAmount: number;
+  trip?: {
+    name: string;
+  } | null;
+  customer?: {
+    firstNameTh?: string;
+    lastNameTh?: string;
+    firstNameEn?: string;
+    lastNameEn?: string;
+  } | null;
+}
 
 interface DashboardStats {
   customerCount: number;
   activeLeadsCount: number;
   pendingBookingsCount: number;
   totalRevenue: number;
-  recentLeads: any[];
-  recentBookings: any[];
+  recentLeads: RecentLead[];
+  recentBookings: RecentBooking[];
 }
 
 export default function DashboardPage() {
@@ -117,9 +141,10 @@ export default function DashboardPage() {
                 stats?.recentBookings.map((booking) => (
                   <div key={booking.id} className="flex items-center">
                     <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">{booking.tripName}</p>
+                      <p className="text-sm font-medium leading-none">{booking.trip?.name || "Unknown Trip"}</p>
                       <p className="text-sm text-muted-foreground">
-                        {booking.customer.firstName} {booking.customer.lastName}
+                        {booking.customer?.firstNameTh || booking.customer?.firstNameEn || ""}{" "}
+                        {booking.customer?.lastNameTh || booking.customer?.lastNameEn || ""}
                       </p>
                     </div>
                     <div className="ml-auto font-medium">
@@ -127,7 +152,7 @@ export default function DashboardPage() {
                         style: "currency",
                         currency: "THB",
                         maximumFractionDigits: 0,
-                      }).format(booking.totalAmount)}
+                      }).format(booking.totalAmount || 0)}
                     </div>
                   </div>
                 ))
@@ -148,14 +173,15 @@ export default function DashboardPage() {
                   <div key={lead.id} className="flex items-center justify-between">
                     <div className="space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {lead.destinationInterest || "General Inquiry"}
+                        {lead.tripInterest || "General Inquiry"}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {lead.customer.firstName} {lead.customer.lastName}
+                        {lead.customer?.firstNameTh || lead.firstName || ""}{" "}
+                        {lead.customer?.lastNameTh || lead.lastName || ""}
                       </p>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {lead.status.replace("_", " ")}
+                      {lead.status?.replace(/_/g, " ") || lead.status}
                     </div>
                   </div>
                 ))
