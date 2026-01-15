@@ -17,6 +17,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { useMemo, useCallback, useEffect } from "react";
+import { Loading } from "@/components/page/loading";
 
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -161,13 +162,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   }, [totalPages, bookings, table]);
 
   if (initialLoading) {
-    return (
-      <div className="mx-auto max-w-6xl space-y-8 p-8">
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-muted-foreground">Loading trip...</p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   if (!trip) {

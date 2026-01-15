@@ -7,12 +7,9 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { BookingForm, BookingFormValues } from "../_components/booking-form";
 import { useBooking } from "../hooks/use-bookings";
+import { Loading } from "@/components/page/loading";
 
-export default function ViewBookingPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function ViewBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const resolvedParams = use(params);
   const bookingId = resolvedParams.id;
@@ -32,32 +29,29 @@ export default function ViewBookingPage({
         extraPricePerBed: booking.extraPricePerBed?.toString() || "0",
         roomNote: booking.roomNote || "",
         seatType: (booking.seatType as "WINDOW" | "MIDDLE" | "AISLE") ?? "WINDOW",
-        seatClass: booking.seatClass
-          ? (booking.seatClass as "FIRST_CLASS" | "BUSINESS_CLASS" | "LONG_LEG")
-          : undefined,
+        seatClass: booking.seatClass ? (booking.seatClass as "FIRST_CLASS" | "BUSINESS_CLASS" | "LONG_LEG") : undefined,
         extraPricePerSeat: booking.extraPricePerSeat?.toString() ?? "",
         seatNote: booking.seatNote || "",
         extraPricePerBag: booking.extraPricePerBag?.toString() || "",
         bagNote: booking.bagNote || "",
         discountPrice: booking.discountPrice?.toString() || "",
         discountNote: booking.discountNote || "",
-        paymentStatus: (booking.paymentStatus as "DEPOSIT_PENDING" | "DEPOSIT_PAID" | "FULLY_PAID" | "CANCELLED") ?? "DEPOSIT_PENDING",
-        firstPaymentRatio: (booking.firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30") ?? "FIRST_PAYMENT_50",
+        paymentStatus:
+          (booking.paymentStatus as "DEPOSIT_PENDING" | "DEPOSIT_PAID" | "FULLY_PAID" | "CANCELLED") ??
+          "DEPOSIT_PENDING",
+        firstPaymentRatio:
+          (booking.firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30") ??
+          "FIRST_PAYMENT_50",
         firstPaymentAmount: booking.firstPayment?.amount.toString() || "",
-        firstPaymentProof: booking.firstPaymentId && booking.payments
-          ? booking.payments.find((p) => p.id === booking.firstPaymentId)?.proofOfPayment ?? undefined
-          : undefined,
+        firstPaymentProof:
+          booking.firstPaymentId && booking.payments
+            ? (booking.payments.find((p) => p.id === booking.firstPaymentId)?.proofOfPayment ?? undefined)
+            : undefined,
       }
     : undefined;
 
   if (isLoadingBooking) {
-    return (
-      <div className="mx-auto max-w-2xl space-y-8 p-8">
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-muted-foreground">Loading booking data...</p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   if (bookingError) {
@@ -86,16 +80,9 @@ export default function ViewBookingPage({
         </Link>
       </div>
 
-      <div className="rounded-md border bg-card p-6">
-        {initialData && (
-          <BookingForm
-            mode="view"
-            initialData={initialData}
-            booking={booking}
-          />
-        )}
+      <div className="bg-card rounded-md border p-6">
+        {initialData && <BookingForm mode="view" initialData={initialData} booking={booking} />}
       </div>
     </div>
   );
 }
-

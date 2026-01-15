@@ -1,4 +1,4 @@
-# The Trip - Tour Management System
+# Thai Word Chinese Word - Tour Management System
 
 ระบบจัดการทัวร์ครบวงจรสำหรับบริษัทท่องเที่ยว ครอบคลุมการจัดการลูกค้า, การจอง, การติดตาม leads, การคำนวณ commission และอื่นๆ
 

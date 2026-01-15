@@ -17,6 +17,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { Loading } from "@/components/page/loading";
 
 export default function TripsPage() {
   const router = useRouter();
@@ -271,13 +272,7 @@ export default function TripsPage() {
   );
 
   if (isLoading) {
-    return (
-      <div className="space-y-8 p-8">
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-muted-foreground">Loading trips...</p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   if (error) {

@@ -96,7 +96,7 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID=1a2b3c4d5e6f7g8h9i0j
 
 1. ไปที่ [Google Drive](https://drive.google.com/)
 2. สร้างโฟลเดอร์ใหม่ (หรือใช้โฟลเดอร์ที่มีอยู่)
-   - ตัวอย่าง: สร้างโฟลเดอร์ชื่อ "The Trip Uploads"
+   - ตัวอย่าง: สร้างโฟลเดอร์ชื่อ "Thai Word Chinese Word Uploads"
 3. คลิกขวาที่โฟลเดอร์ > **"Share"** (หรือคลิกที่ไอคอน Share)
 4. **ในส่วน "People with access"** (ไม่ใช่ "General access"):
    - คลิก **"Add people and groups"**

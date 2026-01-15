@@ -38,7 +38,7 @@ OAuth 2.0 จะใช้ storage quota ของ user (15GB ฟรี) แท�
    - คลิก **SAVE AND CONTINUE** > **BACK TO DASHBOARD**
 6. กลับไปที่ **Credentials** > **+ CREATE CREDENTIALS** > **OAuth client ID**
 7. เลือก **Application type**: **Web application**
-8. ตั้งชื่อ: `The Trip Web Client`
+8. ตั้งชื่อ: `thai-word-chinese-word`
 9. **Authorized JavaScript origins**:
    ```
    http://localhost:3000

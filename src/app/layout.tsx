@@ -13,7 +13,7 @@ import { Providers } from "@/components/Providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "The Trip - Admin",
+  title: "Thai Word Chinese Word - Admin",
   description: "Travel Agent CRM & Trip Management",
 };
 

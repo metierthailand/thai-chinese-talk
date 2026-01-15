@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useTrip, useUpdateTrip, type TripFormValues } from "../../hooks/use-trips";
 import { TripForm } from "../../_components/trip-form";
+import { Loading } from "@/components/page/loading";
 
 export default function EditTripPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -30,18 +31,12 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
   }
 
   if (initialLoading) {
-    return (
-      <div className="p-8 space-y-8 max-w-2xl mx-auto">
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-muted-foreground">Loading trip...</p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   if (!trip) {
     return (
-      <div className="p-8 space-y-8 max-w-2xl mx-auto">
+      <div className="mx-auto max-w-2xl space-y-8 p-8">
         <div className="flex h-64 items-center justify-center">
           <p className="text-destructive">Trip not found</p>
         </div>
@@ -50,7 +45,7 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
   }
 
   return (
-    <div className="p-8 space-y-8 max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl space-y-8 p-8">
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
@@ -58,7 +53,7 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
         <h2 className="text-3xl font-bold tracking-tight">Edit Trip Package</h2>
       </div>
 
-      <div className="rounded-md border p-6 bg-card">
+      <div className="bg-card rounded-md border p-6">
         <TripForm
           mode="edit"
           initialData={{
@@ -85,4 +80,3 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
     </div>
   );
 }
-
