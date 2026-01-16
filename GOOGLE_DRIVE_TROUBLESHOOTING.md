@@ -33,16 +33,16 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID=1_5hVHb0PfPCcbvzPJ5l__v4W3ig-Ws30
 
 **แม้ว่าคุณจะเป็น owner ของโฟลเดอร์ แต่ Service Account ยังต้องถูกเพิ่มใน "People with access" โดยตรง:**
 
-1. เปิดโฟลเดอร์ "the-trip" ใน Google Drive
+1. เปิดโฟลเดอร์ "thai-chinese-talk" ใน Google Drive
 2. คลิก **"Share"** (หรือคลิกขวา > Share)
 3. **ในส่วน "People with access"** (ไม่ใช่ "General access"):
    - คลิกที่ช่อง **"Add people and groups"** หรือ **"Grant access"**
-   - ใส่ email ของ Service Account: `drive-uploader@the-trip-484202.iam.gserviceaccount.com`
+   - ใส่ email ของ Service Account: `drive-uploader@thai-chinese-talk-484202.iam.gserviceaccount.com`
    - ตั้งสิทธิ์เป็น **"Editor"** (ต้องเป็น Editor เพื่อให้อัปโหลดและสร้างโฟลเดอร์ย่อยได้)
    - คลิก **"Send"** หรือ **"Grant access"**
 4. **ตรวจสอบ:**
    - Service Account email ควรปรากฏในตาราง "People with access"
-   - ต้องเห็น `drive-uploader@the-trip-484202.iam.gserviceaccount.com` ในรายการ
+   - ต้องเห็น `drive-uploader@thai-chinese-talk-484202.iam.gserviceaccount.com` ในรายการ
    - Type ควรเป็น "Service account" หรือ "User"
    - Role ควรเป็น "Editor"
    - ถ้าไม่เห็น แสดงว่าแชร์ไม่สำเร็จ
@@ -50,9 +50,9 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID=1_5hVHb0PfPCcbvzPJ5l__v4W3ig-Ws30
 #### ขั้นตอนที่ 3: ตรวจสอบ .env.local
 
 ```env
-GOOGLE_DRIVE_CLIENT_EMAIL=drive-uploader@the-trip-484202.iam.gserviceaccount.com
+GOOGLE_DRIVE_CLIENT_EMAIL=drive-uploader@thai-chinese-talk-484202.iam.gserviceaccount.com
 GOOGLE_DRIVE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-GOOGLE_DRIVE_PROJECT_ID=the-trip-484202
+GOOGLE_DRIVE_PROJECT_ID=thai-chinese-talk-484202
 GOOGLE_DRIVE_ROOT_FOLDER_ID=1_5hVHb0PfPCcbvzPJ5l__v4W3ig-Ws30
 ```
 
@@ -72,9 +72,9 @@ npm run dev
 ### 🔍 ตรวจสอบว่าแชร์ถูกต้องหรือไม่
 
 1. ไปที่ Google Drive
-2. เปิดโฟลเดอร์ "the-trip"
+2. เปิดโฟลเดอร์ "thai-chinese-talk"
 3. คลิก "Share"
-4. ตรวจสอบว่าเห็น `drive-uploader@the-trip-484202.iam.gserviceaccount.com` ใน "People with access"
+4. ตรวจสอบว่าเห็น `drive-uploader@thai-chinese-talk-484202.iam.gserviceaccount.com` ใน "People with access"
 5. ตรวจสอบว่าสิทธิ์เป็น "Editor"
 
 ### ❌ สิ่งที่ทำผิดบ่อย

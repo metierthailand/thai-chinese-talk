@@ -3,12 +3,12 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: the-trip-postgres
+    container_name: thai-chinese-talk-postgres
     restart: always
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: the_trip_db
+      POSTGRES_DB: thai-chinese-talk-db
     ports:
       - "5432:5432"
     volumes:

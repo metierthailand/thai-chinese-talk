@@ -124,7 +124,7 @@
 1. **Clone repository**
 ```bash
 git clone <repository-url>
-cd the-trip
+cd thai-chinese-talk
 ```
 
 2. **Install dependencies**
@@ -254,7 +254,7 @@ npm run prisma:seed
 ## 📁 โครงสร้างโปรเจค
 
 ```
-the-trip/
+thai-chinese-talk/
 ├── prisma/
 │   ├── schema.prisma          # Database schema
 │   ├── seed.ts                # Seed data
@@ -371,10 +371,10 @@ docker-compose down
 
 ```bash
 # Build image
-docker build -t the-trip .
+docker build -t thai-chinese-talk .
 
 # Run container
-docker run -p 3000:3000 --env-file .env.local the-trip
+docker run -p 3000:3000 --env-file .env.local thai-chinese-talk
 ```
 
 ### Environment Variables สำหรับ Production

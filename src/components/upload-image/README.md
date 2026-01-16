@@ -105,7 +105,7 @@ import { DragDropUpload } from "@/components/upload-image";
 2. ลงชื่อเข้าใช้ด้วยบัญชี Google
 3. คลิกที่ dropdown ด้านบน (แสดงชื่อโปรเจกต์ปัจจุบัน)
 4. คลิก **"New Project"** หรือเลือกโปรเจกต์ที่มีอยู่
-5. ตั้งชื่อโปรเจกต์ (เช่น "the-trip-uploads") และคลิก **"Create"**
+5. ตั้งชื่อโปรเจกต์ (เช่น "thai-chinese-talk-uploads") และคลิก **"Create"**
 
 ### ขั้นตอนที่ 2: เปิดใช้งาน Google Drive API
 
