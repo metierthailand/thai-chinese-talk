@@ -12,27 +12,28 @@ import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { CustomerFilter } from "./_components/customer-filter";
 import { Loading } from "@/components/page/loading";
 
-import { useCustomers, type Customer } from "./hooks/use-customers";
+import { CustomerWithTotalTrips, useCustomers } from "./hooks/use-customers";
 import { mapCustomerParamsToQuery, useCustomerParams } from "./hooks/use-customers-params";
+import { format } from "date-fns";
 // --------------------
 // columns
 // --------------------
-const customerColumns: ColumnDef<Customer>[] = [
+const customerColumns: ColumnDef<CustomerWithTotalTrips>[] = [
   {
     accessorKey: "name",
-    header: "Name",
+    header: "Customer name",
     cell: ({ row }) => {
       const customer = row.original;
       const hasThaiName = customer.firstNameTh && customer.lastNameTh;
       const thaiName = hasThaiName ? `${customer.firstNameTh} ${customer.lastNameTh}` : null;
       const englishName = `${customer.firstNameEn} ${customer.lastNameEn}`;
-      
+
       return (
         <div className="flex flex-col font-medium">
-          <p>{thaiName || englishName}</p>
-          {thaiName && (
+          <p>{englishName}</p>
+          {hasThaiName && (
             <p className="text-muted-foreground text-xs">
-              ({englishName})
+              ({thaiName})
             </p>
           )}
         </div>
@@ -40,14 +41,29 @@ const customerColumns: ColumnDef<Customer>[] = [
     },
   },
   {
-    accessorKey: "email",
-    header: "Email",
-    cell: ({ row }) => <div>{row.original.email || "-"}</div>,
+    accessorKey: "dateOfBirth",
+    header: "Date of birth",
+    cell: ({ row }) => <div>{format(new Date(row.original.dateOfBirth || ""), "dd MMM yyyy")}</div>,
   },
   {
     accessorKey: "phone",
-    header: "Phone",
+    header: "Phone number",
     cell: ({ row }) => <div>{row.original.phone || "-"}</div>,
+  },
+  {
+    accessorKey: "totalTrips",
+    header: "Total trips",
+    cell: ({ row }) => <div>{row.original.totalTrips || "-"}</div>,
+  },
+  {
+    accessorKey: "tags",
+    header: "Tags",
+    cell: ({ row }) => <div>{row.original.tags.map((tag) => tag.tag.name).join(", ")}</div>,
+  },
+  {
+    accessorKey: "createdAt",
+    header: "Created date",
+    cell: ({ row }) => <div>{format(new Date(row.original.createdAt || ""), "dd MMM yyyy")}</div>,
   },
   {
     id: "actions",

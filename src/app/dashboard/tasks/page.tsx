@@ -46,13 +46,17 @@ export default function TasksPage() {
       },
       {
         accessorKey: "customer",
-        header: "Customer",
+        header: "Customer name",
         cell: ({ row }) => {
           const customer = row.original.relatedCustomer;
           if (!customer) return <div className="text-muted-foreground">-</div>;
+          const hasThaiName = customer.firstNameTh && customer.lastNameTh;
+          const thaiName = hasThaiName ? `${customer.firstNameTh} ${customer.lastNameTh}` : null;
+          const englishName = `${customer.firstNameEn} ${customer.lastNameEn}`;
           return (
-            <div>
-              {customer.firstNameTh} {customer.lastNameTh}
+            <div className="font-medium">
+              {englishName}
+              {thaiName && <span className="text-muted-foreground text-xs">({thaiName})</span>}
             </div>
           );
         },
@@ -84,7 +88,7 @@ export default function TasksPage() {
       },
       {
         accessorKey: "user",
-        header: "Created By",
+        header: "Created by",
         cell: ({ row }) => {
           const user = row.original.user;
           if (!user) return <div className="text-muted-foreground">-</div>;
@@ -97,7 +101,7 @@ export default function TasksPage() {
       },
       {
         accessorKey: "createdAt",
-        header: "Created At",
+        header: "Created at",
         cell: ({ row }) => {
           const createdAt = row.original.createdAt;
           return (
@@ -110,7 +114,7 @@ export default function TasksPage() {
       },
       {
         accessorKey: "updatedAt",
-        header: "Updated At",
+        header: "Updated at",
         cell: ({ row }) => {
           const updatedAt = row.original.updatedAt;
           return (
@@ -252,7 +256,7 @@ export default function TasksPage() {
         </div>
         <Link href="/dashboard/tasks/create">
           <Button>
-            <Plus className="mr-2 h-4 w-4" /> Add Task
+            <Plus className="mr-2 h-4 w-4" /> Create
           </Button>
         </Link>
       </div>

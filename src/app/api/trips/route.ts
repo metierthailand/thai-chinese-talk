@@ -37,6 +37,14 @@ export async function GET(request: Request) {
                   mode: "insensitive" as const,
                 },
               },
+              {
+                airlineAndAirport: {
+                  code: {
+                    contains: search,
+                    mode: "insensitive" as const,
+                  },
+                },
+              },
             ],
           }
         : {};
@@ -69,13 +77,54 @@ export async function GET(request: Request) {
       include: {
         airlineAndAirport: true,
         _count: {
-          select: { bookings: true },
+          select: {
+            bookings: {
+              where: {
+                paymentStatus: {
+                  not: "CANCELLED",
+                },
+              },
+            },
+          },
         },
       },
     });
 
+    // Calculate trip status for each trip
+    const now = new Date();
+    const tripsWithStatus = trips.map((trip) => {
+      const startDate = new Date(trip.startDate);
+      const endDate = new Date(trip.endDate);
+      const activeBookingsCount = trip._count.bookings;
+      const pax = trip.pax;
+
+      let status: "UPCOMING" | "SOLD_OUT" | "COMPLETED";
+      if (endDate < now) {
+        status = "COMPLETED";
+      } else if (startDate >= now) {
+        // Trip hasn't started yet
+        if (activeBookingsCount >= pax) {
+          status = "SOLD_OUT";
+        } else {
+          status = "UPCOMING";
+        }
+      } else {
+        // Trip has started but not ended
+        if (activeBookingsCount >= pax) {
+          status = "SOLD_OUT";
+        } else {
+          status = "UPCOMING";
+        }
+      }
+
+      return {
+        ...trip,
+        status,
+      };
+    });
+
     return NextResponse.json({
-      data: trips,
+      data: tripsWithStatus,
       total,
       page,
       pageSize,
@@ -126,7 +175,7 @@ export async function POST(req: Request) {
 
     if (existingTrip) {
       return NextResponse.json(
-        { message: "Trip code already exists", field: "code" },
+        { message: "This trip code already exists.", field: "code" },
         { status: 409 }
       );
     }

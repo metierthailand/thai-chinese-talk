@@ -17,6 +17,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { formatDecimal } from "@/lib/utils";
 import { useUsers } from "./hooks/use-users-query";
+import { format, formatDate } from "date-fns";
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
@@ -80,7 +81,7 @@ export default function AdminPage() {
   const userColumns: ColumnDef<User>[] = [
     {
       accessorKey: "name",
-      header: "Staff Name",
+      header: "Staff name",
       cell: ({ row }) => {
         const user = row.original;
         return (
@@ -97,7 +98,7 @@ export default function AdminPage() {
     },
     {
       accessorKey: "phoneNumber",
-      header: "Phone Number",
+      header: "Phone number",
       cell: ({ row }) => <div>{row.original.phoneNumber || "-"}</div>,
     },
     {
@@ -106,20 +107,17 @@ export default function AdminPage() {
       cell: ({ row }) => <Badge variant="outline">{row.original.role}</Badge>,
     },
     {
-      accessorKey: "commissionPerHead",
-      header: () => <div className="text-right">Commission Per Head (Baht)</div>,
-      cell: ({ row }) => {
-        const commission = row.original.commissionPerHead;
-        return <div className="text-right">{commission ? formatDecimal(commission) : "-"}</div>;
-      },
-    },
-    {
       accessorKey: "isActive",
       header: "Status",
       cell: ({ row }) => {
         const isActive = row.original.isActive;
         return <Badge variant={isActive ? "default" : "destructive"}>{isActive ? "Active" : "Inactive"}</Badge>;
       },
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Created date",
+      cell: ({ row }) => <div>{format(new Date(row.original.createdAt || ""), "dd MMM yyyy")}</div>,
     },
     {
       id: "actions",

@@ -52,12 +52,12 @@ export default function LeadsPage() {
     () => [
       {
         accessorKey: "tripInterest",
-        header: "Trip Interest",
+        header: "Trip interest",
         cell: ({ row }) => row.original.tripInterest || "-",
       },
       {
         accessorKey: "customer",
-        header: "Customer",
+        header: "Customer name",
         cell: ({ row }) => {
           const lead = row.original;
           if (lead.newCustomer) {
@@ -75,14 +75,18 @@ export default function LeadsPage() {
           }
           const customer = lead.customer;
           if (!customer) return <div className="text-muted-foreground">-</div>;
+
+          const hasThaiName = customer.firstNameTh && customer.lastNameTh;
+          const thaiName = hasThaiName ? `${customer.firstNameTh} ${customer.lastNameTh}` : null;
+          const englishName = `${customer.firstNameEn} ${customer.lastNameEn}`;
           return (
             <div className="flex flex-col">
               <span className="font-medium">
-                {customer.firstNameTh} {customer.lastNameTh}
+                {englishName}
               </span>
-              <span className="text-muted-foreground text-xs">
-                ({customer.firstNameEn} {customer.lastNameEn})
-              </span>
+              {thaiName && <span className="text-muted-foreground text-xs">
+                ({thaiName})
+              </span>}
               <span className="text-muted-foreground text-xs">{customer.email || "-"}</span>
             </div>
           );
@@ -90,7 +94,7 @@ export default function LeadsPage() {
       },
       {
         accessorKey: "phoneNumber",
-        header: "Phone",
+        header: "Phone number",
         cell: ({ row }) => row.original.phoneNumber || "-",
       },
       {
@@ -100,7 +104,7 @@ export default function LeadsPage() {
       },
       {
         accessorKey: "salesUser",
-        header: "Sales Name",
+        header: "Sales name",
         cell: ({ row }) => {
           const salesUser = row.original.salesUser;
           if (!salesUser) return <div className="text-muted-foreground">-</div>;
@@ -117,11 +121,6 @@ export default function LeadsPage() {
         cell: ({ row }) => (
           <Badge className={getStatusColor(row.original.status)}>{row.original.status.replace("_", " ")}</Badge>
         ),
-      },
-      {
-        accessorKey: "source",
-        header: "Source",
-        cell: ({ row }) => row.original.source,
       },
       {
         id: "actions",

@@ -39,6 +39,7 @@ export interface Booking {
     startDate: string;
     endDate: string;
     standardPrice?: number;
+    code: string;
   };
   note?: string | null;
   extraPriceForSingleTraveller?: number | null;

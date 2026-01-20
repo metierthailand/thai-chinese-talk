@@ -59,7 +59,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     if (existing && existing.id !== id) {
       return NextResponse.json(
-        { message: "Code already exists", field: "code" },
+        { message: "This IATA code already exists.", field: "code" },
         { status: 409 }
       );
     }

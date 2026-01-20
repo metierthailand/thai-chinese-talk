@@ -129,7 +129,7 @@ export async function POST(request: Request) {
     // Handle unique constraint violation
     if (error && typeof error === "object" && "code" in error) {
       if (error.code === "P2002") {
-        return NextResponse.json({ error: "Tag name already exists" }, { status: 409 });
+        return NextResponse.json({ error: "This tag name already exists." }, { status: 409 });
       }
     }
     

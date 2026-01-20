@@ -140,7 +140,7 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
         <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           type="text"
-          placeholder="Search trip name..."
+          placeholder="Search by trip code, trip name, IATA code"
           className="w-full pr-9 pl-9 md:w-full md:max-w-sm"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}

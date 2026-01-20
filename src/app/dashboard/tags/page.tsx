@@ -7,9 +7,8 @@ import { Plus, Edit, Trash2, Eye } from "lucide-react";
 import Link from "next/link";
 import { DataTable } from "@/components/data-table/data-table";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
-import { withDndColumn } from "@/components/data-table/table-utils";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { useTags, useDeleteTag, useReorderTags } from "./hooks/use-tags";
+import { useTags, useDeleteTag } from "./hooks/use-tags";
 import { useTagsParams, mapTagsParamsToQuery } from "./hooks/use-tags-params";
 import { toast } from "sonner";
 import { Loading } from "@/components/page/loading";
@@ -47,7 +46,7 @@ export default function TagsPage() {
     () => [
       {
         accessorKey: "name",
-        header: "Name",
+        header: "Tag Name",
         cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
       },
       {
@@ -96,7 +95,6 @@ export default function TagsPage() {
   // --------------------
   const { data: tagsResponse, isLoading, error } = useTags(tagsQuery);
   const deleteTagMutation = useDeleteTag();
-  const reorderTagsMutation = useReorderTags();
 
   const tags = useMemo(() => tagsResponse?.data ?? [], [tagsResponse?.data]);
   const total = tagsResponse?.total ?? 0;
@@ -111,7 +109,7 @@ export default function TagsPage() {
 
   const table = useDataTableInstance({
     data: tags,
-    columns: withDndColumn(columns),
+    columns,
     enableRowSelection: false,
     defaultPageSize: pageSize,
     defaultPageIndex: page - 1,
@@ -157,21 +155,6 @@ export default function TagsPage() {
     [deleteTagMutation],
   );
 
-  const handleReorder = useCallback(
-    async (newTags: Tag[]) => {
-      try {
-        const tagsWithNewOrder = newTags.map((tag, index) => ({
-          id: tag.id,
-          order: index,
-        }));
-        await reorderTagsMutation.mutateAsync(tagsWithNewOrder);
-      } catch {
-        toast.error("Failed to reorder tags");
-      }
-    },
-    [reorderTagsMutation],
-  );
-
   if (isLoading) {
     return <Loading />;
   }
@@ -195,7 +178,7 @@ export default function TagsPage() {
         </div>
         <Link href="/dashboard/tags/create">
           <Button>
-            <Plus className="mr-2 h-4 w-4" /> Add Tag
+            <Plus className="mr-2 h-4 w-4" /> Create
           </Button>
         </Link>
       </div>
@@ -207,7 +190,7 @@ export default function TagsPage() {
 
       <div className="relative flex flex-col gap-4 overflow-auto">
         <div className="overflow-hidden rounded-md border">
-          <DataTable table={table} columns={withDndColumn(columns)} dndEnabled={true} onReorder={handleReorder} />
+          <DataTable table={table} columns={columns} dndEnabled={false} />
         </div>
         <DataTablePagination
           table={table}

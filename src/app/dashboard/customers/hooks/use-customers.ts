@@ -101,6 +101,11 @@ interface Customer {
   updatedAt: string;
 }
 
+// extend Customer interface
+export interface CustomerWithTotalTrips extends Customer {
+  totalTrips: number;
+}
+
 export interface Address {
   id?: string;
   address: string;
@@ -162,7 +167,7 @@ interface CustomerDetail extends Customer {
 }
 
 interface CustomersResponse {
-  data: Customer[];
+  data: CustomerWithTotalTrips[];
   total: number;
   page: number;
   pageSize: number;

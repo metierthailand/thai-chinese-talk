@@ -36,7 +36,7 @@ export function TagSearch({ search, onSearchChange }: TagSearchProps) {
       <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
       <Input
         type="text"
-        placeholder="Search tags..."
+        placeholder="Search by tag name"
         className="pr-9 pl-9"
         value={searchInput}
         onChange={(e) => setSearchInput(e.target.value)}

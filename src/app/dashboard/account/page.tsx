@@ -142,22 +142,22 @@ export default function AccountPage() {
 
   // Fetch user info
   const fetchUserInfo = useCallback(async (shouldUpdateSession = false) => {
-    setIsLoadingUserInfo(true);
-    try {
-      const res = await fetch("/api/auth/me");
-      if (res.ok) {
-        const data = await res.json();
-        setUserInfo(data);
+      setIsLoadingUserInfo(true);
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setUserInfo(data);
         // Only update session when explicitly requested (e.g., after email verification)
         if (shouldUpdateSession && updateSessionRef.current) {
           await updateSessionRef.current();
         }
+        }
+      } catch (error) {
+        console.error("Failed to fetch user info:", error);
+      } finally {
+        setIsLoadingUserInfo(false);
       }
-    } catch (error) {
-      console.error("Failed to fetch user info:", error);
-    } finally {
-      setIsLoadingUserInfo(false);
-    }
   }, []);
 
   useEffect(() => {
@@ -422,19 +422,19 @@ export default function AccountPage() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={nameForm.control}
+                  <FormField
+                    control={nameForm.control}
                       name="lastName"
-                      render={({ field }) => (
-                        <FormItem>
+                    render={({ field }) => (
+                      <FormItem>
                           <FormLabel>Last Name</FormLabel>
-                          <FormControl>
+                        <FormControl>
                             <Input placeholder="Enter your last name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   </div>
                   <Button type="submit" disabled={isLoadingName}>
                     {isLoadingName && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

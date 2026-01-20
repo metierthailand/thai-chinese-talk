@@ -65,40 +65,54 @@ export default function BookingsPage() {
   const columns: ColumnDef<Booking>[] = useMemo(
     () => [
       {
+        accessorKey: "trip",
+        header: "Trip code",
+        cell: ({ row }) => <div className="font-mono font-medium">{row.original.trip.code}</div>,
+      },
+      {
         accessorKey: "customer",
-        header: "Customer",
+        header: "Customer name",
         cell: ({ row }) => (
           <div className="font-medium">
-            {`${row.original.customer.firstNameTh} ${row.original.customer.lastNameTh}`}
+            {`${row.original.customer.firstNameEn} ${row.original.customer.lastNameEn}`}
           </div>
         ),
       },
       {
-        accessorKey: "trip",
-        header: "Trip",
+        accessorKey: "totalAmount",
+        header: "Total amount",
         cell: ({ row }) => (
-          <div className="flex flex-col">
-            <span>{row.original.trip.name}</span>
-            <span className="text-muted-foreground text-xs">
-              {format(new Date(row.original.trip.startDate), "dd MMM")} -{" "}
-              {format(new Date(row.original.trip.endDate), "dd MMM")}
-            </span>
+          <div className="font-medium">
+            {new Intl.NumberFormat("th-TH", {
+              style: "currency",
+              currency: "THB",
+            }).format(calculateBookingAmounts(row.original)?.totalAmount ?? 0)}
           </div>
         ),
+      },
+      {
+        accessorKey: "balance",
+        header: "Balance",
+        cell: ({ row }) => {
+          const { totalAmount, paidAmount } = calculateBookingAmounts(row.original);
+          return (
+            <div className="font-medium">
+              {new Intl.NumberFormat("th-TH", {
+                style: "currency",
+                currency: "THB",
+              }).format(totalAmount - paidAmount)}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "salesUser",
-        header: "Sales",
+        header: "Sales name",
         cell: ({ row }) => (
           <div className="text-sm">
             {row.original.salesUser ? `${row.original.salesUser.firstName} ${row.original.salesUser.lastName}` : "-"}
           </div>
         ),
-      },
-      {
-        accessorKey: "date",
-        header: "Date",
-        cell: ({ row }) => format(new Date(row.original.trip.startDate), "dd MMM yyyy"),
       },
       {
         accessorKey: "paymentStatus",
@@ -108,21 +122,6 @@ export default function BookingsPage() {
             {row.original.paymentStatus.replace(/_/g, " ")}
           </Badge>
         ),
-      },
-      {
-        accessorKey: "payment",
-        header: "Payment",
-        cell: ({ row }) => {
-          const { totalAmount, paidAmount } = calculateBookingAmounts(row.original);
-          return (
-            <div className="flex flex-col text-sm">
-              <span>Total: {totalAmount.toLocaleString()}</span>
-              <span className={paidAmount >= totalAmount ? "text-green-600" : "text-yellow-600"}>
-                Paid: {paidAmount.toLocaleString()}
-              </span>
-            </div>
-          );
-        },
       },
       {
         id: "actions",
@@ -257,7 +256,7 @@ export default function BookingsPage() {
           <DataTable
             table={table}
             columns={columns}
-            // onRowClick={(row) => router.push(`/dashboard/bookings/${row.id}`)}
+          // onRowClick={(row) => router.push(`/dashboard/bookings/${row.id}`)}
           />
         </div>
         <DataTablePagination

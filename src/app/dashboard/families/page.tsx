@@ -21,15 +21,20 @@ import { mapFamilyParamsToQuery, useFamilyParams } from "./hooks/use-families-pa
 const familyColumns: ColumnDef<Family>[] = [
   {
     accessorKey: "name",
-    header: "Family Name",
+    header: "Name",
     cell: ({ row }) => {
       const family = row.original;
       return <div className="font-medium">{family.name}</div>;
     },
   },
   {
+    accessorKey: "customerName",
+    header: "Customer name",
+    cell: ({ row }) => <div>{row.original.customers.map((customer) => customer.customer.firstNameEn + " " + customer.customer.lastNameEn).join(", ")}</div>,
+  },
+  {
     accessorKey: "members",
-    header: "Members",
+    header: "Total people",
     cell: ({ row }) => {
       const family = row.original;
       const memberCount = family.customers?.length || 0;
@@ -39,16 +44,6 @@ const familyColumns: ColumnDef<Family>[] = [
         </div>
       );
     },
-  },
-  {
-    accessorKey: "email",
-    header: "Email",
-    cell: ({ row }) => <div>{row.original.email || "-"}</div>,
-  },
-  {
-    accessorKey: "phoneNumber",
-    header: "Phone",
-    cell: ({ row }) => <div>{row.original.phoneNumber || "-"}</div>,
   },
   {
     id: "actions",

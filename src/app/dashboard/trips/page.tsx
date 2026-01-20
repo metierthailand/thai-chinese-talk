@@ -30,29 +30,32 @@ export default function TripsPage() {
     () => [
       {
         accessorKey: "code",
-        header: "Code",
+        header: "Trip code",
         cell: ({ row }) => <div className="font-mono font-medium">{row.original.code}</div>,
       },
       {
         accessorKey: "name",
-        header: "Trip Name",
+        header: "Trip name",
         cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
       },
       {
-        accessorKey: "type",
-        header: "Type",
-        cell: ({ row }) => {
-          const type = row.original.type;
-          return (
-            <Badge variant={type === "GROUP_TOUR" ? "default" : "secondary"}>
-              {type === "GROUP_TOUR" ? "Group Tour" : "Private Tour"}
-            </Badge>
-          );
-        },
+        accessorKey: "airlineAndAirport",
+        header: "IATA code",
+        cell: ({ row }) => <div>{row.original.airlineAndAirport.code}</div>,
+      },
+      {
+        accessorKey: "pax",
+        header: "Pax",
+        cell: ({ row }) => <div>{row.original.pax}</div>,
+      },
+      {
+        accessorKey: "fox",
+        header: "Foc",
+        cell: ({ row }) => <div>{row.original.foc}</div>,
       },
       {
         accessorKey: "dates",
-        header: "Dates",
+        header: "Trip date",
         cell: ({ row }) => {
           const trip = row.original;
           return (
@@ -63,43 +66,70 @@ export default function TripsPage() {
         },
       },
       {
-        accessorKey: "pax",
-        header: "PAX/FOC",
-        cell: ({ row }) => {
-          const trip = row.original;
-          return (
-            <div>
-              {trip.pax} / {trip.foc}
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: "airlineAndAirport",
-        header: "Airline/Airport",
-        cell: ({ row }) => {
-          const airlineAndAirport = row.original.airlineAndAirport;
-          return airlineAndAirport ? (
-            <div>
-              <div className="font-mono text-xs">{airlineAndAirport.code}</div>
-              <div className="text-muted-foreground text-xs">{airlineAndAirport.name}</div>
-            </div>
-          ) : (
-            "-"
-          );
-        },
-      },
-      {
         accessorKey: "price",
-        header: "Price",
+        header: "Standard price",
         cell: ({ row }) => {
           const standardPrice = row.original.standardPrice;
           return standardPrice
             ? new Intl.NumberFormat("th-TH", {
-                style: "currency",
-                currency: "THB",
-              }).format(parseFloat(standardPrice))
+              style: "currency",
+              currency: "THB",
+            }).format(parseFloat(standardPrice))
             : "-";
+        },
+      },
+      {
+        accessorKey: "extraPricePerPerson",
+        header: "Single Price",
+        cell: ({ row }) => {
+          const extraPricePerPerson = row.original.extraPricePerPerson;
+          return extraPricePerPerson
+            ? new Intl.NumberFormat("th-TH", {
+              style: "currency",
+              currency: "THB",
+            }).format(parseFloat(extraPricePerPerson))
+            : "-";
+        },
+      },
+      {
+        accessorKey: "type",
+        header: "Type",
+        cell: ({ row }) => <div>{row.original.type === "GROUP_TOUR" ? "Group Tour" : "Private Tour"}</div>,
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+          const status = row.original.status;
+          const getStatusColor = (status: string) => {
+            switch (status) {
+              case "UPCOMING":
+                return "bg-blue-500";
+              case "SOLD_OUT":
+                return "bg-orange-500";
+              case "COMPLETED":
+                return "bg-green-500";
+              default:
+                return "bg-gray-500";
+            }
+          };
+          const getStatusLabel = (status: string) => {
+            switch (status) {
+              case "UPCOMING":
+                return "Upcoming";
+              case "SOLD_OUT":
+                return "Sold out";
+              case "COMPLETED":
+                return "Completed";
+              default:
+                return status;
+            }
+          };
+          return (
+            <Badge className={getStatusColor(status)}>
+              {getStatusLabel(status)}
+            </Badge>
+          );
         },
       },
       {

@@ -32,6 +32,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             trip: true,
           },
         },
+        _count: {
+          select: { bookings: true },
+        },
       },
     });
 
@@ -50,7 +53,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       ],
     });
 
-    return NextResponse.json({ ...customer, tasks });
+    return NextResponse.json({
+      ...customer,
+      totalTrips: customer._count?.bookings ?? 0,
+      tasks,
+    });
   } catch (error) {
     console.error("[CUSTOMER_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });

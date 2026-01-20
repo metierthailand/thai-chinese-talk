@@ -110,11 +110,20 @@ export async function GET(request: Request) {
             tag: true,
           },
         },
+        _count: {
+          select: { bookings: true },
+        },
       },
     });
 
+    // Attach totalTrips from bookings count for each customer
+    const customersWithTotals = customers.map((customer) => ({
+      ...customer,
+      totalTrips: customer._count?.bookings ?? 0,
+    }));
+
     return NextResponse.json({
-      data: customers,
+      data: customersWithTotals,
       total,
       page,
       pageSize,

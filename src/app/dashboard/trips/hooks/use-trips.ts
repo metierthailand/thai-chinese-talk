@@ -44,6 +44,7 @@ export interface Trip {
     code: string;
     name: string;
   };
+  status: "UPCOMING" | "SOLD_OUT" | "COMPLETED";
   _count: {
     bookings: number;
   };

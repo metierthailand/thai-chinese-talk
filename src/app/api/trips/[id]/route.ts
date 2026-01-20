@@ -83,7 +83,7 @@ export async function PUT(
 
     if (existingTrip && existingTrip.id !== id) {
       return NextResponse.json(
-        { message: "Trip code already exists", field: "code" },
+        { message: "This trip code already exists.", field: "code" },
         { status: 409 }
       );
     }

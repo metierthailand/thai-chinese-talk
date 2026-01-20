@@ -12,7 +12,6 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { useCommissionSummary, type CommissionSummary } from "./hooks/use-commissions";
 import { useDebounce } from "@/hooks/use-debounce";
 import { CommissionFilter } from "./_components/commission-filter";
-import { CommissionDetailDialog } from "./_components/commission-detail-dialog";
 import { AccessDenied } from "@/components/page/access-denied";
 import { Loading } from "@/components/page/loading";
 
@@ -33,11 +32,6 @@ export default function CommissionsPage() {
   // Local state for filters
   const [createdAtFrom, setCreatedAtFrom] = useState(createdAtFromQuery);
   const [createdAtTo, setCreatedAtTo] = useState(createdAtToQuery);
-
-  // State for detail dialog
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-  const [selectedAgentName, setSelectedAgentName] = useState<string>("");
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   // Function to update URL params
   const updateSearchParams = useCallback(
@@ -110,36 +104,43 @@ export default function CommissionsPage() {
     createdAtTo || undefined
   );
 
-  // Handle view details
-  const handleViewDetails = (summary: CommissionSummary) => {
-    setSelectedAgentId(summary.agentId);
-    setSelectedAgentName(summary.agentName);
-    setIsDetailDialogOpen(true);
-  };
+  // Navigate to detail page
+  const handleViewDetails = useCallback(
+    (summary: CommissionSummary) => {
+      const params = new URLSearchParams();
+      if (createdAtFrom) params.set("createdAtFrom", createdAtFrom);
+      if (createdAtTo) params.set("createdAtTo", createdAtTo);
+      params.set("agentName", summary.agentName);
+
+      const qs = params.toString();
+      router.push(`/dashboard/commissions/${summary.agentId}${qs ? `?${qs}` : ""}`);
+    },
+    [createdAtFrom, createdAtTo, router]
+  );
 
   // Table columns
   const columns: ColumnDef<CommissionSummary>[] = useMemo(
     () => [
       {
         accessorKey: "agentName",
-        header: "Sales Name",
-        cell: ({ row }) => <div className="font-medium">{row.original.agentName}</div>,
+        header: "Sales name",
+        cell: ({ row }) => row.original.agentName,
       },
       {
         accessorKey: "totalTrips",
-        header: "Total Trips",
-        cell: ({ row }) => <div className="text-center">{row.original.totalTrips}</div>,
+        header: "Total trips",
+        cell: ({ row }) => row.original.totalTrips,
       },
       {
         accessorKey: "totalPeople",
-        header: "Total People",
-        cell: ({ row }) => <div className="text-center">{row.original.totalPeople}</div>,
+        header: "Total people",
+        cell: ({ row }) => row.original.totalPeople,
       },
       {
         accessorKey: "totalCommissionAmount",
-        header: "Total Commission Amount",
+        header: "Total commission amount",
         cell: ({ row }) => (
-          <div className="text-right font-medium">
+          <div className="font-medium">
             {row.original.totalCommissionAmount.toLocaleString("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
@@ -158,14 +159,13 @@ export default function CommissionsPage() {
               size="sm"
               onClick={() => handleViewDetails(row.original)}
             >
-              <Eye className="mr-2 h-4 w-4" />
-              View Details
+              <Eye className="h-4 w-4" />
             </Button>
           </div>
         ),
       },
     ],
-    []
+    [handleViewDetails]
   );
 
   // Table instance
@@ -243,7 +243,10 @@ export default function CommissionsPage() {
 
       {/* Table */}
       <div className="rounded-md border">
-        <DataTable table={table} columns={columns} />
+        <DataTable
+          table={table}
+          columns={columns}
+        />
       </div>
 
       {/* Pagination */}
@@ -257,17 +260,7 @@ export default function CommissionsPage() {
         </div>
       )}
 
-      {/* Detail Dialog */}
-      {selectedAgentId && (
-        <CommissionDetailDialog
-          open={isDetailDialogOpen}
-          onOpenChange={setIsDetailDialogOpen}
-          agentId={selectedAgentId}
-          agentName={selectedAgentName}
-          createdAtFrom={createdAtFrom || undefined}
-          createdAtTo={createdAtTo || undefined}
-        />
-      )}
+      {/* Detail Dialog removed: navigation to /dashboard/commissions/[agentId] */}
     </div>
   );
 }

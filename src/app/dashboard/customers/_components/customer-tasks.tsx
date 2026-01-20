@@ -132,7 +132,7 @@ export function CustomerTasks({ customerId }: CustomerTasksProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-4 border p-4 rounded-md bg-card">
-        <h3 className="font-semibold">Add Task</h3>
+        <h3 className="font-semibold">Task</h3>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleAddTask)} className="flex gap-4">
             <FormField

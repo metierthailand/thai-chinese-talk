@@ -92,7 +92,7 @@ export async function POST(req: Request) {
 
     if (existing) {
       return NextResponse.json(
-        { message: "Code already exists", field: "code" },
+        { message: "This IATA code already exists.", field: "code" },
         { status: 409 }
       );
     }
