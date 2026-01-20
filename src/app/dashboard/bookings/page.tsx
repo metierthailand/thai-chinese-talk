@@ -244,7 +244,7 @@ export default function BookingsPage() {
         </div>
         <Link href="/dashboard/bookings/create">
           <Button>
-            <Plus className="mr-2 h-4 w-4" /> New Booking
+            <Plus className="mr-2 h-4 w-4" /> Create
           </Button>
         </Link>
       </div>

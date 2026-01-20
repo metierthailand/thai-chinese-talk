@@ -23,12 +23,18 @@ const customerColumns: ColumnDef<Customer>[] = [
     header: "Name",
     cell: ({ row }) => {
       const customer = row.original;
+      const hasThaiName = customer.firstNameTh && customer.lastNameTh;
+      const thaiName = hasThaiName ? `${customer.firstNameTh} ${customer.lastNameTh}` : null;
+      const englishName = `${customer.firstNameEn} ${customer.lastNameEn}`;
+      
       return (
         <div className="flex flex-col font-medium">
-          <p>{`${customer.firstNameTh} ${customer.lastNameTh}`}</p>
-          <p className="text-muted-foreground text-xs">
-            ({customer.firstNameEn} {customer.lastNameEn})
-          </p>
+          <p>{thaiName || englishName}</p>
+          {thaiName && (
+            <p className="text-muted-foreground text-xs">
+              ({englishName})
+            </p>
+          )}
         </div>
       );
     },

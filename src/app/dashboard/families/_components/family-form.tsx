@@ -65,10 +65,10 @@ export function FamilyForm({
   }
 
   const selectedCustomerIds = form.watch("customerIds") || [];
-  
+
   // Get selected customers from search results or fetch them if needed
   const selectedCustomers = searchResults.filter((c) => selectedCustomerIds.includes(c.id));
-  
+
   // If we have selected IDs but they're not in search results, we need to fetch them
   // For now, we'll just show the IDs - in production you might want to fetch them separately
 
@@ -80,9 +80,9 @@ export function FamilyForm({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>Family Name</FormLabel>
+              <FormLabel required>Name</FormLabel>
               <FormControl>
-                <Input placeholder="Smith Family" {...field} />
+                <Input placeholder="Name" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -95,9 +95,9 @@ export function FamilyForm({
             name="phoneNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Phone Number</FormLabel>
+                <FormLabel>Phone number</FormLabel>
                 <FormControl>
-                  <Input placeholder="0912345678" {...field} />
+                  <Input placeholder="Phone number" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -111,7 +111,7 @@ export function FamilyForm({
               <FormItem>
                 <FormLabel>LINE ID</FormLabel>
                 <FormControl>
-                  <Input placeholder="@familyline" {...field} />
+                  <Input placeholder="LINE ID" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -126,7 +126,7 @@ export function FamilyForm({
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="family@example.com" {...field} />
+                <Input type="email" placeholder="Email" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -138,7 +138,7 @@ export function FamilyForm({
           name="customerIds"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel required>Members</FormLabel>
+              <FormLabel required>Customer name</FormLabel>
               <Popover open={isCustomersOpen} onOpenChange={setIsCustomersOpen}>
                 <PopoverTrigger asChild>
                   <FormControl>
@@ -217,7 +217,6 @@ export function FamilyForm({
                   </Command>
                 </PopoverContent>
               </Popover>
-              <FormDescription>Select customers to add to this family</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -228,10 +227,9 @@ export function FamilyForm({
           name="note"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Note</FormLabel>
-              <FormDescription>Additional notes about this family</FormDescription>
+              <FormLabel>Note for family / group</FormLabel>
               <FormControl>
-                <Textarea placeholder="Family preferences, special requirements..." className="resize-none" {...field} />
+                <Textarea placeholder="Note for family / group" className="resize-none" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -245,7 +243,7 @@ export function FamilyForm({
             </Button>
           )}
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Saving..." : mode === "create" ? "Create Family" : "Update Family"}
+            {isLoading ? "Saving..." : mode === "create" ? "Create" : "Update"}
           </Button>
         </div>
       </form>

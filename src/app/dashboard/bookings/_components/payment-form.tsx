@@ -130,45 +130,6 @@ export function PaymentForm({ bookingId, booking, onSuccess, onCancel }: Payment
 
         <FormField
           control={form.control}
-          name="paymentType"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Payment Type</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                value={field.value}
-                disabled
-              >
-                <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select payment type" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="secondPayment" disabled={!!booking?.secondPaymentId}>
-                    Second Payment
-                    {booking?.secondPaymentId && " (Already exists)"}
-                  </SelectItem>
-                  <SelectItem value="thirdPayment" disabled={!!booking?.thirdPaymentId}>
-                    Third Payment
-                    {booking?.thirdPaymentId && " (Already exists)"}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <FormDescription>
-                {booking?.secondPaymentId && booking?.thirdPaymentId
-                  ? "All payments have been added (maximum 3 payments)"
-                  : booking?.secondPaymentId
-                    ? "Add third payment (second payment already exists)"
-                    : "Add second payment"}
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
           name="proofOfPayment"
           render={({ field }) => (
             <FormItem>

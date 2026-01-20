@@ -4,6 +4,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 
+interface PassportInput {
+  passportNumber: string;
+  issuingCountry: string;
+  issuingDate: string | Date;
+  expiryDate: string | Date;
+  imageUrl?: string | null;
+  isPrimary?: boolean;
+}
+
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
 
@@ -16,7 +25,6 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
     const search = searchParams.get("search") || "";
-    const type = searchParams.get("type") || "";
     const passportExpiryFrom = searchParams.get("passportExpiryFrom") || "";
     const passportExpiryTo = searchParams.get("passportExpiryTo") || "";
     const skip = (page - 1) * pageSize;
@@ -133,7 +141,6 @@ export async function POST(req: Request) {
       firstNameEn,
       lastNameEn,
       title,
-      nickname,
       email,
       phoneNumber,
       lineId,
@@ -145,14 +152,14 @@ export async function POST(req: Request) {
       foodAllergies,
     } = body;
 
-    if (!firstNameTh || !lastNameTh || !firstNameEn || !lastNameEn) {
-      return new NextResponse("First name and last name (both Thai and English) are required", { status: 400 });
+    if (!firstNameEn || !lastNameEn) {
+      return new NextResponse("First name and last name (English) are required", { status: 400 });
     }
 
     const customer = await prisma.customer.create({
       data: {
-        firstNameTh,
-        lastNameTh,
+        firstNameTh: firstNameTh || null,
+        lastNameTh: lastNameTh || null,
         firstNameEn,
         lastNameEn,
         title: title || undefined,
@@ -178,7 +185,7 @@ export async function POST(req: Request) {
         passports:
           passports && passports.length > 0
             ? {
-                create: passports.map((p: any) => ({
+                create: (passports as PassportInput[]).map((p) => ({
                   passportNumber: p.passportNumber,
                   issuingCountry: p.issuingCountry,
                   issuingDate: new Date(p.issuingDate),

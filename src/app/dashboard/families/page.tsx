@@ -152,7 +152,7 @@ export default function FamiliesPage() {
         </div>
         <Link href="/dashboard/families/create">
           <Button>
-            <Plus className="mr-2 h-4 w-4" /> Add Family
+            <Plus className="mr-2 h-4 w-4" /> Create
           </Button>
         </Link>
       </div>

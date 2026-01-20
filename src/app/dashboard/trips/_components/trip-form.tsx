@@ -111,8 +111,8 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="GROUP_TOUR">Group Tour</SelectItem>
-                    <SelectItem value="PRIVATE_TOUR">Private Tour</SelectItem>
+                    <SelectItem value="GROUP_TOUR">Group tour</SelectItem>
+                    <SelectItem value="PRIVATE_TOUR">Private tour</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -125,9 +125,9 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             name="code"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>Trip Code</FormLabel>
+                <FormLabel required>Trip code</FormLabel>
                 <FormControl>
-                  <Input placeholder="TRIP001" {...field} disabled={readOnly} />
+                  <Input placeholder="Trip code" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -140,13 +140,95 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>Trip Name</FormLabel>
+              <FormLabel required>Trip name</FormLabel>
               <FormControl>
-                <Input placeholder="Autumn in Japan" {...field} disabled={readOnly} />
+                <Input placeholder="Trip name" {...field} disabled={readOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
+        />
+
+        <FormField
+          control={form.control}
+          name="airlineAndAirportId"
+          render={({ field }) => {
+            const selectedAirlineAndAirport = airlineAndAirports.find((aa) => aa.id === field.value);
+
+            // Filter airline and airports based on search
+            const filteredAirlineAndAirports = airlineAndAirportSearch
+              ? airlineAndAirports.filter(
+                (aa) =>
+                  aa.code.toLowerCase().includes(airlineAndAirportSearch.toLowerCase()) ||
+                  aa.name.toLowerCase().includes(airlineAndAirportSearch.toLowerCase()),
+              )
+              : airlineAndAirports;
+
+            return (
+              <FormItem>
+                <FormLabel required>IATA code</FormLabel>
+                <Popover
+                  open={airlineAndAirportOpen}
+                  onOpenChange={(open) => {
+                    setAirlineAndAirportOpen(open);
+                    if (!open) {
+                      setAirlineAndAirportSearch("");
+                    }
+                  }}
+                >
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                        disabled={readOnly}
+                      >
+                        {selectedAirlineAndAirport
+                          ? `${selectedAirlineAndAirport.code} - ${selectedAirlineAndAirport.name}`
+                          : "Select airline/airport"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search by code or name..."
+                        value={airlineAndAirportSearch}
+                        onValueChange={setAirlineAndAirportSearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty>No IATA code found.</CommandEmpty>
+                        <CommandGroup>
+                          {filteredAirlineAndAirports.map((aa) => (
+                            <CommandItem
+                              value={`${aa.code} ${aa.name}`}
+                              key={aa.id}
+                              onSelect={() => {
+                                field.onChange(aa.id);
+                                setAirlineAndAirportOpen(false);
+                                setAirlineAndAirportSearch("");
+                              }}
+                            >
+                              <Check
+                                className={cn("mr-2 h-4 w-4", field.value === aa.id ? "opacity-100" : "opacity-0")}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-mono">{aa.code}</span>
+                                <span className="text-muted-foreground text-sm">{aa.name}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
 
         <FormField
@@ -187,7 +269,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
 
             return (
               <FormItem className="flex flex-col">
-                <FormLabel required>Trip Dates</FormLabel>
+                <FormLabel required>Start date to end date</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -242,7 +324,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             name="pax"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>Passenger (PAX)</FormLabel>
+                <FormLabel required>PAX</FormLabel>
                 <FormControl>
                   <Input type="number" placeholder="1" {...field} disabled={readOnly} />
                 </FormControl>
@@ -255,7 +337,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             name="foc"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>Free of Charge (FOC)</FormLabel>
+                <FormLabel required>FOC</FormLabel>
                 <FormControl>
                   <Input type="number" placeholder="1" {...field} disabled={readOnly} />
                 </FormControl>
@@ -265,15 +347,15 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <FormField
             control={form.control}
             name="tl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Tour Leader (TL)</FormLabel>
+                <FormLabel>TL</FormLabel>
                 <FormControl>
-                  <Input placeholder="Tour Leader" {...field} disabled={readOnly} />
+                  <Input placeholder="TL" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -284,9 +366,9 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             name="tg"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Tour Guide (TG)</FormLabel>
+                <FormLabel>TG</FormLabel>
                 <FormControl>
-                  <Input placeholder="Tour Guide" {...field} disabled={readOnly} />
+                  <Input placeholder="TG" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -301,7 +383,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             <FormItem>
               <FormLabel>Staff</FormLabel>
               <FormControl>
-                <Input placeholder="Staff Name" {...field} disabled={readOnly} />
+                <Input placeholder="Staff" {...field} disabled={readOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -314,7 +396,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             name="standardPrice"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>Standard Price</FormLabel>
+                <FormLabel required>Standard price</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" placeholder="0.00" {...field} disabled={readOnly} />
                 </FormControl>
@@ -327,7 +409,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             name="extraPricePerPerson"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>Extra Price Per Person</FormLabel>
+                <FormLabel required>Extra price for single traveller</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" placeholder="0.00" {...field} disabled={readOnly} />
                 </FormControl>
@@ -339,94 +421,12 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
 
         <FormField
           control={form.control}
-          name="airlineAndAirportId"
-          render={({ field }) => {
-            const selectedAirlineAndAirport = airlineAndAirports.find((aa) => aa.id === field.value);
-
-            // Filter airline and airports based on search
-            const filteredAirlineAndAirports = airlineAndAirportSearch
-              ? airlineAndAirports.filter(
-                  (aa) =>
-                    aa.code.toLowerCase().includes(airlineAndAirportSearch.toLowerCase()) ||
-                    aa.name.toLowerCase().includes(airlineAndAirportSearch.toLowerCase()),
-                )
-              : airlineAndAirports;
-
-            return (
-              <FormItem>
-                <FormLabel required>Airline/Airport</FormLabel>
-                <Popover
-                  open={airlineAndAirportOpen}
-                  onOpenChange={(open) => {
-                    setAirlineAndAirportOpen(open);
-                    if (!open) {
-                      setAirlineAndAirportSearch("");
-                    }
-                  }}
-                >
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
-                        disabled={readOnly}
-                      >
-                        {selectedAirlineAndAirport
-                          ? `${selectedAirlineAndAirport.code} - ${selectedAirlineAndAirport.name}`
-                          : "Select airline/airport"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0" align="start">
-                    <Command>
-                      <CommandInput
-                        placeholder="Search by code or name..."
-                        value={airlineAndAirportSearch}
-                        onValueChange={setAirlineAndAirportSearch}
-                      />
-                      <CommandList>
-                        <CommandEmpty>No airline/airport found.</CommandEmpty>
-                        <CommandGroup>
-                          {filteredAirlineAndAirports.map((aa) => (
-                            <CommandItem
-                              value={`${aa.code} ${aa.name}`}
-                              key={aa.id}
-                              onSelect={() => {
-                                field.onChange(aa.id);
-                                setAirlineAndAirportOpen(false);
-                                setAirlineAndAirportSearch("");
-                              }}
-                            >
-                              <Check
-                                className={cn("mr-2 h-4 w-4", field.value === aa.id ? "opacity-100" : "opacity-0")}
-                              />
-                              <div className="flex flex-col">
-                                <span className="font-mono">{aa.code}</span>
-                                <span className="text-muted-foreground text-sm">{aa.name}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            );
-          }}
-        />
-
-        <FormField
-          control={form.control}
           name="note"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Note</FormLabel>
+              <FormLabel>Note for trip</FormLabel>
               <FormControl>
-                <Textarea placeholder="Trip notes..." className="resize-none" {...field} disabled={readOnly} />
+                <Textarea placeholder="Note for trip" className="resize-none" {...field} disabled={readOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -446,8 +446,8 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                   ? "Creating..."
                   : "Updating..."
                 : mode === "create"
-                  ? "Create Trip"
-                  : "Update Trip"}
+                  ? "Create"
+                  : "Update"}
             </Button>
           </div>
         )}

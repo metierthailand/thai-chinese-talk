@@ -82,58 +82,29 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={readOnly || isLoading}>
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="TODO">TODO</SelectItem>
-                    <SelectItem value="IN_PROGRESS">IN_PROGRESS</SelectItem>
-                    <SelectItem value="COMPLETED">COMPLETED</SelectItem>
-                    <SelectItem value="CANCELLED">CANCELLED</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="contact"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Contact</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value ?? undefined}
-                  disabled={readOnly || isLoading}
-                >
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select contact" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="CALL">CALL</SelectItem>
-                    <SelectItem value="LINE">LINE</SelectItem>
-                    <SelectItem value="MESSENGER">MESSENGER</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel required>Status</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value} disabled={readOnly || isLoading}>
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="TODO">To-do</SelectItem>
+                  <SelectItem value="IN_PROGRESS">In progress</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
@@ -173,7 +144,7 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
           name="relatedCustomerId"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel required>Customer</FormLabel>
+              <FormLabel required>Customer name</FormLabel>
               {readOnly ? (
                 <FormControl>
                   <Input
@@ -192,8 +163,8 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                         disabled={isLoading}
                       >
                         {selectedCustomer
-                          ? `${selectedCustomer.firstNameTh} ${selectedCustomer.lastNameTh}`
-                          : "Search for a customer..."}
+                          ? `${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn}`
+                          : "Search for a customer name..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
@@ -201,7 +172,7 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                   <PopoverContent className="w-[400px] p-0">
                     <Command shouldFilter={false}>
                       <CommandInput
-                        placeholder="Search customers..."
+                        placeholder="Search customer names..."
                         value={customerSearchQuery}
                         onValueChange={setCustomerSearchQuery}
                       />
@@ -224,8 +195,7 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                                   field.value === customer.id ? "opacity-100" : "opacity-0",
                                 )}
                               />
-                              {customer.firstNameTh} {customer.lastNameTh} ({customer.firstNameEn} {customer.lastNameEn}
-                              )
+                              {customer.firstNameEn} {customer.lastNameEn}
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -234,6 +204,33 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                   </PopoverContent>
                 </Popover>
               )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="contact"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Contact channel</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value ?? undefined}
+                disabled={readOnly || isLoading}
+              >
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select contact" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="CALL">Call</SelectItem>
+                  <SelectItem value="LINE">Line</SelectItem>
+                  <SelectItem value="MESSENGER">Messenger</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -289,8 +286,8 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                   ? "Creating..."
                   : "Updating..."
                 : mode === "create"
-                  ? "Create Task"
-                  : "Update Task"}
+                  ? "Create"
+                  : "Update"}
             </Button>
           </div>
         )}

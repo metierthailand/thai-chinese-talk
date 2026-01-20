@@ -8,7 +8,7 @@ export type Role = (typeof ROLE_VALUES)[number];
 
 // Role display labels mapping
 export const ROLE_LABELS: Record<Role, string> = {
-  SUPER_ADMIN: "Super Admin",
+  SUPER_ADMIN: "Super admin",
   ADMIN: "Admin",
   SALES: "Sales",
   STAFF: "Staff",

@@ -196,6 +196,16 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
   const firstPaymentRatio = form.watch("firstPaymentRatio");
   const salesUserId = form.watch("salesUserId");
 
+  // Update extraPriceForSingleTraveller when tripId changes and enableSingleTravellerPrice is true
+  useEffect(() => {
+    if (enableSingleTravellerPrice && tripId) {
+      const selectedTrip = trips.find((t) => t.id === tripId);
+      if (selectedTrip?.extraPricePerPerson) {
+        form.setValue("extraPriceForSingleTraveller", selectedTrip.extraPricePerPerson);
+      }
+    }
+  }, [tripId, enableSingleTravellerPrice, trips, form]);
+
   // Calculate total amount and first payment amount
   const calculatedAmounts = useMemo(() => {
     const selectedTrip = trips.find((t) => t.id === tripId);
@@ -263,16 +273,33 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
   const availableCompanionCustomers = useMemo(() => {
     const companionBookings = companionBookingsResponse || [];
     if (!companionBookings.length) return [];
-    return companionBookings
+
+    // Use Map to deduplicate customers by ID
+    const customerMap = new Map<string, {
+      id: string;
+      firstNameTh: string;
+      lastNameTh: string;
+      firstNameEn: string;
+      lastNameEn: string;
+      email?: string;
+    }>();
+
+    companionBookings
       .filter((b: Booking) => b.customerId !== customerId)
-      .map((b: Booking) => ({
+      .forEach((b: Booking) => {
+        if (!customerMap.has(b.customerId)) {
+          customerMap.set(b.customerId, {
         id: b.customerId,
         firstNameTh: b.customer.firstNameTh,
         lastNameTh: b.customer.lastNameTh,
         firstNameEn: b.customer.firstNameEn,
         lastNameEn: b.customer.lastNameEn,
         email: b.customer.email,
-      }));
+          });
+        }
+      });
+
+    return Array.from(customerMap.values());
   }, [companionBookingsResponse, customerId]);
 
   const { data: searchResults = [], isLoading: isSearching } = useSearchCustomers(customerSearchQuery, 10);
@@ -389,9 +416,13 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
         bagNote: initialData.bagNote ?? "",
         discountPrice: discount,
         discountNote: initialData.discountNote ?? "",
-        paymentStatus: initialData.paymentStatus
-          ? (initialData.paymentStatus as "DEPOSIT_PENDING" | "DEPOSIT_PAID" | "FULLY_PAID" | "CANCELLED")
-          : ("DEPOSIT_PENDING" as const),
+        paymentStatus: (() => {
+          const validStatuses = ["DEPOSIT_PENDING", "DEPOSIT_PAID", "FULLY_PAID", "CANCELLED"] as const;
+          const status = initialData.paymentStatus as string;
+          return status && validStatuses.includes(status as typeof validStatuses[number])
+            ? (status as typeof validStatuses[number])
+            : ("DEPOSIT_PENDING" as const);
+        })(),
         firstPaymentRatio: initialData.firstPaymentRatio
           ? (initialData.firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30")
           : ("FIRST_PAYMENT_50" as const),
@@ -475,7 +506,51 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         {/* Basic Information Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Basic Information</h3>
+          {/* <h3 className="text-lg font-semibold">Basic Information</h3> */}
+
+          {/* Trip Field */}
+          <FormField
+            control={form.control}
+            name="tripId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required={!readOnly}>Trip code</FormLabel>
+                {readOnly ? (
+                  <FormControl>
+                    <Input
+                      value={
+                        booking?.trip
+                          ? `${booking.trip.name} (${format(new Date(booking.trip.startDate), "dd MMM")} - ${format(new Date(booking.trip.endDate), "dd MMM")})`
+                          : trips.find((t) => t.id === field.value)?.name || ""
+                      }
+                      disabled
+                    />
+                  </FormControl>
+                ) : (
+                  <Select
+                    onValueChange={handleTripChange}
+                    value={field.value || ""}
+                    key={`trip-select-${trips.length}-${field.value || ""}`}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a trip package" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {trips.map((trip) => (
+                        <SelectItem key={trip.id} value={trip.id} disabled={trip._count?.bookings >= trip.pax}>
+                          {trip.code}
+                          {trip._count?.bookings >= trip.pax ? " [FULL]" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Customer Field */}
           <FormField
@@ -489,7 +564,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                     <Input
                       value={
                         selectedCustomer
-                          ? `${selectedCustomer.firstNameTh} ${selectedCustomer.lastNameTh} (${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn})`
+                          ? `${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn}`
                           : ""
                       }
                       disabled
@@ -505,7 +580,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                           className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
                         >
                           {selectedCustomer
-                            ? `${selectedCustomer.firstNameTh} ${selectedCustomer.lastNameTh} (${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn})`
+                            ? `${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn}`
                             : "Search for a customer..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -545,12 +620,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                                   />
                                   <div className="flex flex-col">
                                     <span className="font-medium">
-                                      {customer.firstNameTh} {customer.lastNameTh}
-                                    </span>
-                                    <span className="text-muted-foreground text-xs">
                                       {customer.firstNameEn} {customer.lastNameEn}
-                                      {customer.email && ` • ${customer.email}`}
-                                      {customer.phone && ` • ${customer.phone}`}
                                     </span>
                                   </div>
                                 </CommandItem>
@@ -581,143 +651,17 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
             )}
           />
 
-          {/* Trip Field */}
-          <FormField
-            control={form.control}
-            name="tripId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel required={!readOnly}>Trip</FormLabel>
-                {readOnly ? (
-                  <FormControl>
-                    <Input
-                      value={
-                        booking?.trip
-                          ? `${booking.trip.name} (${format(new Date(booking.trip.startDate), "dd MMM")} - ${format(new Date(booking.trip.endDate), "dd MMM")})`
-                          : trips.find((t) => t.id === field.value)?.name || ""
-                      }
-                      disabled
-                    />
-                  </FormControl>
-                ) : (
-                  <Select
-                    onValueChange={handleTripChange}
-                    value={field.value || ""}
-                    key={`trip-select-${trips.length}-${field.value || ""}`}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a trip package" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {trips.map((trip) => (
-                        <SelectItem key={trip.id} value={trip.id} disabled={trip._count?.bookings >= trip.pax}>
-                          {trip.name} ({format(new Date(trip.startDate), "dd MMM")} -{" "}
-                          {format(new Date(trip.endDate), "dd MMM")})
-                          {trip._count?.bookings >= trip.pax ? " [FULL]" : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Sales User Field */}
-          <FormField
-            control={form.control}
-            name="salesUserId"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel required={!readOnly}>Sales User</FormLabel>
-                {readOnly ? (
-                  <FormControl>
-                    <Input
-                      value={selectedSalesUser ? `${selectedSalesUser.firstName} ${selectedSalesUser.lastName}` : ""}
-                      disabled
-                    />
-                  </FormControl>
-                ) : (
-                  <Popover open={salesUserSearchOpen} onOpenChange={setSalesUserSearchOpen}>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
-                        >
-                          {selectedSalesUser
-                            ? `${selectedSalesUser.firstName} ${selectedSalesUser.lastName}`
-                            : "Search for a sales user..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0">
-                      <Command shouldFilter={false}>
-                        <CommandInput
-                          placeholder="Search sales users by name or email..."
-                          value={salesUserSearchQuery}
-                          onValueChange={setSalesUserSearchQuery}
-                        />
-                        <CommandList>
-                          {filteredSalesUsers.length === 0 ? (
-                            <CommandEmpty>No sales users found.</CommandEmpty>
-                          ) : (
-                            <CommandGroup>
-                              {filteredSalesUsers.map((user) => (
-                                <CommandItem
-                                  value={user.id}
-                                  key={user.id}
-                                  onSelect={() => {
-                                    field.onChange(user.id);
-                                    setSalesUserSearchOpen(false);
-                                    setSalesUserSearchQuery("");
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      user.id === field.value ? "opacity-100" : "opacity-0",
-                                    )}
-                                  />
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">
-                                      {user.firstName} {user.lastName}
-                                    </span>
-                                    <span className="text-muted-foreground text-xs">{user.email}</span>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          )}
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           {/* Companion Customers */}
           <FormField
             control={form.control}
             name="companionCustomerIds"
             render={() => (
               <FormItem>
-                <FormLabel>Companion Customers</FormLabel>
-                <FormDescription>
-                  Select customers who are already booked in the same trip to join this booking
-                </FormDescription>
+                <FormLabel>Companion name</FormLabel>
                 {readOnly ? (
                   <div className="space-y-2">
                     {selectedCompanions.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No companion customers</p>
+                      <p className="text-muted-foreground text-sm">No companion name</p>
                     ) : (
                       selectedCompanions.map(
                         (c: {
@@ -782,11 +726,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                                       >
                                         <div className="flex flex-col">
                                           <span className="font-medium">
-                                            {customer.firstNameTh} {customer.lastNameTh}
-                                          </span>
-                                          <span className="text-muted-foreground text-xs">
                                             {customer.firstNameEn} {customer.lastNameEn}
-                                            {customer.email && ` • ${customer.email}`}
                                           </span>
                                         </div>
                                       </CommandItem>
@@ -810,7 +750,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                           }) => (
                             <div key={c.id} className="flex items-center justify-between rounded-md border p-2">
                               <span className="text-sm">
-                                {c.firstNameTh} {c.lastNameTh} ({c.firstNameEn} {c.lastNameEn})
+                                {c.firstNameEn} {c.lastNameEn}
                               </span>
                               <Button
                                 type="button"
@@ -827,26 +767,6 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                     )}
                   </div>
                 )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Note */}
-          <FormField
-            control={form.control}
-            name="note"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Note</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Add a note about this booking..."
-                    className="resize-none"
-                    {...field}
-                    disabled={readOnly}
-                  />
-                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -879,10 +799,14 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
             <FormField
               control={form.control}
               name="extraPriceForSingleTraveller"
-              render={({ field }) => (
+              render={({ field }) => {
+                const selectedTrip = trips.find((t) => t.id === tripId);
+                const tripExtraPrice = selectedTrip?.extraPricePerPerson || "0";
+
+                return (
                 <FormItem>
                   <div className="flex items-center justify-between">
-                    <FormLabel>Extra Price for Single Traveller (THB)</FormLabel>
+                      <FormLabel>Extra price for single traveller</FormLabel>
                     <div className="flex items-center space-x-2">
                       <FormLabel htmlFor="single-traveller-toggle" className="cursor-pointer text-sm font-normal">
                         {enableSingleTravellerPrice ? "Enabled" : "Disabled"}
@@ -892,7 +816,11 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                         checked={enableSingleTravellerPrice}
                         onCheckedChange={(checked) => {
                           setEnableSingleTravellerPrice(checked);
-                          if (!checked) {
+                            if (checked) {
+                              // When enabled, set value from trip's extraPricePerPerson
+                              field.onChange(tripExtraPrice);
+                            } else {
+                              // When disabled, clear the value
                             field.onChange("");
                           }
                         }}
@@ -905,142 +833,23 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                       type="number"
                       placeholder="0.00"
                       {...field}
-                      disabled={readOnly || !enableSingleTravellerPrice}
+                        disabled={readOnly || enableSingleTravellerPrice}
                       onChange={(e) => field.onChange(e.target.value)}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
-              )}
+                );
+              }}
             />
+          </div>
           </div>
 
           <Separator />
-
-          <div className="grid grid-cols-1 gap-4">
-            <FormField
-              control={form.control}
-              name="extraPricePerBag"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Extra Price per Bag (THB)</FormLabel>
-                    <div className="flex items-center space-x-2">
-                      <FormLabel htmlFor="bag-price-toggle" className="cursor-pointer text-sm font-normal">
-                        {enableBagPrice ? "Enabled" : "Disabled"}
-                      </FormLabel>
-                      <Switch
-                        id="bag-price-toggle"
-                        checked={enableBagPrice}
-                        onCheckedChange={(checked) => {
-                          setEnableBagPrice(checked);
-                          if (!checked) {
-                            field.onChange("");
-                          }
-                        }}
-                        disabled={readOnly}
-                      />
-                    </div>
-                  </div>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0.00"
-                      {...field}
-                      disabled={readOnly || !enableBagPrice}
-                      onChange={(e) => field.onChange(e.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="bagNote"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bag Note</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Add note about bags..."
-                      className="resize-none"
-                      {...field}
-                      disabled={readOnly}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="grid grid-cols-1 gap-4">
-            <FormField
-              control={form.control}
-              name="discountPrice"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Discount Price (THB)</FormLabel>
-                    <div className="flex items-center space-x-2">
-                      <FormLabel htmlFor="discount-toggle" className="cursor-pointer text-sm font-normal">
-                        {enableDiscount ? "Enabled" : "Disabled"}
-                      </FormLabel>
-                      <Switch
-                        id="discount-toggle"
-                        checked={enableDiscount}
-                        onCheckedChange={(checked) => {
-                          setEnableDiscount(checked);
-                          if (!checked) {
-                            field.onChange("");
-                          }
-                        }}
-                        disabled={readOnly}
-                      />
-                    </div>
-                  </div>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0.00"
-                      {...field}
-                      disabled={readOnly || !enableDiscount}
-                      onChange={(e) => field.onChange(e.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="discountNote"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Discount Note</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Add note about discount..."
-                      className="resize-none"
-                      {...field}
-                      disabled={readOnly}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
 
         {/* Room Information Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Room Information</h3>
+          {/* <h3 className="text-lg font-semibold">Room Information</h3> */}
 
           <div className="grid grid-cols-1 gap-4">
             <FormField
@@ -1048,18 +857,18 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
               name="roomType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Room Type</FormLabel>
+                  <FormLabel>Room type</FormLabel>
                   {readOnly ? (
-                    <FormControl>
+                  <FormControl>
                       <Input value={field.value} disabled />
-                    </FormControl>
+                  </FormControl>
                   ) : (
                     <Select onValueChange={field.onChange} value={field.value} key={`roomType-${field.value}`}>
-                      <FormControl>
+                  <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
-                      </FormControl>
+                  </FormControl>
                       <SelectContent>
                         <SelectItem value="DOUBLE_BED">Double Bed</SelectItem>
                         <SelectItem value="TWIN_BED">Twin Bed</SelectItem>
@@ -1079,7 +888,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
               render={({ field }) => (
                 <FormItem>
                   <div className="flex items-center justify-between">
-                    <FormLabel>Extra Price per Bed (THB)</FormLabel>
+                    <FormLabel>Extra price for extra bed</FormLabel>
                     <div className="flex items-center space-x-2">
                       <FormLabel htmlFor="bed-price-toggle" className="cursor-pointer text-sm font-normal">
                         {enableBedPrice ? "Enabled" : "Disabled"}
@@ -1116,10 +925,10 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
               name="roomNote"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Room Note</FormLabel>
+                  <FormLabel>Note for room</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Add note about room..."
+                      placeholder="Note for room"
                       className="resize-none"
                       {...field}
                       disabled={readOnly}
@@ -1132,32 +941,31 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
           </div>
         </div>
 
+        <Separator />
+
         {/* Seat Information Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Seat Information</h3>
-
-          <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="seatType"
+            name="seatType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>Seat Type</FormLabel>
+                <FormLabel required>Seat type</FormLabel>
                   {readOnly ? (
                     <FormControl>
                       <Input value={field.value} disabled />
                     </FormControl>
                   ) : (
-                    <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="WINDOW">Window</SelectItem>
-                        <SelectItem value="MIDDLE">Middle</SelectItem>
-                        <SelectItem value="AISLE">Aisle</SelectItem>
+                      <SelectItem value="WINDOW">Window</SelectItem>
+                      <SelectItem value="MIDDLE">Middle</SelectItem>
+                      <SelectItem value="AISLE">Aisle</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -1166,12 +974,36 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
               )}
             />
 
+          {/* <h3 className="text-lg font-semibold">Seat upgrade</h3> */}
+
+          <div className="grid grid-cols-1 gap-4">
             <FormField
               control={form.control}
               name="seatClass"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Seat Upgrade</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Seat type upgrade</FormLabel>
+                    <div className="flex items-center space-x-2">
+                      <FormLabel htmlFor="seat-price-toggle" className="cursor-pointer text-sm font-normal">
+                        {enableSeatPrice ? "Enabled" : "Disabled"}
+                      </FormLabel>
+                      <Switch
+                        id="seat-price-toggle"
+                        checked={enableSeatPrice}
+                        onCheckedChange={(checked) => {
+                          setEnableSeatPrice(checked);
+                          if (!checked) {
+                            // Clear extraPricePerSeat when disable
+                            form.setValue("extraPricePerSeat", "");
+                            // Clear seatClass when disable
+                            form.setValue("seatClass", undefined);
+                          }
+                        }}
+                        disabled={readOnly}
+                      />
+                    </div>
+                  </div>
                   {readOnly ? (
                     <FormControl>
                       <Input value={field.value || ""} disabled />
@@ -1181,6 +1013,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                       onValueChange={field.onChange}
                       value={field.value ?? ""}
                       key={`seatClass-${field.value ?? "empty"}`}
+                      disabled={!enableSeatPrice}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
@@ -1198,33 +1031,13 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                 </FormItem>
               )}
             />
-          </div>
 
-          <div className="grid grid-cols-1 gap-4">
             <FormField
               control={form.control}
               name="extraPricePerSeat"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Extra Price per Seat (THB)</FormLabel>
-                    <div className="flex items-center space-x-2">
-                      <FormLabel htmlFor="seat-price-toggle" className="cursor-pointer text-sm font-normal">
-                        {enableSeatPrice ? "Enabled" : "Disabled"}
-                      </FormLabel>
-                      <Switch
-                        id="seat-price-toggle"
-                        checked={enableSeatPrice}
-                        onCheckedChange={(checked) => {
-                          setEnableSeatPrice(checked);
-                          if (!checked) {
-                            field.onChange("");
-                          }
-                        }}
-                        disabled={readOnly}
-                      />
-                    </div>
-                  </div>
+                  <FormLabel>Extra price for seat upgrade</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -1244,10 +1057,10 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
               name="seatNote"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Seat Note</FormLabel>
+                  <FormLabel>Note for seat</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Add note about seat..."
+                      placeholder="Note for seat"
                       className="resize-none"
                       {...field}
                       disabled={readOnly}
@@ -1260,9 +1073,233 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
           </div>
         </div>
 
+        <Separator />
+
+        <div className="grid grid-cols-1 gap-4">
+            <FormField
+              control={form.control}
+            name="extraPricePerBag"
+              render={({ field }) => (
+                <FormItem>
+                <div className="flex items-center justify-between">
+                  <FormLabel>Extra price for bag upgrade</FormLabel>
+                  <div className="flex items-center space-x-2">
+                    <FormLabel htmlFor="bag-price-toggle" className="cursor-pointer text-sm font-normal">
+                      {enableBagPrice ? "Enabled" : "Disabled"}
+                    </FormLabel>
+                    <Switch
+                      id="bag-price-toggle"
+                      checked={enableBagPrice}
+                      onCheckedChange={(checked) => {
+                        setEnableBagPrice(checked);
+                        if (!checked) {
+                          field.onChange("");
+                        }
+                      }}
+                      disabled={readOnly}
+                    />
+                  </div>
+                </div>
+                    <FormControl>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    {...field}
+                    disabled={readOnly || !enableBagPrice}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                    </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+            name="bagNote"
+              render={({ field }) => (
+                <FormItem>
+                <FormLabel>Note for bag</FormLabel>
+                    <FormControl>
+                  <Textarea
+                    placeholder="Note for bag"
+                    className="resize-none"
+                    {...field}
+                    disabled={readOnly}
+                  />
+                    </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+        <Separator />
+
+          <div className="grid grid-cols-1 gap-4">
+            <FormField
+              control={form.control}
+            name="discountPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between">
+                  <FormLabel>Discount price</FormLabel>
+                    <div className="flex items-center space-x-2">
+                    <FormLabel htmlFor="discount-toggle" className="cursor-pointer text-sm font-normal">
+                      {enableDiscount ? "Enabled" : "Disabled"}
+                      </FormLabel>
+                      <Switch
+                      id="discount-toggle"
+                      checked={enableDiscount}
+                        onCheckedChange={(checked) => {
+                        setEnableDiscount(checked);
+                          if (!checked) {
+                            field.onChange("");
+                          }
+                        }}
+                        disabled={readOnly}
+                      />
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      {...field}
+                    disabled={readOnly || !enableDiscount}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+            name="discountNote"
+              render={({ field }) => (
+                <FormItem>
+                <FormLabel>Note for discount</FormLabel>
+                  <FormControl>
+                    <Textarea
+                    placeholder="Note for discount"
+                      className="resize-none"
+                      {...field}
+                      disabled={readOnly}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+        <Separator />
+
+        {/* Sales User Field */}
+        <FormField
+          control={form.control}
+          name="salesUserId"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel required={!readOnly}>Sales name</FormLabel>
+              {readOnly ? (
+                <FormControl>
+                  <Input
+                    value={selectedSalesUser ? `${selectedSalesUser.firstName} ${selectedSalesUser.lastName}` : ""}
+                    disabled
+                  />
+                </FormControl>
+              ) : (
+                <Popover open={salesUserSearchOpen} onOpenChange={setSalesUserSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                      >
+                        {selectedSalesUser
+                          ? `${selectedSalesUser.firstName} ${selectedSalesUser.lastName}`
+                          : "Search for a sales name..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0">
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Search sales users by name or email..."
+                        value={salesUserSearchQuery}
+                        onValueChange={setSalesUserSearchQuery}
+                      />
+                      <CommandList>
+                        {filteredSalesUsers.length === 0 ? (
+                          <CommandEmpty>No sales users found.</CommandEmpty>
+                        ) : (
+                          <CommandGroup>
+                            {filteredSalesUsers.map((user) => (
+                              <CommandItem
+                                value={user.id}
+                                key={user.id}
+                                onSelect={() => {
+                                  field.onChange(user.id);
+                                  setSalesUserSearchOpen(false);
+                                  setSalesUserSearchQuery("");
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    user.id === field.value ? "opacity-100" : "opacity-0",
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {user.firstName} {user.lastName}
+                                  </span>
+                                  <span className="text-muted-foreground text-xs">{user.email}</span>
+        </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Note */}
+        <FormField
+          control={form.control}
+          name="note"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Note for booking</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Note for booking"
+                  className="resize-none"
+                  {...field}
+                  disabled={readOnly}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Separator />
+
         {/* Payment Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Payment Information</h3>
+          {/* <h3 className="text-lg font-semibold">Payment Information</h3> */}
 
           <div className="grid grid-cols-1 gap-4">
             <FormField
@@ -1301,7 +1338,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
               render={({ field }) => {
                 // Disable if there's already a payment made
                 const hasPayment = booking?.firstPayment !== undefined && booking?.firstPayment !== null;
-                const isDisabled = readOnly || mode === "create" || hasPayment;
+                const isDisabled = readOnly || hasPayment;
 
                 // Map value to display label
                 const getPaymentRatioLabel = (value: string) => {
@@ -1318,33 +1355,33 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                 };
 
                 return (
-                  <FormItem>
-                    <FormLabel>First Payment Ratio</FormLabel>
+                <FormItem>
+                    <FormLabel>1st Payment (Ratio)</FormLabel>
                     {isDisabled ? (
-                      <FormControl>
+                    <FormControl>
                         <Input value={getPaymentRatioLabel(field.value)} disabled />
+                    </FormControl>
+                  ) : (
+                    <Select onValueChange={field.onChange} value={field.value} key={`firstPaymentRatio-${field.value}`}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
                       </FormControl>
-                    ) : (
-                      <Select onValueChange={field.onChange} value={field.value} key={`firstPaymentRatio-${field.value}`}>
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="FIRST_PAYMENT_100">100% (Full Payment)</SelectItem>
-                          <SelectItem value="FIRST_PAYMENT_50">50% (Half Payment)</SelectItem>
-                          <SelectItem value="FIRST_PAYMENT_30">30% (Deposit)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
+                      <SelectContent>
+                        <SelectItem value="FIRST_PAYMENT_100">100% (Full Payment)</SelectItem>
+                        <SelectItem value="FIRST_PAYMENT_50">50% (Half Payment)</SelectItem>
+                        <SelectItem value="FIRST_PAYMENT_30">30% (Deposit)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                     {hasPayment && (
                       <FormDescription className="text-muted-foreground text-xs">
                         Cannot edit: Payment has already been made
                       </FormDescription>
                     )}
-                    <FormMessage />
-                  </FormItem>
+                  <FormMessage />
+                </FormItem>
                 );
               }}
             />
@@ -1360,41 +1397,41 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                 const isDisabled = readOnly || mode === "create" || hasPayment;
 
                 return (
-                  <FormItem>
-                    <FormLabel>First Payment Amount (THB) *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        {...field}
+                <FormItem>
+                    <FormLabel required>1st Payment</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      {...field}
                         disabled={isDisabled}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          field.onChange(value);
-                          // If user manually changes the value in create mode, validate it matches calculated
-                          if (mode === "create" && value) {
-                            const calculated = calculatedAmounts.firstPaymentAmount.toFixed(2);
-                            const entered = parseFloat(value);
-                            const expected = parseFloat(calculated);
-                            if (Math.abs(entered - expected) > 0.01) {
-                              // Show warning but don't block - let backend validate
-                              console.warn(
-                                `First payment amount (${entered}) does not match calculated value (${expected}). The calculated value will be used.`,
-                              );
-                            }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value);
+                        // If user manually changes the value in create mode, validate it matches calculated
+                        if (mode === "create" && value) {
+                          const calculated = calculatedAmounts.firstPaymentAmount.toFixed(2);
+                          const entered = parseFloat(value);
+                          const expected = parseFloat(calculated);
+                          if (Math.abs(entered - expected) > 0.01) {
+                            // Show warning but don't block - let backend validate
+                            console.warn(
+                              `First payment amount (${entered}) does not match calculated value (${expected}). The calculated value will be used.`,
+                            );
                           }
-                        }}
-                      />
-                    </FormControl>
-                    <FormDescription>
+                        }
+                      }}
+                    />
+                  </FormControl>
+                    {/* <FormDescription>
                       {hasPayment
                         ? "Cannot edit: Payment has already been made"
                         : mode === "create"
                           ? "Auto-calculated based on ratio"
                           : "Enter the actual first payment amount"}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    </FormDescription> */}
+                  <FormMessage />
+                </FormItem>
                 );
               }}
             />
@@ -1432,9 +1469,32 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                 };
 
                 return (
-                  <FormItem>
-                    <FormLabel>Proof of Payment</FormLabel>
-                    {readOnly ? (
+                <FormItem>
+                    <FormLabel>Proof of payment (1st payment)</FormLabel>
+                  {readOnly ? (
+                    <FormControl>
+                      {field.value ? (
+                        <div className="space-y-2">
+                          <div className="bg-muted relative h-48 w-full overflow-hidden rounded-md border">
+                            <picture>
+                              <img src={field.value} alt="Proof of Payment" className="object-contain" />
+                            </picture>
+                          </div>
+                          <a
+                            href={field.value}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary text-sm underline"
+                          >
+                            View proof of payment
+                          </a>
+                        </div>
+                      ) : (
+                        <Input value="No proof uploaded" disabled />
+                      )}
+                    </FormControl>
+                  ) : (
+                    <>
                       <FormControl>
                         {field.value ? (
                           <div className="space-y-2">
@@ -1442,6 +1502,15 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                               <picture>
                                 <img src={field.value} alt="Proof of Payment" className="object-contain" />
                               </picture>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-2 right-2"
+                                onClick={() => field.onChange("")}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
                             </div>
                             <a
                               href={field.value}
@@ -1453,67 +1522,35 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                             </a>
                           </div>
                         ) : (
-                          <Input value="No proof uploaded" disabled />
+                          <DragDropUpload
+                            acceptedFileTypes={[
+                              "image/jpeg",
+                              "image/png",
+                              "image/jpg",
+                              ".jpg",
+                              ".jpeg",
+                              ".png",
+                              "application/pdf",
+                              ".pdf",
+                            ]}
+                            maxFileSize={10 * 1024 * 1024} // 10MB
+                              folderName={getFolderName()}
+                            multiple={false}
+                            onUploadSuccess={(url) => {
+                              field.onChange(url);
+                            }}
+                            onUploadError={(error) => {
+                              toast.error(error);
+                            }}
+                            className="w-full"
+                          />
                         )}
                       </FormControl>
-                    ) : (
-                      <>
-                        <FormControl>
-                          {field.value ? (
-                            <div className="space-y-2">
-                              <div className="bg-muted relative h-48 w-full overflow-hidden rounded-md border">
-                                <picture>
-                                  <img src={field.value} alt="Proof of Payment" className="object-contain" />
-                                </picture>
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="icon"
-                                  className="absolute top-2 right-2"
-                                  onClick={() => field.onChange("")}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                              <a
-                                href={field.value}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary text-sm underline"
-                              >
-                                View proof of payment
-                              </a>
-                            </div>
-                          ) : (
-                            <DragDropUpload
-                              acceptedFileTypes={[
-                                "image/jpeg",
-                                "image/png",
-                                "image/jpg",
-                                ".jpg",
-                                ".jpeg",
-                                ".png",
-                                "application/pdf",
-                                ".pdf",
-                              ]}
-                              maxFileSize={10 * 1024 * 1024} // 10MB
-                              folderName={getFolderName()}
-                              multiple={false}
-                              onUploadSuccess={(url) => {
-                                field.onChange(url);
-                              }}
-                              onUploadError={(error) => {
-                                toast.error(error);
-                              }}
-                              className="w-full"
-                            />
-                          )}
-                        </FormControl>
-                        <FormDescription>Upload proof of payment (max 10MB)</FormDescription>
-                      </>
-                    )}
-                    <FormMessage />
-                  </FormItem>
+                      <FormDescription>Upload proof of payment (max 10MB)</FormDescription>
+                    </>
+                  )}
+                  <FormMessage />
+                </FormItem>
                 );
               }}
             />
@@ -1619,7 +1656,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                     {booking.firstPayment && (
                       <div className="flex items-center justify-between rounded-md border p-3">
                         <div className="flex-1">
-                          <p className="text-sm font-medium">First Payment</p>
+                          <p className="text-sm font-medium">1st Payment</p>
                           <p className="text-muted-foreground text-xs">
                             Amount: {firstAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
                             {booking.firstPayment.paidAt &&
@@ -1644,7 +1681,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                     {booking.secondPayment && (
                       <div className="flex items-center justify-between rounded-md border p-3">
                         <div className="flex-1">
-                          <p className="text-sm font-medium">Second Payment</p>
+                          <p className="text-sm font-medium">2nd Payment</p>
                           <p className="text-muted-foreground text-xs">
                             Amount: {secondAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
                             {booking.secondPayment.paidAt &&
@@ -1669,7 +1706,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                     {booking.thirdPayment && (
                       <div className="flex items-center justify-between rounded-md border p-3">
                         <div className="flex-1">
-                          <p className="text-sm font-medium">Third Payment</p>
+                          <p className="text-sm font-medium">3rd Payment</p>
                           <p className="text-muted-foreground text-xs">
                             Amount: {thirdAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
                             {booking.thirdPayment.paidAt &&
@@ -1702,7 +1739,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                   <div className="space-y-4">
                     {!booking.secondPayment && (
                       <div className="rounded-md border p-4">
-                        <h4 className="mb-2 font-medium">Second Payment</h4>
+                        <h4 className="mb-2 font-medium">2nd Payment</h4>
                         <PaymentForm
                           bookingId={booking.id}
                           booking={{
@@ -1724,7 +1761,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
 
                     {booking.secondPayment && !booking.thirdPayment && (
                       <div className="rounded-md border p-4">
-                        <h4 className="mb-2 font-medium">Third Payment</h4>
+                        <h4 className="mb-2 font-medium">3rd Payment</h4>
                         <PaymentForm
                           bookingId={booking.id}
                           booking={{

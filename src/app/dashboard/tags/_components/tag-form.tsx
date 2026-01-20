@@ -5,9 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const tagFormSchema = z.object({
   name: z.string().min(1, {
@@ -46,7 +45,7 @@ export function TagForm({
   const readOnly = mode === "view";
 
   // Calculate default order for create mode (last position + 1)
-  const maxOrder = allTagsForPosition.length > 0 
+  const maxOrder = allTagsForPosition.length > 0
     ? Math.max(...allTagsForPosition.map((t) => t.order))
     : -1;
   const defaultOrderForCreate = maxOrder + 1;
@@ -74,13 +73,6 @@ export function TagForm({
     await onSubmit(values);
   }
 
-  // Build position options
-  const currentTag = currentTagId ? allTagsForPosition.find((t) => t.id === currentTagId) : undefined;
-
-  const otherTags = currentTagId != null ? allTagsForPosition.filter((t) => t.id !== currentTagId) : allTagsForPosition;
-
-  const sortedOtherTags = [...otherTags].sort((a, b) => a.order - b.order);
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -98,86 +90,6 @@ export function TagForm({
           )}
         />
 
-        {mode === "view" ? (
-          // Simple read-only display for order
-          <FormField
-            control={form.control}
-            name="order"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Position</FormLabel>
-                <FormControl>
-                  <Input
-                    value={field.value !== undefined ? field.value.toString() : (currentTag?.order?.toString() ?? "")}
-                    disabled
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        ) : (
-          // Editable position selection for create/edit
-          <FormField
-            control={form.control}
-            name="order"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Position</FormLabel>
-                <Select
-                  value={
-                    field.value !== undefined
-                      ? field.value.toString()
-                      : mode === "edit" && currentTag
-                        ? currentTag.order.toString()
-                        : mode === "create"
-                          ? defaultOrderForCreate.toString()
-                          : "end"
-                  }
-                  onValueChange={(value) => {
-                    if (value === "end") {
-                      field.onChange(undefined);
-                    } else {
-                      field.onChange(parseInt(value, 10));
-                    }
-                  }}
-                  disabled={isLoading}
-                >
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select position" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {mode === "edit" && currentTag && (
-                      <SelectItem value={currentTag.order.toString()}>
-                        {(currentTag.order + 1).toString()}
-                      </SelectItem>
-                    )}
-                    {sortedOtherTags.map((tag) => (
-                      <SelectItem key={tag.id} value={tag.order.toString()}>
-                        {(tag.order + 1).toString()}
-                      </SelectItem>
-                    ))}
-                    {mode === "create" && (
-                      <SelectItem value={defaultOrderForCreate.toString()}>
-                        {(defaultOrderForCreate + 1).toString()}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-
-                <FormDescription>
-                  {mode === "create"
-                    ? "Select where to insert this tag. Existing tags at this position and after will be shifted down."
-                    : "Select the new position for this tag. Other tags will be automatically reordered."}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
         {mode !== "view" && (
           <div className="flex justify-end space-x-4">
             {onCancel && (
@@ -191,8 +103,8 @@ export function TagForm({
                   ? "Creating..."
                   : "Updating..."
                 : mode === "create"
-                  ? "Create Tag"
-                  : "Update Tag"}
+                  ? "Create"
+                  : "Update"}
             </Button>
           </div>
         )}

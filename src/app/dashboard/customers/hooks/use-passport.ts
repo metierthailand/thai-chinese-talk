@@ -7,7 +7,7 @@ import { customerKeys } from "./use-customers";
 export const passportFormSchema = z.object({
   id: z.string().optional(),
   customerId: z.string(),
-  passportNumber: z.string().min(1, "Passport number is required"),
+  passportNumber: z.string().min(6, "Passport number must be at least 6 characters."),
   issuingCountry: z.string().min(1, "Issuing country is required"),
   expiryDate: z.date(),
   isPrimary: z.boolean(),

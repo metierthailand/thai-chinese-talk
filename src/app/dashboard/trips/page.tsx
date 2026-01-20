@@ -214,7 +214,7 @@ export default function TripsPage() {
         </div>
         <Link href="/dashboard/trips/create">
           <Button>
-            <Plus className="mr-2 h-4 w-4" /> New Trip
+            <Plus className="mr-2 h-4 w-4" /> Create
           </Button>
         </Link>
       </div>

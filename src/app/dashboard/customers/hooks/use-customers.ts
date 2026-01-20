@@ -46,7 +46,7 @@ export const customerFormSchema = z.object({
   passports: z
     .array(
       z.object({
-        passportNumber: z.string().min(1, "Please fill in the information."),
+        passportNumber: z.string().min(6, "Passport number must be at least 6 characters."),
         issuingCountry: z.string().min(1, "Please fill in the information."),
         issuingDate: z.union([z.string(), z.date()]).refine(
           (val) => {

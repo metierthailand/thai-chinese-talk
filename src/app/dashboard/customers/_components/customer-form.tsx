@@ -123,7 +123,7 @@ export function CustomerForm({
             const selectedTags = availableTags.filter((tag) => field.value?.includes(tag.id));
             return (
               <FormItem className="flex flex-col">
-                <FormLabel>Tags</FormLabel>
+                <FormLabel>Tag</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -180,7 +180,6 @@ export function CustomerForm({
                     </Command>
                   </PopoverContent>
                 </Popover>
-                <FormDescription>Select one or more tags to categorize this customer.</FormDescription>
                 <FormMessage />
               </FormItem>
             );
@@ -192,7 +191,7 @@ export function CustomerForm({
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>Title</FormLabel>
+              <FormLabel required>Title (EN/TH)</FormLabel>
               <Select onValueChange={field.onChange} value={field.value || ""}>
                 <FormControl>
                   <SelectTrigger className="w-full">
@@ -202,7 +201,7 @@ export function CustomerForm({
                 <SelectContent>
                   <SelectItem value="MR">Mr. (นาย)</SelectItem>
                   <SelectItem value="MRS">Mrs. (นาง)</SelectItem>
-                  <SelectItem value="MISS">Miss. (นางสาว)</SelectItem>
+                  <SelectItem value="MISS">Miss. (นางสาว/เด็กหญิง)</SelectItem>
                   <SelectItem value="MASTER">Master (เด็กชาย)</SelectItem>
                   <SelectItem value="OTHER">Other (อื่นๆ)</SelectItem>
                 </SelectContent>
@@ -218,9 +217,9 @@ export function CustomerForm({
             name="firstNameEn"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>First Name (English)</FormLabel>
+                <FormLabel required>First name (EN)</FormLabel>
                 <FormControl>
-                  <Input placeholder="First Name" {...field} />
+                  <Input placeholder="First name (EN)" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -231,9 +230,9 @@ export function CustomerForm({
             name="lastNameEn"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>Last Name (English)</FormLabel>
+                <FormLabel required>Last name (EN)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Last Name" {...field} />
+                  <Input placeholder="Last name (EN)" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -247,9 +246,9 @@ export function CustomerForm({
             name="firstNameTh"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>First Name (Thai)</FormLabel>
+                <FormLabel>First name (TH)</FormLabel>
                 <FormControl>
-                  <Input placeholder="ชื่อ" {...field} />
+                  <Input placeholder="First name (TH)" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -260,9 +259,9 @@ export function CustomerForm({
             name="lastNameTh"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Last Name (Thai)</FormLabel>
+                <FormLabel>Last name (TH)</FormLabel>
                 <FormControl>
-                  <Input placeholder="นามสกุล" {...field} />
+                  <Input placeholder="Last name (TH)" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -276,7 +275,7 @@ export function CustomerForm({
             name="dateOfBirth"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel required>Date of Birth</FormLabel>
+                <FormLabel required>Date of birth</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -311,9 +310,9 @@ export function CustomerForm({
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Phone Number</FormLabel>
+                <FormLabel>Phone number</FormLabel>
                 <FormControl>
-                  <Input placeholder="Phone Number" {...field} />
+                  <Input placeholder="Phone number" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -343,21 +342,6 @@ export function CustomerForm({
               <FormLabel>LINE ID</FormLabel>
               <FormControl>
                 <Input placeholder="LINE ID" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="note"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Note</FormLabel>
-              <FormDescription>Dietary requirements, seat preferences, etc.</FormDescription>
-              <FormControl>
-                <Textarea placeholder="Vegetarian, Window seat preferred..." className="resize-none" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -394,6 +378,7 @@ export function CustomerForm({
               </Button>
             )}
           </div>
+
           <CollapsibleContent className="space-y-4">
             {useWatch({ control: form.control, name: "addresses" })?.map((_, index) => (
               <div key={index} className="relative grid grid-cols-2 gap-4 rounded-md border p-4">
@@ -431,7 +416,7 @@ export function CustomerForm({
                   render={({ field }) => {
                     return (
                       <FormItem className="flex flex-col">
-                        <FormLabel>Province (จังหวัด)</FormLabel>
+                        <FormLabel>Province</FormLabel>
                         <Popover>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -489,7 +474,7 @@ export function CustomerForm({
                     const districts = provinceValue ? getDistrict(provinceValue) : [];
                     return (
                       <FormItem className="flex flex-col">
-                        <FormLabel>District (อำเภอ/เขต)</FormLabel>
+                        <FormLabel>District</FormLabel>
                         <Popover>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -549,7 +534,7 @@ export function CustomerForm({
                       provinceValue && districtValue ? getSubDistrict(provinceValue, districtValue) : [];
                     return (
                       <FormItem className="flex flex-col">
-                        <FormLabel>Sub-District (ตำบล/แขวง)</FormLabel>
+                        <FormLabel>Sub district</FormLabel>
                         <Popover>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -622,7 +607,7 @@ export function CustomerForm({
 
                     return (
                       <FormItem>
-                        <FormLabel>Postal Code (รหัสไปรษณีย์)</FormLabel>
+                        <FormLabel>Postal code</FormLabel>
                         <FormControl>
                           {hasMultiplePostCodes ? (
                             <Select onValueChange={field.onChange} value={field.value || ""}>
@@ -716,9 +701,9 @@ export function CustomerForm({
                   name={`passports.${index}.passportNumber`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel required>Passport Number</FormLabel>
+                      <FormLabel required>Passport no.</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Passport Number" />
+                        <Input {...field} placeholder="Passport no." />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -782,7 +767,7 @@ export function CustomerForm({
                   name={`passports.${index}.issuingDate`}
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel required>Issuing Date</FormLabel>
+                      <FormLabel required>Date of issue</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -823,7 +808,7 @@ export function CustomerForm({
 
                     return (
                       <FormItem className="flex flex-col">
-                        <FormLabel required>Expiry Date</FormLabel>
+                        <FormLabel required>Date of expiry</FormLabel>
                         <Popover>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -868,9 +853,9 @@ export function CustomerForm({
                     const sanitizedName =
                       customerName !== "_"
                         ? customerName
-                            .replace(/[^a-zA-Z0-9ก-๙\s_]/g, "")
-                            .replace(/\s+/g, "_")
-                            .toLowerCase()
+                          .replace(/[^a-zA-Z0-9ก-๙\s_]/g, "")
+                          .replace(/\s+/g, "_")
+                          .toLowerCase()
                         : `temp_${Date.now()}_${index}`; // Use timestamp and index for temp customers
 
                     const folderName = `passports/${sanitizedName}`;
@@ -879,7 +864,7 @@ export function CustomerForm({
 
                     return (
                       <FormItem className="col-span-2">
-                        <FormLabel>Passport Image</FormLabel>
+                        <FormLabel>Passport image</FormLabel>
                         {imageUrl ? (
                           <div className="space-y-2">
                             <div className="bg-muted relative h-48 w-full overflow-hidden rounded-md border">
@@ -975,7 +960,7 @@ export function CustomerForm({
                   name={`foodAllergies.${index}.types`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Allergy Types</FormLabel>
+                      <FormLabel>Food allergy type</FormLabel>
                       <div className="flex flex-wrap gap-2">
                         {(["DIARY", "EGGS", "FISH", "CRUSTACEAN", "GLUTEN", "PEANUT_AND_NUTS", "OTHER"] as const).map(
                           (type) => {
@@ -1006,9 +991,9 @@ export function CustomerForm({
                   name={`foodAllergies.${index}.note`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Note</FormLabel>
+                      <FormLabel>Note for food allergy</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="Specific details about allergy..." className="resize-none" />
+                        <Textarea {...field} placeholder="Note for food allergy" className="resize-none" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1018,6 +1003,20 @@ export function CustomerForm({
             ))}
           </CollapsibleContent>
         </Collapsible>
+
+        <FormField
+          control={form.control}
+          name="note"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Note for customer</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Note for customer" className="resize-none" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex justify-end space-x-4">
           {onCancel && (
@@ -1031,8 +1030,8 @@ export function CustomerForm({
                 ? "Creating..."
                 : "Updating..."
               : mode === "create"
-                ? "Create Customer"
-                : "Update Customer"}
+                ? "Create"
+                : "Update"}
           </Button>
         </div>
       </form>

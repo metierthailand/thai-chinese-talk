@@ -57,7 +57,7 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
     } catch (error) {
       if (error instanceof Error) {
         const fieldError = error as Error & { field?: string; fields?: { field: string; message: string }[] };
-        
+
         // Handle multiple field errors
         if (fieldError.fields && Array.isArray(fieldError.fields)) {
           fieldError.fields.forEach((err) => {
@@ -110,9 +110,9 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
           name="firstName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>First Name</FormLabel>
+              <FormLabel required>First name</FormLabel>
               <FormControl>
-                <Input placeholder="First Name" {...field} />
+                <Input placeholder="First name" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -124,9 +124,9 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
           name="lastName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>Last Name</FormLabel>
+              <FormLabel required>Last name</FormLabel>
               <FormControl>
-                <Input placeholder="Last Name" {...field} />
+                <Input placeholder="Last name" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -152,9 +152,9 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
           name="phoneNumber"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Phone Number</FormLabel>
+              <FormLabel>Phone number</FormLabel>
               <FormControl>
-                <Input type="tel" placeholder="Phone Number" {...field} />
+                <Input type="tel" placeholder="Phone number" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -170,7 +170,7 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select role" />
+                    <SelectValue placeholder="Role" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -194,7 +194,7 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             name="commissionPerHead"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Commission Per Head (Baht)</FormLabel>
+                <FormLabel>Commission per head (Baht)</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" placeholder="0.00" {...field} />
                 </FormControl>

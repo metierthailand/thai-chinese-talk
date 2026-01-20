@@ -85,8 +85,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       foodAllergies,
     } = body;
 
-    if (!firstNameTh || !lastNameTh || !firstNameEn || !lastNameEn) {
-      return new NextResponse("First name and last name (both Thai and English) are required", { status: 400 });
+    if (!firstNameEn || !lastNameEn) {
+      return new NextResponse("First name and last name (English) are required", { status: 400 });
     }
 
     // Use transaction to update customer and tags atomically
@@ -95,8 +95,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       await tx.customer.update({
         where: { id },
         data: {
-          firstNameTh,
-          lastNameTh,
+          firstNameTh: firstNameTh || null,
+          lastNameTh: lastNameTh || null,
           firstNameEn,
           lastNameEn,
           title: title || null,

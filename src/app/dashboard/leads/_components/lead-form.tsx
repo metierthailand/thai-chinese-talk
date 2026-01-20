@@ -50,8 +50,8 @@ const formSchema = z
     salesUserId: z.string().min(1, { message: "Please select the information." }),
     source: z.string().min(1, { message: "Please fill in the information." }),
     status: z.string().min(1, { message: "Please select the information." }),
-    tripInterest: z.string().min(1, { message: "Please fill in the information." }),
-    pax: z.number().min(1, { message: "Please fill in the information." }),
+    tripInterest: z.string('Please fill in the information.').min(1, { message: "Please fill in the information." }),
+    pax: z.number('Please fill in the information.').min(1, { message: "Please fill in the information." }),
     leadNote: z.string().optional(),
     sourceNote: z.string().optional(),
   })
@@ -196,6 +196,46 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel required>Status</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value} disabled={disabled}>
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {LEAD_STATUS_VALUES.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {LEAD_STATUS_LABELS[status]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Trip Interest */}
+        <FormField
+          control={form.control}
+          name="tripInterest"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel required>Trip Interest</FormLabel>
+              <FormControl>
+                <Input placeholder="Trip Interest" {...field} disabled={disabled} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         {/* New Customer Toggle */}
         <FormField
           control={form.control}
@@ -378,13 +418,76 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
           />
         )}
 
+        <div className="grid grid-cols-2 gap-4">
+          {/* Pax */}
+          <FormField
+            control={form.control}
+            name="pax"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Pax</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min="1"
+                    placeholder="1"
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                    value={field.value}
+                    disabled={disabled}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="source"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Source</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={disabled}>
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select source" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {LEAD_SOURCE_VALUES.map((source) => (
+                      <SelectItem key={source} value={source}>
+                        {LEAD_SOURCE_LABELS[source]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="sourceNote"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Note for source</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Source notes..." className="resize-none" {...field} disabled={disabled} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         {/* Sales User Selection */}
         <FormField
           control={form.control}
           name="salesUserId"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel required>Sales User</FormLabel>
+              <FormLabel required>Sales name</FormLabel>
               {disabled ? (
                 <FormControl>
                   <Input
@@ -406,7 +509,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                           ? `${selectedSalesUser.firstName} ${selectedSalesUser.lastName}`
                           : isLoadingSalesUsers
                             ? "Loading..."
-                            : "Select sales user..."}
+                            : "Select sales name..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
@@ -414,14 +517,14 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                   <PopoverContent className="w-[400px] p-0">
                     <Command shouldFilter={false}>
                       <CommandInput
-                        placeholder="Search sales users..."
+                        placeholder="Search sales names..."
                         value={salesUserSearchQuery}
                         onValueChange={setSalesUserSearchQuery}
                       />
                       <CommandList>
                         {filteredSalesUsers.length === 0 ? (
                           <CommandEmpty>
-                            {salesUserSearchQuery ? "No sales users found." : "No sales users available."}
+                            {salesUserSearchQuery ? "No sales names found." : "No sales names available."}
                           </CommandEmpty>
                         ) : (
                           <CommandGroup>
@@ -461,128 +564,19 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
           )}
         />
 
-        {/* Source and Status */}
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="source"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Source</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={disabled}>
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select source" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {LEAD_SOURCE_VALUES.map((source) => (
-                      <SelectItem key={source} value={source}>
-                        {LEAD_SOURCE_LABELS[source]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={disabled}>
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {LEAD_STATUS_VALUES.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {LEAD_STATUS_LABELS[status]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Trip Interest and Pax */}
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="tripInterest"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel required>Trip Interest</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g. Japan, Europe" {...field} disabled={disabled} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="pax"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pax</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="1"
-                    placeholder="1"
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                    value={field.value}
-                    disabled={disabled}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Notes */}
-        <div className="grid grid-cols-1 gap-4">
-          <FormField
-            control={form.control}
-            name="leadNote"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Lead Note</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Lead notes..." className="resize-none" {...field} disabled={disabled} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="sourceNote"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Source Note</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Source notes..." className="resize-none" {...field} disabled={disabled} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="leadNote"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Note for lead</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Note for lead" className="resize-none" {...field} disabled={disabled} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {mode !== "view" && (
           <div className="flex justify-end space-x-4">
@@ -592,7 +586,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
               </Button>
             )}
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? (mode === "create" ? "Creating..." : "Saving...") : mode === "create" ? "Create Lead" : "Save Changes"}
+              {isLoading ? (mode === "create" ? "Creating..." : "Saving...") : mode === "create" ? "Create" : "Update"}
             </Button>
           </div>
         )}
