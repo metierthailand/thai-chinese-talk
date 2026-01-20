@@ -112,24 +112,33 @@ export async function POST(req: Request) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
+    // Check for duplicate email and phone number
     const existingEmail = await prisma.user.findUnique({
       where: {
         email,
       },
     });
 
+    const existingPhoneNumber = phoneNumber
+      ? await prisma.user.findUnique({
+          where: {
+            phoneNumber,
+          },
+        })
+      : null;
+
+    // Collect all errors
+    const errors: { field: string; message: string }[] = [];
     if (existingEmail) {
-      return new NextResponse("This email already exists.", { status: 409 });
+      errors.push({ field: "email", message: "This email already exists." });
+    }
+    if (existingPhoneNumber) {
+      errors.push({ field: "phoneNumber", message: "This phone number already exists." });
     }
 
-    const existingPhoneNumber = await prisma.user.findUnique({
-      where: {
-        phoneNumber,
-      },
-    });
-
-    if (existingPhoneNumber) {
-      return new NextResponse("This phone number already exists.", { status: 409 });
+    // If there are errors, return them all
+    if (errors.length > 0) {
+      return NextResponse.json({ errors }, { status: 409 });
     }
 
     // Generate reset token

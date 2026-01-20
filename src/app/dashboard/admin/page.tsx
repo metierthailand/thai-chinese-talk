@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
-import { UserDialog } from "./_components/user-dialog";
 import { UserFilter } from "./_components/user-filter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,14 +16,12 @@ import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { formatDecimal } from "@/lib/utils";
-import { useInvalidateUsers, useUsers } from "./hooks/use-users-query";
+import { useUsers } from "./hooks/use-users-query";
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const search = searchParams.get("search") || "";
   const role = searchParams.get("role") || "ALL";
@@ -75,18 +73,6 @@ export default function AdminPage() {
 
   const users = useMemo(() => usersResponse?.data ?? [], [usersResponse?.data]);
   const total = usersResponse?.total ?? 0;
-
-  const handleCreateUser = () => {
-    setSelectedUser(null);
-    setIsDialogOpen(true);
-  };
-
-  const handleEditUser = useCallback((user: User) => {
-    setSelectedUser(user);
-    setIsDialogOpen(true);
-  }, []);
-
-  const invalidateUsers = useInvalidateUsers();
 
   // --------------------
   // columns
@@ -140,16 +126,11 @@ export default function AdminPage() {
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => (
         <div className="flex justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEditUser(row.original);
-            }}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
+          <Link href={`/dashboard/admin/${row.original.id}/edit`}>
+            <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+              <Edit className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       ),
     },
@@ -188,11 +169,6 @@ export default function AdminPage() {
     [updateSearchParams]
   );
 
-  const handleUserSaved = () => {
-    setIsDialogOpen(false);
-    invalidateUsers();
-  };
-
   // Show loading state while checking session
   if (status === "loading") {
     return <Loading />;
@@ -230,9 +206,11 @@ export default function AdminPage() {
           <h2 className="text-3xl font-bold tracking-tight">Staff</h2>
           <p className="text-muted-foreground">Manage staff members and their permissions.</p>
         </div>
-        <Button onClick={handleCreateUser}>
-          <Plus className="mr-2 h-4 w-4" /> Create
-        </Button>
+        <Link href="/dashboard/admin/create">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> Create
+          </Button>
+        </Link>
       </div>
 
       {/* Filter & Search form */}
@@ -252,13 +230,6 @@ export default function AdminPage() {
           onPageSizeChange={handlePageSizeChange}
         />
       </div>
-
-      <UserDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        user={selectedUser || undefined}
-        onSaved={handleUserSaved}
-      />
     </div>
   );
 }

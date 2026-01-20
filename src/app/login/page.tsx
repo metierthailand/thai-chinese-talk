@@ -75,7 +75,7 @@ export default function LoginPage() {
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Lock className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Thai Word Chinese Word Admin</h1>
+          <h1 className="text-3xl font-bold tracking-tight">ThaiChinese Tour Admin</h1>
           <p className="text-muted-foreground text-sm">
             For your security, please sign in with your<br />email and password to access your account.
           </p>

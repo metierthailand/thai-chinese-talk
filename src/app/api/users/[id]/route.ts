@@ -6,6 +6,47 @@ import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import Decimal from "decimal.js";
 
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getServerSession(authOptions);
+
+  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+    if (!id) {
+      return new NextResponse("User ID is required", { status: 400 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phoneNumber: true,
+        role: true,
+        isActive: true,
+        commissionPerHead: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      return new NextResponse("User not found", { status: 404 });
+    }
+
+    return NextResponse.json(user);
+  } catch (error) {
+    console.error("[USER_GET]", error);
+    return new NextResponse("Internal Error", { status: 500 });
+  }
+}
+
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
 
@@ -22,30 +63,37 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = await req.json();
     const { firstName, lastName, email, phoneNumber, role, isActive, commissionRate, password } = body;
 
-    // Check for duplicate email if email is being updated
-    if (email !== undefined) {
-      const existingEmail = await prisma.user.findUnique({
-        where: {
-          email,
-        },
-      });
+    // Check for duplicate email and phone number
+    const existingEmail =
+      email !== undefined
+        ? await prisma.user.findUnique({
+            where: {
+              email,
+            },
+          })
+        : null;
 
-      if (existingEmail && existingEmail.id !== id) {
-        return new NextResponse("This email already exists.", { status: 409 });
-      }
+    const existingPhoneNumber =
+      phoneNumber !== undefined && phoneNumber
+        ? await prisma.user.findUnique({
+            where: {
+              phoneNumber,
+            },
+          })
+        : null;
+
+    // Collect all errors
+    const errors: { field: string; message: string }[] = [];
+    if (existingEmail && existingEmail.id !== id) {
+      errors.push({ field: "email", message: "This email already exists." });
+    }
+    if (existingPhoneNumber && existingPhoneNumber.id !== id) {
+      errors.push({ field: "phoneNumber", message: "This phone number already exists." });
     }
 
-    // Check for duplicate phone number if phoneNumber is being updated
-    if (phoneNumber !== undefined && phoneNumber) {
-      const existingPhoneNumber = await prisma.user.findUnique({
-        where: {
-          phoneNumber,
-        },
-      });
-
-      if (existingPhoneNumber && existingPhoneNumber.id !== id) {
-        return new NextResponse("This phone number already exists.", { status: 409 });
-      }
+    // If there are errors, return them all
+    if (errors.length > 0) {
+      return NextResponse.json({ errors }, { status: 409 });
     }
 
     const updateData: Prisma.UserUpdateInput = {

@@ -11,6 +11,16 @@ export interface UsersResponse {
   totalPages: number;
 }
 
+interface FieldError {
+  field: string;
+  message: string;
+}
+
+interface ErrorResponse {
+  message?: string;
+  errors?: FieldError[];
+}
+
 // Query key factory
 export const userKeys = {
   all: ["users"] as const,
@@ -67,6 +77,25 @@ export function useInvalidateUsers() {
   };
 }
 
+// Fetch single user function
+async function fetchUser(id: string): Promise<User> {
+  const res = await fetch(`/api/users/${id}`);
+  if (!res.ok) {
+    throw new Error("Failed to fetch user");
+  }
+  return res.json();
+}
+
+// Hook to fetch a single user
+export function useUser(id: string | undefined) {
+  return useQuery({
+    queryKey: [...userKeys.all, "detail", id],
+    queryFn: () => fetchUser(id!),
+    enabled: !!id,
+    staleTime: 30 * 1000, // 30 seconds
+  });
+}
+
 // Create user function
 async function createUser(data: UserFormValues): Promise<User> {
   const body = {
@@ -83,13 +112,30 @@ async function createUser(data: UserFormValues): Promise<User> {
   });
 
   if (!res.ok) {
-    const error = await res.text();
-    const errorWithField = new Error(error) as Error & { field?: string };
+    const contentType = res.headers.get("content-type");
+    let errorData: ErrorResponse;
+    
+    if (contentType?.includes("application/json")) {
+      errorData = await res.json();
+    } else {
+      errorData = { message: await res.text() };
+    }
+
+    // Check if response has errors array (multiple field errors)
+    if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+      const errorWithFields = new Error("Validation failed") as Error & { fields?: FieldError[] };
+      errorWithFields.fields = errorData.errors;
+      throw errorWithFields;
+    }
+
+    // Single error (backward compatibility)
+    const errorMessage = errorData.message || "Failed to create user";
+    const errorWithField = new Error(errorMessage) as Error & { field?: string };
     
     // Map API errors to form fields
-    if (error.toLowerCase().includes("email") && error.toLowerCase().includes("already exists")) {
+    if (errorMessage.toLowerCase().includes("email") && errorMessage.toLowerCase().includes("already exists")) {
       errorWithField.field = "email";
-    } else if (error.toLowerCase().includes("phone") && error.toLowerCase().includes("already exists")) {
+    } else if (errorMessage.toLowerCase().includes("phone") && errorMessage.toLowerCase().includes("already exists")) {
       errorWithField.field = "phoneNumber";
     }
     
@@ -115,13 +161,30 @@ async function updateUser({ id, data }: { id: string; data: UserFormValues }): P
   });
 
   if (!res.ok) {
-    const error = await res.text();
-    const errorWithField = new Error(error) as Error & { field?: string };
+    const contentType = res.headers.get("content-type");
+    let errorData: ErrorResponse;
+    
+    if (contentType?.includes("application/json")) {
+      errorData = await res.json();
+    } else {
+      errorData = { message: await res.text() };
+    }
+
+    // Check if response has errors array (multiple field errors)
+    if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+      const errorWithFields = new Error("Validation failed") as Error & { fields?: FieldError[] };
+      errorWithFields.fields = errorData.errors;
+      throw errorWithFields;
+    }
+
+    // Single error (backward compatibility)
+    const errorMessage = errorData.message || "Failed to update user";
+    const errorWithField = new Error(errorMessage) as Error & { field?: string };
     
     // Map API errors to form fields
-    if (error.toLowerCase().includes("email") && error.toLowerCase().includes("already exists")) {
+    if (errorMessage.toLowerCase().includes("email") && errorMessage.toLowerCase().includes("already exists")) {
       errorWithField.field = "email";
-    } else if (error.toLowerCase().includes("phone") && error.toLowerCase().includes("already exists")) {
+    } else if (errorMessage.toLowerCase().includes("phone") && errorMessage.toLowerCase().includes("already exists")) {
       errorWithField.field = "phoneNumber";
     }
     
