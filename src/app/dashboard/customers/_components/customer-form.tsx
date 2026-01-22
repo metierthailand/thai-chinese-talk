@@ -38,6 +38,16 @@ interface CustomerFormProps {
   selectedTagIds?: string[];
 }
 
+const FOOD_ALLERGY_LABELS: Record<string, string> = {
+  DIARY: "Diary (นม)",
+  EGGS: "Eggs (ไข่)",
+  FISH: "Fish (ปลา)",
+  CRUSTACEAN: "Crustacean (กุ้ง / ปู)",
+  GLUTEN: "Gluten (แป้ง)",
+  PEANUT_AND_NUTS: "Peanut & nuts (ถั่ว)",
+  OTHER: "Other (อื่น ๆ)",
+};
+
 export function CustomerForm({
   mode,
   initialData,
@@ -61,7 +71,7 @@ export function CustomerForm({
       lastNameEn: initialData?.lastNameEn ?? "",
       title: initialData?.title ?? undefined,
       email: initialData?.email ?? "",
-      phone: initialData?.phone ?? "",
+      phoneNumber: initialData?.phoneNumber ?? "",
       lineId: initialData?.lineId ?? "",
       dateOfBirth: initialData?.dateOfBirth ?? "",
       note: initialData?.note ?? "",
@@ -70,8 +80,8 @@ export function CustomerForm({
       passports:
         initialData?.passports?.map((p) => ({
           ...p,
-          issuingDate: p.issuingDate ? new Date(p.issuingDate) : new Date(),
-          expiryDate: p.expiryDate ? new Date(p.expiryDate) : new Date(),
+          issuingDate: p.issuingDate ? new Date(p.issuingDate) : undefined,
+          expiryDate: p.expiryDate ? new Date(p.expiryDate) : undefined,
           imageUrl: p.imageUrl ?? null,
           isPrimary: p.isPrimary ?? false,
         })) ?? [],
@@ -89,7 +99,7 @@ export function CustomerForm({
         lastNameEn: initialData.lastNameEn ?? "",
         title: initialData.title || undefined,
         email: initialData.email || "",
-        phone: initialData.phone || "",
+        phoneNumber: initialData.phoneNumber || "",
         lineId: initialData.lineId || "",
         dateOfBirth: initialData.dateOfBirth || "",
         note: initialData.note || "",
@@ -98,8 +108,8 @@ export function CustomerForm({
         passports:
           initialData.passports?.map((p) => ({
             ...p,
-            issuingDate: p.issuingDate ? new Date(p.issuingDate) : new Date(),
-            expiryDate: p.expiryDate ? new Date(p.expiryDate) : new Date(),
+            issuingDate: p.issuingDate ? new Date(p.issuingDate) : undefined,
+            expiryDate: p.expiryDate ? new Date(p.expiryDate) : undefined,
             imageUrl: p.imageUrl ?? null,
             isPrimary: p.isPrimary ?? false,
           })) || [],
@@ -109,10 +119,42 @@ export function CustomerForm({
   }, [initialData, form, selectedTagIds]);
 
   async function handleSubmit(values: CustomerFormValues) {
-    await onSubmit(values);
+    try {
+      await onSubmit(values);
+    } catch (error) {
+      if (error instanceof Error) {
+        const fieldError = error as Error & { field?: string; fields?: { field: string; message: string }[] };
+
+        // Handle multiple field errors
+        if (fieldError.fields && Array.isArray(fieldError.fields)) {
+          fieldError.fields.forEach((err) => {
+            if (err.field === "email" || err.field === "phoneNumber") {
+              toast.error(err.message);
+              console.log(`Setting form error for ${err.field}:`, err.message);
+              form.setError(err.field as "email" | "phoneNumber", {
+                type: "server",
+                message: err.message,
+              });
+              console.log(`Form errors after setError:`, form.formState.errors);
+            }
+          });
+        }
+        // Handle single field error (backward compatibility)
+        else if (fieldError.field === "email") {
+          form.setError("email", {
+            type: "server",
+            message: error.message,
+          });
+        } else if (fieldError.field === "phoneNumber") {
+          form.setError("phoneNumber", {
+            type: "server",
+            message: error.message,
+          });
+        }
+      }
+    }
   }
 
-  console.log({ form: form.getValues() });
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -307,7 +349,7 @@ export function CustomerForm({
           />
           <FormField
             control={form.control}
-            name="phone"
+            name="phoneNumber"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Phone number</FormLabel>
@@ -662,9 +704,9 @@ export function CustomerForm({
                   ...(form.getValues("passports") || []),
                   {
                     passportNumber: "",
-                    issuingCountry: "",
-                    issuingDate: new Date(),
-                    expiryDate: new Date(),
+                    issuingCountry: "Thailand",
+                    issuingDate: undefined,
+                    expiryDate: undefined,
                     imageUrl: null,
                     isPrimary: false,
                   },
@@ -976,7 +1018,7 @@ export function CustomerForm({
                                   field.onChange(next);
                                 }}
                               >
-                                {type.replace("_", " ")}
+                                {FOOD_ALLERGY_LABELS[type] || type}
                               </Badge>
                             );
                           },

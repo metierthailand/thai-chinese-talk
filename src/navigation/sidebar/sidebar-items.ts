@@ -99,7 +99,7 @@ export const sidebarItems: NavGroup[] = [
   },
   {
     id: 4,
-    label: "Task & Interaction",
+    label: "Task Management",
     items: [
       {
         title: "Tasks",

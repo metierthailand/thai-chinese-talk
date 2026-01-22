@@ -96,6 +96,39 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return new NextResponse("First name and last name (English) are required", { status: 400 });
     }
 
+    // Check for duplicate email and phone number (excluding current customer)
+    const existingEmail = email
+      ? await prisma.customer.findFirst({
+          where: {
+            email,
+            id: { not: id },
+          },
+        })
+      : null;
+
+    const existingPhoneNumber = phoneNumber
+      ? await prisma.customer.findFirst({
+          where: {
+            phoneNumber,
+            id: { not: id },
+          },
+        })
+      : null;
+
+    // Collect all errors
+    const errors: { field: string; message: string }[] = [];
+    if (existingEmail) {
+      errors.push({ field: "email", message: "This email already exists." });
+    }
+    if (existingPhoneNumber) {
+      errors.push({ field: "phoneNumber", message: "This phone number already exists." });
+    }
+
+    // If there are errors, return them all
+    if (errors.length > 0) {
+      return NextResponse.json({ errors }, { status: 409 });
+    }
+
     // Use transaction to update customer and tags atomically
     const customer = await prisma.$transaction(async (tx) => {
       // Update customer data

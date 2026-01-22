@@ -39,7 +39,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       lastNameEn: customer.lastNameEn || "",
       title: customer.title || undefined,
       email: customer.email || "",
-      phone: customer.phone || "",
+      phoneNumber: customer.phoneNumber || "",
       lineId: customer.lineId || "",
       dateOfBirth: customer.dateOfBirth
         ? typeof customer.dateOfBirth === "string"
@@ -83,8 +83,18 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       });
       router.push(`/dashboard/customers/${customerId}`);
       router.refresh();
-    } catch {
-      toast.error("Updated unsuccessfully.");
+    } catch (error) {
+      // Error will be handled by form component's handleSubmit
+      // Only show toast if it's not a field-specific error
+      if (error instanceof Error) {
+        const fieldError = error as Error & { field?: string; fields?: Array<{ field: string; message: string }> };
+        if (!fieldError.field && !fieldError.fields) {
+          toast.error("Updated unsuccessfully.");
+        }
+      } else {
+        toast.error("Updated unsuccessfully.");
+      }
+      throw error; // Re-throw to let form handle field errors
     }
   }
 

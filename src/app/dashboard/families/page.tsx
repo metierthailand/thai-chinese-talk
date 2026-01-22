@@ -127,7 +127,7 @@ export default function FamiliesPage() {
     <div className="flex flex-col gap-8 p-8">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Families</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Families / Groups</h2>
           <p className="text-muted-foreground">Manage family groups and their members.</p>
         </div>
         <Link href="/dashboard/families/create">

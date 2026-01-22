@@ -97,7 +97,7 @@ export default function CustomerDetailPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="text-muted-foreground h-4 w-4" />
-                <span>{customer.phone || "-"}</span>
+                <span>{customer.phoneNumber || "-"}</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-muted-foreground w-4 text-center text-xs font-bold">L</span>
@@ -177,7 +177,7 @@ export default function CustomerDetailPage() {
 
         {/* Right Column: Tabs */}
         <div className="md:col-span-2">
-          <CustomerTabs customerId={customer.id} leads={customer.leads} bookings={customer.bookings} />
+          <CustomerTabs customerId={customer.id} leads={customer.leads || []} bookings={customer.bookings || []} />
         </div>
       </div>
     </div>

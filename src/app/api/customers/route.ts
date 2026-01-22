@@ -116,11 +116,14 @@ export async function GET(request: Request) {
       },
     });
 
-    // Attach totalTrips from bookings count for each customer
-    const customersWithTotals = customers.map((customer) => ({
-      ...customer,
-      totalTrips: customer._count?.bookings ?? 0,
-    }));
+    // Attach totalTrips from bookings count for each customer and transform phoneNumber to phone
+    const customersWithTotals = customers.map((customer) => {
+      const { _count, ...rest } = customer;
+      return {
+        ...rest,
+        totalTrips: _count?.bookings ?? 0,
+      };
+    });
 
     return NextResponse.json({
       data: customersWithTotals,
@@ -163,6 +166,37 @@ export async function POST(req: Request) {
 
     if (!firstNameEn || !lastNameEn) {
       return new NextResponse("First name and last name (English) are required", { status: 400 });
+    }
+
+    // Check for duplicate email and phone number
+    const existingEmail = email
+      ? await prisma.customer.findFirst({
+          where: {
+            email,
+          },
+        })
+      : null;
+
+    const existingPhoneNumber = phoneNumber
+      ? await prisma.customer.findFirst({
+          where: {
+            phoneNumber,
+          },
+        })
+      : null;
+
+    // Collect all errors
+    const errors: { field: string; message: string }[] = [];
+    if (existingEmail) {
+      errors.push({ field: "email", message: "This email already exists." });
+    }
+    if (existingPhoneNumber) {
+      errors.push({ field: "phoneNumber", message: "This phone number already exists." });
+    }
+
+    // If there are errors, return them all
+    if (errors.length > 0) {
+      return NextResponse.json({ errors }, { status: 409 });
     }
 
     const customer = await prisma.customer.create({

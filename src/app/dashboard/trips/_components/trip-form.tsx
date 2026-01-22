@@ -101,23 +101,30 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
           <FormField
             control={form.control}
             name="type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel required>Type</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={readOnly}>
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="GROUP_TOUR">Group tour</SelectItem>
-                    <SelectItem value="PRIVATE_TOUR">Private tour</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              return (
+                <FormItem>
+                  <FormLabel required>Type</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || ""}
+                    disabled={readOnly}
+                    key={`type-select-${field.value || ""}`}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="GROUP_TOUR">Group tour</SelectItem>
+                      <SelectItem value="PRIVATE_TOUR">Private tour</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           <FormField
@@ -269,7 +276,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
 
             return (
               <FormItem className="flex flex-col">
-                <FormLabel required>Start date to end date</FormLabel>
+                <FormLabel required>Trip date</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -324,9 +331,9 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             name="pax"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>PAX</FormLabel>
+                <FormLabel required>Passengers (PAX)</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="1" {...field} disabled={readOnly} />
+                  <Input type="number" placeholder="Passengers (PAX)" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -337,9 +344,9 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             name="foc"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>FOC</FormLabel>
+                <FormLabel required>Free of charge (FOC)</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="1" {...field} disabled={readOnly} />
+                  <Input type="number" placeholder="Free of charge (FOC)" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -353,9 +360,9 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             name="tl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>TL</FormLabel>
+                <FormLabel>Tour leader (TL)</FormLabel>
                 <FormControl>
-                  <Input placeholder="TL" {...field} disabled={readOnly} />
+                  <Input placeholder="Tour leader (TL)" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -366,9 +373,9 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             name="tg"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>TG</FormLabel>
+                <FormLabel>Tour guide (TG)</FormLabel>
                 <FormControl>
-                  <Input placeholder="TG" {...field} disabled={readOnly} />
+                  <Input placeholder="Tour guide (TG)" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

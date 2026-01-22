@@ -14,8 +14,8 @@ import type {
 
 interface CustomerTabsProps {
   customerId: string;
-  leads: CustomerLeadSummary[];
-  bookings: CustomerBookingSummary[];
+  leads?: CustomerLeadSummary[];
+  bookings?: CustomerBookingSummary[];
 }
 
 export function CustomerTabs({
@@ -52,7 +52,7 @@ export function CustomerTabs({
 
       <TabsContent value="leads" className="mt-6">
         <div className="space-y-4">
-          {leads.length === 0 ? (
+          {!leads || leads.length === 0 ? (
             <p className="text-muted-foreground">No leads found.</p>
           ) : (
             leads.map((lead) => (
@@ -74,7 +74,7 @@ export function CustomerTabs({
 
       <TabsContent value="bookings" className="mt-6">
         <div className="space-y-4">
-          {bookings.length === 0 ? (
+          {!bookings || bookings.length === 0 ? (
             <p className="text-muted-foreground">No bookings found.</p>
           ) : (
             bookings.map((booking) => (

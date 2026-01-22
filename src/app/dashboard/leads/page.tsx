@@ -99,7 +99,7 @@ export default function LeadsPage() {
       },
       {
         accessorKey: "pax",
-        header: "Pax",
+        header: "PAX",
         cell: ({ row }) => row.original.pax || "-",
       },
       {

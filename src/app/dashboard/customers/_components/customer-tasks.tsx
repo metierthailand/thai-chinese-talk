@@ -23,7 +23,7 @@ import {
   type Task,
   type TaskFormValues,
 } from "../hooks/use-task";
-import { DeleteTaskDialog } from "./delete-task-dialog";
+import { DeleteDialog } from "@/app/dashboard/_components/delete-dialog";
 
 interface CustomerTasksProps {
   customerId: string;
@@ -278,11 +278,13 @@ export function CustomerTasks({ customerId }: CustomerTasksProps) {
         </>
       )}
 
-      <DeleteTaskDialog
+      <DeleteDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
         isDeleting={deleteTaskMutation.isPending}
+        title="Are you sure?"
+        description="This action cannot be undone. This will permanently delete this item."
       />
     </div>
   );

@@ -116,7 +116,7 @@ export default function BookingsPage() {
       },
       {
         accessorKey: "paymentStatus",
-        header: "Payment Status",
+        header: "Payment status",
         cell: ({ row }) => (
           <Badge className={getPaymentStatusColor(row.original.paymentStatus)}>
             {row.original.paymentStatus.replace(/_/g, " ")}

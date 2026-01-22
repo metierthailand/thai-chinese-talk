@@ -46,9 +46,9 @@ const customerColumns: ColumnDef<CustomerWithTotalTrips>[] = [
     cell: ({ row }) => <div>{format(new Date(row.original.dateOfBirth || ""), "dd MMM yyyy")}</div>,
   },
   {
-    accessorKey: "phone",
+    accessorKey: "phoneNumber",
     header: "Phone number",
-    cell: ({ row }) => <div>{row.original.phone || "-"}</div>,
+    cell: ({ row }) => <div>{row.original.phoneNumber || "-"}</div>,
   },
   {
     accessorKey: "totalTrips",

@@ -45,12 +45,12 @@ export default function TripsPage() {
       },
       {
         accessorKey: "pax",
-        header: "Pax",
+        header: "PAX",
         cell: ({ row }) => <div>{row.original.pax}</div>,
       },
       {
         accessorKey: "fox",
-        header: "Foc",
+        header: "FOC",
         cell: ({ row }) => <div>{row.original.foc}</div>,
       },
       {
@@ -80,7 +80,7 @@ export default function TripsPage() {
       },
       {
         accessorKey: "extraPricePerPerson",
-        header: "Single Price",
+        header: "Single price",
         cell: ({ row }) => {
           const extraPricePerPerson = row.original.extraPricePerPerson;
           return extraPricePerPerson

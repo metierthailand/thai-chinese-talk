@@ -207,7 +207,7 @@ export default function TagsPage() {
         onConfirm={() => deletingId && handleDelete(deletingId)}
         isDeleting={deleteTagMutation.isPending}
         title="Are you sure?"
-        description="This action cannot be undone. This will permanently delete the tag and remove it from all customers."
+        description="This action cannot be undone. This will permanently delete this item and remove it from all selections."
       />
     </div>
   );

@@ -22,7 +22,7 @@ export const customerFormSchema = z.object({
       message: "Title must be one of: MR, MRS, MISS, MASTER, OTHER",
     }),
   email: z.string().email().optional().or(z.literal("")),
-  phone: phoneNumberFormat,
+  phoneNumber: phoneNumberFormat,
   lineId: z.string().optional(),
   dateOfBirth: z.string().min(1, {
     message: "Please fill in the information.",
@@ -48,17 +48,21 @@ export const customerFormSchema = z.object({
       z.object({
         passportNumber: z.string().min(6, "Passport number must be at least 6 characters."),
         issuingCountry: z.string().min(1, "Please fill in the information."),
-        issuingDate: z.union([z.string(), z.date()]).refine(
+        issuingDate: z.union([z.string(), z.date(), z.undefined()]).refine(
           (val) => {
-            if (val === null || val === undefined || val === "") return false;
+            // Require a value - undefined should fail validation
+            if (val === undefined) return false;
+            if (val === null || val === "") return false;
             if (typeof val === "string" && val.trim() === "") return false;
             return true;
           },
           { message: "Please fill in the information." },
         ),
-        expiryDate: z.union([z.string(), z.date()]).refine(
+        expiryDate: z.union([z.string(), z.date(), z.undefined()]).refine(
           (val) => {
-            if (val === null || val === undefined || val === "") return false;
+            // Require a value - undefined should fail validation
+            if (val === undefined) return false;
+            if (val === null || val === "") return false;
             if (typeof val === "string" && val.trim() === "") return false;
             return true;
           },
@@ -90,7 +94,7 @@ interface Customer {
   lastNameEn: string;
   nickname: string | null;
   email: string | null;
-  phone: string | null;
+  phoneNumber: string | null;
   type: "INDIVIDUAL" | "CORPORATE";
   title?: "MR" | "MRS" | "MISS" | "MASTER" | "OTHER" | null;
   lineId?: string | null;
@@ -254,17 +258,48 @@ async function fetchCustomer(id: string): Promise<CustomerDetail> {
 
 // Create customer function
 async function createCustomer(data: CustomerFormValues): Promise<Customer> {
+  const { ...rest } = data;
+  const apiData = {
+    ...rest,
+  };
+
   const res = await fetch("/api/customers", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify(apiData),
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to create customer");
+    const contentType = res.headers.get("content-type");
+    let errorData: { message?: string; errors?: Array<{ field: string; message: string }> };
+    
+    if (contentType?.includes("application/json")) {
+      errorData = await res.json();
+    } else {
+      errorData = { message: await res.text() };
+    }
+
+    // Check if response has errors array (multiple field errors)
+    if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+      const errorWithFields = new Error("Validation failed") as Error & { fields?: Array<{ field: string; message: string }> };
+      errorWithFields.fields = errorData.errors;
+      throw errorWithFields;
+    }
+
+    // Single error (backward compatibility)
+    const errorMessage = errorData.message || "Failed to create customer";
+    const errorWithField = new Error(errorMessage) as Error & { field?: string };
+    
+    // Map API errors to form fields
+    if (errorMessage.toLowerCase().includes("email") && errorMessage.toLowerCase().includes("already exists")) {
+      errorWithField.field = "email";
+    } else if (errorMessage.toLowerCase().includes("phone number") && errorMessage.toLowerCase().includes("already exists")) {
+      errorWithField.field = "phoneNumber";
+    }
+    
+    throw errorWithField;
   }
 
   return res.json();
@@ -272,17 +307,48 @@ async function createCustomer(data: CustomerFormValues): Promise<Customer> {
 
 // Update customer function
 async function updateCustomer({ id, data }: { id: string; data: CustomerFormValues }): Promise<CustomerDetail> {
+  const { ...rest } = data;
+  const apiData = {
+    ...rest,
+  };
+
   const res = await fetch(`/api/customers/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify(apiData),
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to update customer");
+    const contentType = res.headers.get("content-type");
+    let errorData: { message?: string; errors?: Array<{ field: string; message: string }> };
+    
+    if (contentType?.includes("application/json")) {
+      errorData = await res.json();
+    } else {
+      errorData = { message: await res.text() };
+    }
+
+    // Check if response has errors array (multiple field errors)
+    if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+      const errorWithFields = new Error("Validation failed") as Error & { fields?: Array<{ field: string; message: string }> };
+      errorWithFields.fields = errorData.errors;
+      throw errorWithFields;
+    }
+
+    // Single error (backward compatibility)
+    const errorMessage = errorData.message || "Failed to update customer";
+    const errorWithField = new Error(errorMessage) as Error & { field?: string };
+    
+    // Map API errors to form fields
+    if (errorMessage.toLowerCase().includes("email") && errorMessage.toLowerCase().includes("already exists")) {
+      errorWithField.field = "email";
+    } else if (errorMessage.toLowerCase().includes("phone number") && errorMessage.toLowerCase().includes("already exists")) {
+      errorWithField.field = "phoneNumber";
+    }
+    
+    throw errorWithField;
   }
 
   return res.json();
@@ -341,8 +407,11 @@ export function useCreateCustomer() {
       queryClient.invalidateQueries({ queryKey: customerKeys.all });
       toast.success("Created successfully.");
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Created unsuccessfully.");
+    onError: (error: Error & { field?: string; fields?: Array<{ field: string; message: string }> }) => {
+      // Only show toast if error doesn't have a field or fields (field errors are shown in form)
+      if (!error.field && !error.fields) {
+        toast.error(error.message || "Created unsuccessfully.");
+      }
     },
   });
 }
@@ -360,8 +429,11 @@ export function useUpdateCustomer() {
       queryClient.setQueryData(customerKeys.detail(variables.id), data);
       toast.success("Updated successfully.");
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Updated unsuccessfully.");
+    onError: (error: Error & { field?: string; fields?: Array<{ field: string; message: string }> }) => {
+      // Only show toast if error doesn't have a field or fields (field errors are shown in form)
+      if (!error.field && !error.fields) {
+        toast.error(error.message || "Updated unsuccessfully.");
+      }
     },
   });
 }

@@ -25,8 +25,18 @@ export default function NewCustomerPage() {
       await createCustomerMutation.mutateAsync(values);
       router.push("/dashboard/customers");
       router.refresh();
-    } catch {
-      toast.error("Created unsuccessfully.");
+    } catch (error) {
+      // Error will be handled by form component's handleSubmit
+      // Only show toast if it's not a field-specific error
+      if (error instanceof Error) {
+        const fieldError = error as Error & { field?: string; fields?: Array<{ field: string; message: string }> };
+        if (!fieldError.field && !fieldError.fields) {
+          toast.error("Created unsuccessfully.");
+        }
+      } else {
+        toast.error("Created unsuccessfully.");
+      }
+      throw error; // Re-throw to let form handle field errors
     }
   }
 

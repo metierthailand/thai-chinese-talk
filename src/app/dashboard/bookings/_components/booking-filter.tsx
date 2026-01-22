@@ -106,10 +106,10 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
             <SelectValue placeholder="Filter payment status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All Status</SelectItem>
-            <SelectItem value="DEPOSIT_PENDING">Deposit Pending</SelectItem>
-            <SelectItem value="DEPOSIT_PAID">Deposit Paid</SelectItem>
-            <SelectItem value="FULLY_PAID">Fully Paid</SelectItem>
+            <SelectItem value="ALL">All status</SelectItem>
+            <SelectItem value="DEPOSIT_PENDING">Deposit pending</SelectItem>
+            <SelectItem value="DEPOSIT_PAID">Deposit paid</SelectItem>
+            <SelectItem value="FULLY_PAID">Fully paid</SelectItem>
             <SelectItem value="CANCELLED">Cancelled</SelectItem>
           </SelectContent>
         </Select>

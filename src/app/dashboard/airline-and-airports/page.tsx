@@ -199,7 +199,7 @@ export default function AirlineAndAirportsPage() {
     <div className="flex flex-col gap-8 p-8">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">IATA Code</h2>
+          <h2 className="text-3xl font-bold tracking-tight">IATA Codes</h2>
           <p className="text-muted-foreground">Manage IATA codes for airlines and airports.</p>
         </div>
         <Link href="/dashboard/airline-and-airports/create">
@@ -245,7 +245,7 @@ export default function AirlineAndAirportsPage() {
         onConfirm={handleDeleteConfirm}
         isDeleting={deleteAirlineAndAirportMutation.isPending}
         title="Are you sure?"
-        description="This action cannot be undone. This will permanently delete this airline/airport."
+        description="This action cannot be undone. This will permanently delete this item."
       />
     </div>
   );
