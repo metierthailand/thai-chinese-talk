@@ -221,20 +221,6 @@ export default function TripsPage() {
     [searchParams, router],
   );
 
-  if (isLoading) {
-    return <Loading />;
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-8 p-8">
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-destructive">Failed to load trips. Please try again.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-8 p-8">
       <div className="flex items-center justify-between">
@@ -253,18 +239,30 @@ export default function TripsPage() {
       <TripFilter />
 
       <div className="relative flex flex-col gap-4 overflow-auto">
-        <div className="overflow-hidden rounded-md border">
-          <DataTable table={table} columns={columns} />
-        </div>
-        <DataTablePagination
-          table={table}
-          total={total}
-          pageSize={pageSize}
-          pageIndex={page - 1}
-          pageCount={pageCount}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
+        {isLoading ? (
+          <Loading />
+        ) : error ? (
+          <div className="space-y-8 p-8">
+            <div className="flex h-64 items-center justify-center">
+              <p className="text-destructive">Failed to load trips. Please try again.</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-hidden rounded-md border">
+              <DataTable table={table} columns={columns} />
+            </div>
+            <DataTablePagination
+              table={table}
+              total={total}
+              pageSize={pageSize}
+              pageIndex={page - 1}
+              pageCount={pageCount}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          </>
+        )}
       </div>
     </div>
   );

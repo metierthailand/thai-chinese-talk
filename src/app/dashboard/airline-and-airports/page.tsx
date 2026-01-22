@@ -45,7 +45,7 @@ const airlineAndAirportColumns: ColumnDef<AirlineAndAirport>[] = [
       const tripCount = row.original._count?.trips || 0;
       return (
         <div>
-         {tripCount} {tripCount === 1 ? "Trip" : "Trips"}
+          {tripCount} {tripCount === 1 ? "Trip" : "Trips"}
         </div>
       );
     },
@@ -193,23 +193,6 @@ export default function AirlineAndAirportsPage() {
   );
 
   // --------------------
-  // states
-  // --------------------
-  if (isLoading) {
-    return <Loading />;
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-8 p-8">
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-destructive">Failed to load airline and airports. Please try again.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // --------------------
   // render
   // --------------------
   return (
@@ -230,18 +213,30 @@ export default function AirlineAndAirportsPage() {
       <AirlineAndAirportFilter />
 
       <div className="relative flex flex-col gap-4 overflow-auto">
-        <div className="overflow-hidden rounded-md border">
-          <DataTable table={table} columns={columns} />
-        </div>
-        <DataTablePagination
-          table={table}
-          total={total}
-          pageSize={pageSize}
-          pageIndex={page - 1}
-          pageCount={pageCount}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
+        {isLoading ? (
+          <Loading />
+        ) : error ? (
+          <div className="space-y-8 p-8">
+            <div className="flex h-64 items-center justify-center">
+              <p className="text-destructive">Failed to load airline and airports. Please try again.</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-hidden rounded-md border">
+              <DataTable table={table} columns={columns} />
+            </div>
+            <DataTablePagination
+              table={table}
+              total={total}
+              pageSize={pageSize}
+              pageIndex={page - 1}
+              pageCount={pageCount}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          </>
+        )}
       </div>
 
       <DeleteDialog

@@ -11,6 +11,7 @@ import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { useTasks, useDeleteTask, type Task } from "./hooks/use-tasks";
 import { useTasksParams, mapTasksParamsToQuery } from "./hooks/use-tasks-params";
+import { TaskFilter } from "./_components/task-filter";
 import { toast } from "sonner";
 import { Loading } from "@/components/page/loading";
 import { DeleteDialog } from "@/app/dashboard/_components/delete-dialog";
@@ -23,7 +24,7 @@ export default function TasksPage() {
   // --------------------
   // params
   // --------------------
-  const { page, pageSize, customerId, status, contact, userId, setParams } = useTasksParams();
+  const { page, pageSize, customerId, status, contact, userId, deadlineFrom, deadlineTo, search, setParams } = useTasksParams();
 
   const tasksQuery = mapTasksParamsToQuery({
     page,
@@ -32,6 +33,9 @@ export default function TasksPage() {
     status,
     contact,
     userId,
+    deadlineFrom,
+    deadlineTo,
+    search,
   });
 
   // --------------------
@@ -56,7 +60,7 @@ export default function TasksPage() {
           return (
             <div className="font-medium">
               {englishName}
-              {thaiName && <span className="text-muted-foreground text-xs">({thaiName})</span>}
+              {thaiName && <span className="text-muted-foreground text-xs"> ({thaiName})</span>}
             </div>
           );
         },
@@ -172,6 +176,9 @@ export default function TasksPage() {
     tasksQuery.status,
     tasksQuery.contact,
     tasksQuery.userId,
+    tasksQuery.deadlineFrom,
+    tasksQuery.deadlineTo,
+    tasksQuery.search,
   );
   const deleteTaskMutation = useDeleteTask();
 
@@ -228,23 +235,6 @@ export default function TasksPage() {
   );
 
   // --------------------
-  // states
-  // --------------------
-  if (isLoading) {
-    return <Loading />;
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-8 p-8">
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-destructive">Failed to load tasks. Please try again.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // --------------------
   // render
   // --------------------
   return (
@@ -261,19 +251,34 @@ export default function TasksPage() {
         </Link>
       </div>
 
+      {/* Filter & Search form */}
+      <TaskFilter />
+
       <div className="relative flex flex-col gap-4 overflow-auto">
-        <div className="overflow-hidden rounded-md border">
-          <DataTable table={table} columns={columns} />
-        </div>
-        <DataTablePagination
-          table={table}
-          total={total}
-          pageSize={pageSize}
-          pageIndex={page - 1}
-          pageCount={pageCount}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
+        {isLoading ? (
+          <Loading />
+        ) : error ? (
+          <div className="space-y-8 p-8">
+            <div className="flex h-64 items-center justify-center">
+              <p className="text-destructive">Failed to load tasks. Please try again.</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-hidden rounded-md border">
+              <DataTable table={table} columns={columns} />
+            </div>
+            <DataTablePagination
+              table={table}
+              total={total}
+              pageSize={pageSize}
+              pageIndex={page - 1}
+              pageCount={pageCount}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          </>
+        )}
       </div>
 
       <DeleteDialog

@@ -15,9 +15,8 @@ import { Loading } from "@/components/page/loading";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
-import { formatDecimal } from "@/lib/utils";
 import { useUsers } from "./hooks/use-users-query";
-import { format, formatDate } from "date-fns";
+import { format } from "date-fns";
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
@@ -178,23 +177,6 @@ export default function AdminPage() {
   }
 
   // --------------------
-  // states
-  // --------------------
-  if (isLoading) {
-    return <Loading />;
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-8 p-8">
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-destructive">Failed to load users. Please try again.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // --------------------
   // render
   // --------------------
   return (
@@ -215,18 +197,30 @@ export default function AdminPage() {
       <UserFilter />
 
       <div className="relative flex flex-col gap-4 overflow-auto">
-        <div className="overflow-hidden rounded-md border">
-          <DataTable table={table} columns={userColumns} />
-        </div>
-        <DataTablePagination
-          table={table}
-          total={total}
-          pageSize={pageSize}
-          pageIndex={page - 1}
-          pageCount={pageCount}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
+        {isLoading ? (
+          <Loading />
+        ) : error ? (
+          <div className="space-y-8 p-8">
+            <div className="flex h-64 items-center justify-center">
+              <p className="text-destructive">Failed to load users. Please try again.</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-hidden rounded-md border">
+              <DataTable table={table} columns={userColumns} />
+            </div>
+            <DataTablePagination
+              table={table}
+              total={total}
+              pageSize={pageSize}
+              pageIndex={page - 1}
+              pageCount={pageCount}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          </>
+        )}
       </div>
     </div>
   );

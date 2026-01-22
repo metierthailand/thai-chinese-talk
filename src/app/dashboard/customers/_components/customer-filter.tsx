@@ -159,7 +159,7 @@ export function CustomerFilter({ onFilterChange }: CustomerFilterProps) {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />
-        {searchInput && (
+        {/* {searchInput && (
           <Button
             variant="ghost"
             size="icon"
@@ -171,7 +171,7 @@ export function CustomerFilter({ onFilterChange }: CustomerFilterProps) {
           >
             <X className="h-4 w-4" />
           </Button>
-        )}
+        )} */}
       </div>
     </div>
   );

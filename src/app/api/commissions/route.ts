@@ -62,77 +62,111 @@ export async function GET(req: Request) {
       }),
     };
 
-    // Fetch commissions with related data
+    // Get all commissions with necessary data in one query
     const commissions = await prisma.commission.findMany({
       where,
-      include: {
-        agent: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        booking: {
-          include: {
-            trip: {
-              select: {
-                id: true,
-                startDate: true,
-              },
-            },
-            customer: {
-              select: {
-                id: true,
-              },
-            },
-            companionCustomers: {
-              select: {
-                id: true,
-              },
-            },
-          },
-        },
+      select: {
+        id: true,
+        agentId: true,
+        bookingId: true,
+        amount: true,
       },
     });
 
-    // Group by agent (sales user)
-    const groupedByAgent = new Map<
+    if (commissions.length === 0) {
+      return NextResponse.json([]);
+    }
+
+    // Group by agent and calculate aggregates in memory (faster than multiple queries)
+    const commissionGroups = new Map<
       string,
       {
         agentId: string;
-        agentName: string;
         totalTrips: number;
-        totalPeople: number;
         totalCommissionAmount: number;
+        bookingIds: string[];
       }
     >();
 
-    for (const commission of commissions) {
-      const agentId = commission.agentId;
-      const agentName = `${commission.agent.firstName} ${commission.agent.lastName}`;
-
-      if (!groupedByAgent.has(agentId)) {
-        groupedByAgent.set(agentId, {
-          agentId,
-          agentName,
+    commissions.forEach((c) => {
+      if (!commissionGroups.has(c.agentId)) {
+        commissionGroups.set(c.agentId, {
+          agentId: c.agentId,
           totalTrips: 0,
-          totalPeople: 0,
           totalCommissionAmount: 0,
+          bookingIds: [],
         });
       }
 
-      const group = groupedByAgent.get(agentId)!;
+      const group = commissionGroups.get(c.agentId)!;
       group.totalTrips += 1;
-      // Total people = 1 (customer) + companionCustomers.length
-      group.totalPeople += 1 + commission.booking.companionCustomers.length;
-      group.totalCommissionAmount += Number(commission.amount);
-    }
+      group.totalCommissionAmount += Number(c.amount);
+      if (!group.bookingIds.includes(c.bookingId)) {
+        group.bookingIds.push(c.bookingId);
+      }
+    });
 
-    // Convert map to array and sort by agent name
-    const result = Array.from(groupedByAgent.values()).sort((a, b) =>
-      a.agentName.localeCompare(b.agentName)
+    // Get agent details and companion counts in parallel
+    const agentIds = Array.from(commissionGroups.keys());
+    const allBookingIds = Array.from(
+      new Set(commissions.map((c) => c.bookingId))
     );
+
+    const [agents, bookings] = await Promise.all([
+      prisma.user.findMany({
+        where: {
+          id: { in: agentIds },
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+        },
+      }),
+      prisma.booking.findMany({
+        where: {
+          id: { in: allBookingIds },
+        },
+        select: {
+          id: true,
+          companionCustomers: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    // Create maps for quick lookup
+    const agentMap = new Map(agents.map((a) => [a.id, a]));
+    const companionCountMap = new Map(
+      bookings.map((b) => [b.id, b.companionCustomers.length])
+    );
+
+    // Calculate total people for each agent
+    const result = Array.from(commissionGroups.values())
+      .map((group) => {
+        const agent = agentMap.get(group.agentId);
+        if (!agent) return null;
+
+        const totalPeople =
+          group.bookingIds.length + // 1 customer per booking
+          group.bookingIds.reduce(
+            (sum, bookingId) => sum + (companionCountMap.get(bookingId) || 0),
+            0
+          );
+
+        return {
+          agentId: group.agentId,
+          agentName: `${agent.firstName} ${agent.lastName}`,
+          totalTrips: group.totalTrips,
+          totalPeople,
+          totalCommissionAmount: group.totalCommissionAmount,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .sort((a, b) => a.agentName.localeCompare(b.agentName));
 
     return NextResponse.json(result);
   } catch (error) {

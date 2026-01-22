@@ -87,6 +87,9 @@ export async function GET(req: Request) {
     const status = searchParams.get("status");
     const contact = searchParams.get("contact");
     const userId = searchParams.get("userId");
+    const deadlineFrom = searchParams.get("deadlineFrom");
+    const deadlineTo = searchParams.get("deadlineTo");
+    const search = searchParams.get("search");
 
     // Build where clause with proper types
     const where: Prisma.TaskWhereInput = {
@@ -101,6 +104,34 @@ export async function GET(req: Request) {
         : {}),
       ...(contact && Object.values(ContactType).includes(contact as ContactType)
         ? { contact: contact as ContactType }
+        : {}),
+      ...(deadlineFrom || deadlineTo
+        ? {
+            deadline: {
+              ...(deadlineFrom ? { gte: new Date(deadlineFrom) } : {}),
+              ...(deadlineTo
+                ? {
+                    lte: new Date(new Date(deadlineTo).setHours(23, 59, 59, 999)),
+                  }
+                : {}),
+            },
+          }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              {
+                relatedCustomer: {
+                  OR: [
+                    { firstNameEn: { contains: search, mode: "insensitive" } },
+                    { lastNameEn: { contains: search, mode: "insensitive" } },
+                    { firstNameTh: { contains: search, mode: "insensitive" } },
+                    { lastNameTh: { contains: search, mode: "insensitive" } },
+                  ],
+                },
+              },
+            ],
+          }
         : {}),
     };
 

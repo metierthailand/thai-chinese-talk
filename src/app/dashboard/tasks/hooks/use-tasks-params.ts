@@ -8,6 +8,9 @@ export interface TasksQuery {
   status?: string;
   contact?: string;
   userId?: string;
+  deadlineFrom?: string;
+  deadlineTo?: string;
+  search?: string;
 }
 
 export function mapTasksParamsToQuery(params: {
@@ -17,6 +20,9 @@ export function mapTasksParamsToQuery(params: {
   status?: string;
   contact?: string;
   userId?: string;
+  deadlineFrom?: string;
+  deadlineTo?: string;
+  search?: string;
 }): TasksQuery {
   return {
     page: params.page,
@@ -25,6 +31,9 @@ export function mapTasksParamsToQuery(params: {
     status: params.status,
     contact: params.contact,
     userId: params.userId,
+    deadlineFrom: params.deadlineFrom,
+    deadlineTo: params.deadlineTo,
+    search: params.search,
   };
 }
 
@@ -58,6 +67,18 @@ export function useTasksParams() {
     return searchParams.get("userId") || undefined;
   }, [searchParams]);
 
+  const deadlineFrom = useMemo(() => {
+    return searchParams.get("deadlineFrom") || undefined;
+  }, [searchParams]);
+
+  const deadlineTo = useMemo(() => {
+    return searchParams.get("deadlineTo") || undefined;
+  }, [searchParams]);
+
+  const search = useMemo(() => {
+    return searchParams.get("search") || undefined;
+  }, [searchParams]);
+
   const setParams = useCallback(
     (updates: Partial<{
       page: number;
@@ -66,6 +87,9 @@ export function useTasksParams() {
       status?: string;
       contact?: string;
       userId?: string;
+      deadlineFrom?: string;
+      deadlineTo?: string;
+      search?: string;
     }>) => {
       const params = new URLSearchParams(searchParams.toString());
 
@@ -117,6 +141,30 @@ export function useTasksParams() {
         }
       }
 
+      if (updates.deadlineFrom !== undefined) {
+        if (!updates.deadlineFrom) {
+          params.delete("deadlineFrom");
+        } else {
+          params.set("deadlineFrom", updates.deadlineFrom);
+        }
+      }
+
+      if (updates.deadlineTo !== undefined) {
+        if (!updates.deadlineTo) {
+          params.delete("deadlineTo");
+        } else {
+          params.set("deadlineTo", updates.deadlineTo);
+        }
+      }
+
+      if (updates.search !== undefined) {
+        if (!updates.search) {
+          params.delete("search");
+        } else {
+          params.set("search", updates.search);
+        }
+      }
+
       const newUrl = params.toString() ? `?${params.toString()}` : "";
       router.push(`/dashboard/tasks${newUrl}`, { scroll: false });
     },
@@ -130,6 +178,9 @@ export function useTasksParams() {
     status,
     contact,
     userId,
+    deadlineFrom,
+    deadlineTo,
+    search,
     setParams,
   };
 }

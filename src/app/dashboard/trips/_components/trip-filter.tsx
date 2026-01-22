@@ -89,25 +89,46 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
     <div className="flex flex-col items-end justify-end gap-4 md:flex-row">
       {/* Filter: Trip start date range */}
       <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal md:w-[260px]",
-              !startDateFrom && !startDateTo && "text-muted-foreground",
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {startDateFrom || startDateTo ? (
-              <span className="truncate">
-                {startDateFrom ? format(new Date(startDateFrom), "dd MMM yyyy") : "..."} -{" "}
-                {startDateTo ? format(new Date(startDateTo), "dd MMM yyyy") : "..."}
-              </span>
-            ) : (
-              "Trip start date range"
-            )}
-          </Button>
-        </PopoverTrigger>
+        <div className="relative w-full md:w-[260px]">
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start pr-8 text-left font-normal md:w-[260px]",
+                !startDateFrom && !startDateTo && "text-muted-foreground",
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {startDateFrom || startDateTo ? (
+                <span className="truncate">
+                  {startDateFrom ? format(new Date(startDateFrom), "dd MMM yyyy") : "..."} -{" "}
+                  {startDateTo ? format(new Date(startDateTo), "dd MMM yyyy") : "..."}
+                </span>
+              ) : (
+                "Trip start date range"
+              )}
+            </Button>
+          </PopoverTrigger>
+          {(startDateFrom || startDateTo) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
+              onClick={(e) => {
+                e.stopPropagation();
+                setStartDateFrom("");
+                setStartDateTo("");
+                pushWithParams({
+                  startDateFrom: "",
+                  startDateTo: "",
+                  page: 1,
+                });
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
         <PopoverContent className="w-auto p-0" align="end">
           <Calendar
             captionLayout="dropdown"
@@ -145,7 +166,7 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />
-        {searchInput && (
+        {/* {searchInput && (
           <Button
             variant="ghost"
             size="icon"
@@ -157,7 +178,7 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
           >
             <X className="h-4 w-4" />
           </Button>
-        )}
+        )} */}
       </div>
     </div>
   );

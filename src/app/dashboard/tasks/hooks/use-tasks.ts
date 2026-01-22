@@ -51,8 +51,8 @@ export interface TasksResponse {
 export const taskKeys = {
   all: ["tasks"] as const,
   lists: () => [...taskKeys.all, "list"] as const,
-  list: (page: number, pageSize: number, customerId?: string, status?: string, contact?: string, userId?: string) =>
-    [...taskKeys.lists(), page, pageSize, customerId, status, contact, userId] as const,
+  list: (page: number, pageSize: number, customerId?: string, status?: string, contact?: string, userId?: string, deadlineFrom?: string, deadlineTo?: string, search?: string) =>
+    [...taskKeys.lists(), page, pageSize, customerId, status, contact, userId, deadlineFrom, deadlineTo, search] as const,
   details: () => [...taskKeys.all, "detail"] as const,
   detail: (id: string) => [...taskKeys.details(), id] as const,
 };
@@ -65,6 +65,9 @@ async function fetchTasks(
   status?: string,
   contact?: string,
   userId?: string,
+  deadlineFrom?: string,
+  deadlineTo?: string,
+  search?: string,
 ): Promise<TasksResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -82,6 +85,15 @@ async function fetchTasks(
   }
   if (userId) {
     params.set("userId", userId);
+  }
+  if (deadlineFrom) {
+    params.set("deadlineFrom", deadlineFrom);
+  }
+  if (deadlineTo) {
+    params.set("deadlineTo", deadlineTo);
+  }
+  if (search) {
+    params.set("search", search);
   }
 
   const response = await fetch(`/api/tasks?${params.toString()}`);
@@ -188,10 +200,13 @@ export function useTasks(
   status?: string,
   contact?: string,
   userId?: string,
+  deadlineFrom?: string,
+  deadlineTo?: string,
+  search?: string,
 ) {
   return useQuery({
-    queryKey: taskKeys.list(page, pageSize, customerId, status, contact, userId),
-    queryFn: () => fetchTasks(page, pageSize, customerId, status, contact, userId),
+    queryKey: taskKeys.list(page, pageSize, customerId, status, contact, userId, deadlineFrom, deadlineTo, search),
+    queryFn: () => fetchTasks(page, pageSize, customerId, status, contact, userId, deadlineFrom, deadlineTo, search),
     staleTime: 30 * 1000, // 30 seconds
   });
 }

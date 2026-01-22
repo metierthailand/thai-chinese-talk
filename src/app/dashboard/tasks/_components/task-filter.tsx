@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useDebounce } from "@/hooks/use-debounce";
 
-interface BookingFilterProps {
+interface TaskFilterProps {
   onFilterChange?: () => void;
 }
 
@@ -20,26 +20,26 @@ type UpdateParams = {
   page?: number;
   pageSize?: number;
   search?: string;
-  paymentStatus?: string;
-  tripStartDateFrom?: string;
-  tripStartDateTo?: string;
+  status?: string;
+  deadlineFrom?: string;
+  deadlineTo?: string;
 };
 
-export function BookingFilter({ onFilterChange }: BookingFilterProps) {
+export function TaskFilter({ onFilterChange }: TaskFilterProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Initial values from URL
   const searchQuery = searchParams.get("search") || "";
   const statusQuery = searchParams.get("status") || "";
-  const tripStartDateFromQuery = searchParams.get("tripStartDateFrom") || "";
-  const tripStartDateToQuery = searchParams.get("tripStartDateTo") || "";
+  const deadlineFromQuery = searchParams.get("deadlineFrom") || "";
+  const deadlineToQuery = searchParams.get("deadlineTo") || "";
 
   // Local state (init จาก URL แค่ตอน mount)
   const [searchInput, setSearchInput] = useState(searchQuery);
-  const [paymentStatus, setPaymentStatus] = useState(statusQuery || "ALL");
-  const [tripStartDateFrom, setTripStartDateFrom] = useState(tripStartDateFromQuery);
-  const [tripStartDateTo, setTripStartDateTo] = useState(tripStartDateToQuery);
+  const [status, setStatus] = useState(statusQuery || "ALL");
+  const [deadlineFrom, setDeadlineFrom] = useState(deadlineFromQuery);
+  const [deadlineTo, setDeadlineTo] = useState(deadlineToQuery);
 
   // Debounced search
   const debouncedSearch = useDebounce(searchInput, 500);
@@ -62,9 +62,9 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
     setParam("page", updates.page?.toString(), "1");
     setParam("pageSize", updates.pageSize?.toString(), "10");
     setParam("search", updates.search);
-    setParam("status", updates.paymentStatus, "ALL");
-    setParam("tripStartDateFrom", updates.tripStartDateFrom);
-    setParam("tripStartDateTo", updates.tripStartDateTo);
+    setParam("status", updates.status, "ALL");
+    setParam("deadlineFrom", updates.deadlineFrom);
+    setParam("deadlineTo", updates.deadlineTo);
 
     const qs = params.toString();
     return qs ? `?${qs}` : "";
@@ -72,7 +72,7 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
 
   const pushWithParams = (updates: UpdateParams) => {
     const newQuery = buildQueryString(updates);
-    router.push(`/dashboard/bookings${newQuery}`, { scroll: false });
+    router.push(`/dashboard/tasks${newQuery}`, { scroll: false });
     onFilterChange?.();
   };
 
@@ -86,35 +86,35 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
   // Sync URL → local state (รองรับ back/forward / external change)
   useEffect(() => {
     setSearchInput(searchQuery);
-    setPaymentStatus(statusQuery || "ALL");
-    setTripStartDateFrom(tripStartDateFromQuery);
-    setTripStartDateTo(tripStartDateToQuery);
-  }, [searchQuery, statusQuery, tripStartDateFromQuery, tripStartDateToQuery]);
+    setStatus(statusQuery || "ALL");
+    setDeadlineFrom(deadlineFromQuery);
+    setDeadlineTo(deadlineToQuery);
+  }, [searchQuery, statusQuery, deadlineFromQuery, deadlineToQuery]);
 
   return (
     <div className="flex flex-col items-end justify-end gap-4 lg:flex-row">
       <div className="flex w-full flex-col gap-4 lg:w-auto lg:flex-row">
-        {/* Filter: Payment Status */}
+        {/* Filter: Status */}
         <Select
-          value={paymentStatus}
+          value={status}
           onValueChange={(value) => {
-            setPaymentStatus(value);
-            pushWithParams({ paymentStatus: value, page: 1 });
+            setStatus(value);
+            pushWithParams({ status: value, page: 1 });
           }}
         >
           <SelectTrigger className="w-full lg:w-40">
-            <SelectValue placeholder="Filter payment status" />
+            <SelectValue placeholder="Filter status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Status</SelectItem>
-            <SelectItem value="DEPOSIT_PENDING">Deposit Pending</SelectItem>
-            <SelectItem value="DEPOSIT_PAID">Deposit Paid</SelectItem>
-            <SelectItem value="FULLY_PAID">Fully Paid</SelectItem>
+            <SelectItem value="TODO">To-do</SelectItem>
+            <SelectItem value="IN_PROGRESS">In progress</SelectItem>
+            <SelectItem value="COMPLETED">Completed</SelectItem>
             <SelectItem value="CANCELLED">Cancelled</SelectItem>
           </SelectContent>
         </Select>
 
-        {/* Filter: Trip start date range */}
+        {/* Filter: Deadline date range */}
         <Popover>
           <div className="relative w-full lg:w-[260px]">
             <PopoverTrigger asChild>
@@ -122,32 +122,32 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
                 variant="outline"
                 className={cn(
                   "w-full justify-start pr-8 text-left font-normal lg:w-[260px]",
-                  !tripStartDateFrom && !tripStartDateTo && "text-muted-foreground",
+                  !deadlineFrom && !deadlineTo && "text-muted-foreground",
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {tripStartDateFrom || tripStartDateTo ? (
+                {deadlineFrom || deadlineTo ? (
                   <span className="truncate">
-                    {tripStartDateFrom ? format(new Date(tripStartDateFrom), "dd MMM yyyy") : "..."} -{" "}
-                    {tripStartDateTo ? format(new Date(tripStartDateTo), "dd MMM yyyy") : "..."}
+                    {deadlineFrom ? format(new Date(deadlineFrom), "dd MMM yyyy") : "..."} -{" "}
+                    {deadlineTo ? format(new Date(deadlineTo), "dd MMM yyyy") : "..."}
                   </span>
                 ) : (
-                  "Trip start date range"
+                  "Deadline date range"
                 )}
               </Button>
             </PopoverTrigger>
-            {(tripStartDateFrom || tripStartDateTo) && (
+            {(deadlineFrom || deadlineTo) && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setTripStartDateFrom("");
-                  setTripStartDateTo("");
+                  setDeadlineFrom("");
+                  setDeadlineTo("");
                   pushWithParams({
-                    tripStartDateFrom: "",
-                    tripStartDateTo: "",
+                    deadlineFrom: "",
+                    deadlineTo: "",
                     page: 1,
                   });
                 }}
@@ -162,17 +162,17 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
               mode="range"
               numberOfMonths={2}
               selected={{
-                from: tripStartDateFrom ? new Date(tripStartDateFrom) : undefined,
-                to: tripStartDateTo ? new Date(tripStartDateTo) : undefined,
+                from: deadlineFrom ? new Date(deadlineFrom) : undefined,
+                to: deadlineTo ? new Date(deadlineTo) : undefined,
               }}
               onSelect={(range) => {
                 const from = range?.from ? format(range.from, "yyyy-MM-dd") : "";
                 const to = range?.to ? format(range.to, "yyyy-MM-dd") : "";
-                setTripStartDateFrom(from);
-                setTripStartDateTo(to);
+                setDeadlineFrom(from);
+                setDeadlineTo(to);
                 pushWithParams({
-                  tripStartDateFrom: from,
-                  tripStartDateTo: to,
+                  deadlineFrom: from,
+                  deadlineTo: to,
                   page: 1,
                 });
               }}

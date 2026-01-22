@@ -84,6 +84,7 @@ export function useCommissionSummary(
     queryKey: commissionKeys.summary(search, createdAtFrom, createdAtTo),
     queryFn: () => fetchCommissionSummary(search, createdAtFrom, createdAtTo),
     staleTime: 30 * 1000, // 30 seconds
+    placeholderData: (previousData) => previousData, // Keep previous data while fetching new data
   });
 }
 

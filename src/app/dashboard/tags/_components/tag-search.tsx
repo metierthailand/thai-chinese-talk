@@ -41,7 +41,7 @@ export function TagSearch({ search, onSearchChange }: TagSearchProps) {
         value={searchInput}
         onChange={(e) => setSearchInput(e.target.value)}
       />
-      {searchInput && (
+      {/* {searchInput && (
         <Button
           variant="ghost"
           size="icon"
@@ -50,7 +50,7 @@ export function TagSearch({ search, onSearchChange }: TagSearchProps) {
         >
           <X className="h-4 w-4" />
         </Button>
-      )}
+      )} */}
     </div>
   );
 }

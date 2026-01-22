@@ -13,6 +13,8 @@ interface RecentLead {
   customer?: {
     firstNameTh?: string;
     lastNameTh?: string;
+    firstNameEn?: string;
+    lastNameEn?: string;
   } | null;
   firstName?: string | null;
   lastName?: string | null;
@@ -140,8 +142,8 @@ export default function DashboardPage() {
                     <div className="ml-4 space-y-1">
                       <p className="text-sm leading-none font-medium">{booking.trip?.name || "Unknown Trip"}</p>
                       <p className="text-muted-foreground text-sm">
-                        {booking.customer?.firstNameTh || booking.customer?.firstNameEn || ""}{" "}
-                        {booking.customer?.lastNameTh || booking.customer?.lastNameEn || ""}
+                        {booking.customer?.firstNameEn || booking.customer?.firstNameTh || ""}{" "}
+                        {booking.customer?.lastNameEn || booking.customer?.lastNameTh || ""}
                       </p>
                     </div>
                     <div className="ml-auto font-medium">
@@ -171,8 +173,8 @@ export default function DashboardPage() {
                     <div className="space-y-1">
                       <p className="text-sm leading-none font-medium">{lead.tripInterest || "General Inquiry"}</p>
                       <p className="text-muted-foreground text-sm">
-                        {lead.customer?.firstNameTh || lead.firstName || ""}{" "}
-                        {lead.customer?.lastNameTh || lead.lastName || ""}
+                        {lead.customer?.firstNameEn || lead.firstName || ""}{" "}
+                        {lead.customer?.lastNameEn || lead.lastName || ""}
                       </p>
                     </div>
                     <div className="text-muted-foreground text-sm">
