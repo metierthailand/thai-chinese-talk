@@ -400,7 +400,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                                     <span className="text-muted-foreground text-xs">
                                       {customer.firstNameEn} {customer.lastNameEn}
                                       {customer.email && ` • ${customer.email}`}
-                                      {customer.phone && ` • ${customer.phone}`}
+                                      {customer.phoneNumber && ` • ${customer.phoneNumber}`}
                                     </span>
                                   </div>
                                 </CommandItem>
