@@ -5,12 +5,12 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Eye } from "lucide-react";
+import { Plus, Edit, Eye, Download } from "lucide-react";
 import Link from "next/link";
 import { DataTable } from "@/components/data-table/data-table";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { useBookings, type Booking } from "./hooks/use-bookings";
+import { useBookings, useExportBookings, type Booking } from "./hooks/use-bookings";
 import { Loading } from "@/components/page/loading";
 import { BookingFilter } from "./_components/booking-filter";
 import { getPaymentStatusColor, PAYMENT_STATUS_LABELS } from "@/lib/constants/payment";
@@ -207,6 +207,16 @@ export default function BookingsPage() {
     [searchParams, router],
   );
 
+  const exportBookings = useExportBookings();
+  const handleExport = useCallback(() => {
+    exportBookings(
+      searchQuery || undefined,
+      paymentStatus !== "ALL" ? paymentStatus : undefined,
+      tripStartDateFromQuery || undefined,
+      tripStartDateToQuery || undefined,
+    );
+  }, [exportBookings, searchQuery, paymentStatus, tripStartDateFromQuery, tripStartDateToQuery]);
+
   return (
     <div className="flex flex-col gap-8 p-8">
       <div className="flex items-center justify-between">
@@ -214,11 +224,16 @@ export default function BookingsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Bookings</h2>
           <p className="text-muted-foreground">Manage trip bookings and visa statuses.</p>
         </div>
-        <Link href="/dashboard/bookings/create">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Create
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
-        </Link>
+          <Link href="/dashboard/bookings/create">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Create
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filter & Search form */}

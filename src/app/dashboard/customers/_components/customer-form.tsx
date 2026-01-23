@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Check, ChevronsUpDown, Trash2, ChevronDown } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown, Trash2, ChevronDown, Plus } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -391,6 +391,20 @@ export function CustomerForm({
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="note"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Note for customer</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Note for customer" className="resize-none" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         {/* Address Section */}
         <Collapsible open={isAddressesOpen} onOpenChange={setIsAddressesOpen} className="space-y-4">
           <div className="flex items-center justify-between">
@@ -417,7 +431,7 @@ export function CustomerForm({
                   setIsAddressesOpen(true);
                 }}
               >
-                Add Address
+                <Plus className="mr-2 h-4 w-4" /> Add
               </Button>
             )}
           </div>
@@ -715,7 +729,7 @@ export function CustomerForm({
                 setIsPassportsOpen(true);
               }}
             >
-              Add Passport
+              <Plus className="mr-2 h-4 w-4" /> Add
             </Button>
           </div>
           <CollapsibleContent className="space-y-4">
@@ -976,7 +990,7 @@ export function CustomerForm({
                   setIsFoodAllergiesOpen(true);
                 }}
               >
-                Add Allergy Info
+                <Plus className="mr-2 h-4 w-4" /> Add
               </Button>
             )}
           </div>
@@ -1046,20 +1060,6 @@ export function CustomerForm({
             ))}
           </CollapsibleContent>
         </Collapsible>
-
-        <FormField
-          control={form.control}
-          name="note"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Note for customer</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Note for customer" className="resize-none" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <div className="flex justify-end space-x-4">
           {onCancel && (

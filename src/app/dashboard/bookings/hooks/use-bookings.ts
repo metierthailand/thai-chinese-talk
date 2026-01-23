@@ -1,5 +1,6 @@
 import { Payment } from "@prisma/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { toast } from "sonner";
 
 export interface Booking {
@@ -428,4 +429,39 @@ export function useDeleteBooking() {
       toast.error(error.message || "Deleted unsuccessfully.");
     },
   });
+}
+
+// Hook to export bookings as CSV
+export function useExportBookings() {
+  return useCallback(
+    (search?: string, status?: string, tripStartDateFrom?: string, tripStartDateTo?: string) => {
+      const params = new URLSearchParams();
+
+      // Add filter params (excluding page and pageSize)
+      if (search) {
+        params.set("search", search);
+      }
+      if (status && status !== "ALL") {
+        params.set("status", status);
+      }
+      if (tripStartDateFrom) {
+        params.set("tripStartDateFrom", tripStartDateFrom);
+      }
+      if (tripStartDateTo) {
+        params.set("tripStartDateTo", tripStartDateTo);
+      }
+
+      const queryString = params.toString();
+      const url = `/api/bookings/export${queryString ? `?${queryString}` : ""}`;
+
+      // Create a temporary link and trigger download
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `bookings-export-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    },
+    [],
+  );
 }
