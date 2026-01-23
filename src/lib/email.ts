@@ -254,3 +254,105 @@ export async function sendEmailVerificationEmail(
   // Return verification URL for development/testing purposes
   return verifyUrl;
 }
+
+export async function sendEmailChangeNotificationEmail(
+  oldEmail: string,
+  newEmail: string,
+  name: string,
+  changedBy: string,
+): Promise<void> {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #2563eb;">Email Address Changed</h1>
+          <p>Hello ${name},</p>
+          <p>Your email address has been changed by an administrator (${changedBy}).</p>
+          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>Old Email:</strong> ${oldEmail}</p>
+            <p style="margin: 10px 0 0 0;"><strong>New Email:</strong> ${newEmail}</p>
+          </div>
+          <p>If you did not request this change, please contact your administrator immediately.</p>
+          <p style="margin-top: 30px; font-size: 12px; color: #666;">
+            This is an automated notification. Please do not reply to this email.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const text = `
+    Email Address Changed
+    
+    Hello ${name},
+    
+    Your email address has been changed by an administrator (${changedBy}).
+    
+    Old Email: ${oldEmail}
+    New Email: ${newEmail}
+    
+    If you did not request this change, please contact your administrator immediately.
+    
+    This is an automated notification. Please do not reply to this email.
+  `;
+
+  await sendEmail({
+    to: oldEmail,
+    subject: "Your Email Address Has Been Changed",
+    html,
+    text,
+  });
+
+  // Also send notification to new email
+  const newEmailHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #2563eb;">Email Address Changed</h1>
+          <p>Hello ${name},</p>
+          <p>Your email address has been changed by an administrator (${changedBy}).</p>
+          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>Old Email:</strong> ${oldEmail}</p>
+            <p style="margin: 10px 0 0 0;"><strong>New Email:</strong> ${newEmail}</p>
+          </div>
+          <p>You can now use this email address (${newEmail}) to log in to your account.</p>
+          <p style="margin-top: 30px; font-size: 12px; color: #666;">
+            This is an automated notification. Please do not reply to this email.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const newEmailText = `
+    Email Address Changed
+    
+    Hello ${name},
+    
+    Your email address has been changed by an administrator (${changedBy}).
+    
+    Old Email: ${oldEmail}
+    New Email: ${newEmail}
+    
+    You can now use this email address (${newEmail}) to log in to your account.
+    
+    This is an automated notification. Please do not reply to this email.
+  `;
+
+  await sendEmail({
+    to: newEmail,
+    subject: "Your Email Address Has Been Changed",
+    html: newEmailHtml,
+    text: newEmailText,
+  });
+}

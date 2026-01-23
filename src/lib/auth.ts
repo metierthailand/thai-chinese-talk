@@ -67,6 +67,8 @@ export const authOptions: NextAuthOptions = {
       if (token && token.id) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.firstName = token.firstName as string | null;
+        session.user.lastName = token.lastName as string | null;
         
         // If user is not active, return null session
         if (token.isActive === false) {
@@ -79,6 +81,8 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
+        token.firstName = (user as any).firstName;
+        token.lastName = (user as any).lastName;
       }
       
       // Verify user is still active and has password on each request

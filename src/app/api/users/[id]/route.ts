@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import Decimal from "decimal.js";
+import { sendEmailChangeNotificationEmail } from "@/lib/email";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -62,6 +63,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const body = await req.json();
     const { firstName, lastName, email, phoneNumber, role, isActive, commissionRate, password } = body;
+
+    // Get current user data to check if email is changing
+    const currentUser = await prisma.user.findUnique({
+      where: { id: id },
+      select: {
+        email: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+
+    if (!currentUser) {
+      return new NextResponse("User not found", { status: 404 });
+    }
 
     // Check for duplicate email and phone number
     const existingEmail =
@@ -128,10 +143,40 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       data: updateData,
     });
 
+    // Send email notification if email was changed
+    let emailNotificationSent = false;
+    let emailNotificationError: string | null = null;
+    
+    if (email !== undefined && email !== currentUser.email) {
+      try {
+        const adminName = session.user.firstName && session.user.lastName
+          ? `${session.user.firstName} ${session.user.lastName}`
+          : session.user.email || "Administrator";
+        
+        await sendEmailChangeNotificationEmail(
+          currentUser.email,
+          email,
+          `${user.firstName} ${user.lastName}`,
+          adminName,
+        );
+        emailNotificationSent = true;
+      } catch (emailError) {
+        // Log error but don't fail the update
+        console.error("[USER_PATCH] Failed to send email notification:", emailError);
+        emailNotificationError = emailError instanceof Error 
+          ? emailError.message 
+          : "Failed to send email notification";
+      }
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userWithoutPassword } = user;
 
-    return NextResponse.json(userWithoutPassword);
+    return NextResponse.json({
+      ...userWithoutPassword,
+      emailNotificationSent,
+      emailNotificationError,
+    });
   } catch (error) {
     console.error("[USER_PATCH]", error);
     return new NextResponse("Internal Error", { status: 500 });

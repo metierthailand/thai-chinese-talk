@@ -146,7 +146,7 @@ async function createUser(data: UserFormValues): Promise<User> {
 }
 
 // Update user function
-async function updateUser({ id, data }: { id: string; data: UserFormValues }): Promise<User> {
+async function updateUser({ id, data }: { id: string; data: UserFormValues }): Promise<User & { _emailNotificationWarning?: string }> {
   const body = {
     ...data,
     commissionPerHead: data.commissionPerHead ? parseFloat(data.commissionPerHead) : null,
@@ -191,7 +191,21 @@ async function updateUser({ id, data }: { id: string; data: UserFormValues }): P
     throw errorWithField;
   }
 
-  return res.json();
+  const response = await res.json();
+  
+  // Extract email notification status and remove from response
+  const { emailNotificationSent, emailNotificationError, ...userData } = response;
+  
+  // Check if email notification failed
+  if (emailNotificationSent === false && emailNotificationError) {
+    // Return user data with warning attached
+    return {
+      ...userData,
+      _emailNotificationWarning: emailNotificationError,
+    } as User & { _emailNotificationWarning?: string };
+  }
+  
+  return userData as User;
 }
 
 // Hook to create a user
@@ -219,9 +233,17 @@ export function useUpdateUser() {
 
   return useMutation({
     mutationFn: updateUser,
-    onSuccess: () => {
+    onSuccess: (data: User & { _emailNotificationWarning?: string }) => {
       queryClient.invalidateQueries({ queryKey: userKeys.all });
       toast.success("Updated successfully.");
+      
+      // Show warning if email notification failed
+      if (data._emailNotificationWarning) {
+        toast.warning(
+          `User updated, but email notification failed: ${data._emailNotificationWarning}`,
+          { duration: 5000 }
+        );
+      }
     },
     onError: (error: Error & { field?: string }) => {
       // Only show toast if error doesn't have a field (field errors are shown in form)
