@@ -5,7 +5,7 @@ export interface LeadBooking {
   id: string;
   tripId: string;
   status: string;
-  visaStatus: string;
+  visaStatus?: string | null;
   totalAmount: number;
   paidAmount: number;
   trip: {

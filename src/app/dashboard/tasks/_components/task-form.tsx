@@ -96,7 +96,12 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
           render={({ field }) => (
             <FormItem>
               <FormLabel required>Status</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value} disabled={readOnly || isLoading}>
+              <Select 
+                onValueChange={field.onChange} 
+                value={field.value || ""} 
+                disabled={readOnly || isLoading}
+                key={`status-${field.value || "TODO"}`}
+              >
                 <FormControl>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select status" />

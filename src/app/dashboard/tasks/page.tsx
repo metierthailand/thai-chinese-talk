@@ -47,7 +47,7 @@ export default function TasksPage() {
       {
         accessorKey: "topic",
         header: "Topic",
-        cell: ({ row }) => <div className="font-medium">{row.original.topic}</div>,
+        cell: ({ row }) => <div className="font-medium max-w-[200px] truncate">{row.original.topic}</div>,
       },
       {
         accessorKey: "customer",
@@ -98,7 +98,7 @@ export default function TasksPage() {
           const user = row.original.user;
           if (!user) return <div className="text-muted-foreground">-</div>;
           return (
-            <div>
+            <div className="max-w-[100px] truncate">
               {user.firstName} {user.lastName}
             </div>
           );

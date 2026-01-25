@@ -7,18 +7,12 @@ import {
   CheckCircle2,
   Circle,
   XCircle,
-  Calendar,
-  MapPin,
-  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLead } from "../hooks/use-leads";
 import { LeadForm } from "../_components/lead-form";
-import { format } from "date-fns";
-import { formatDecimal, cn } from "@/lib/utils";
-import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { Loading } from "@/components/page/loading";
 
 const LEAD_STATUSES = [
@@ -30,21 +24,6 @@ const LEAD_STATUSES = [
 
 const getStatusIndex = (status: string): number => {
   return LEAD_STATUSES.findIndex((s) => s.value === status);
-};
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "INTERESTED":
-      return "bg-blue-500";
-    case "BOOKED":
-      return "bg-green-500";
-    case "COMPLETED":
-      return "bg-emerald-500";
-    case "CANCELLED":
-      return "bg-red-500";
-    default:
-      return "bg-gray-500";
-  }
 };
 
 export default function LeadViewPage({ params }: { params: Promise<{ id: string }> }) {
@@ -89,7 +68,7 @@ export default function LeadViewPage({ params }: { params: Promise<{ id: string 
       </div>
 
       {/* Status Pipeline */}
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle>Lead Status</CardTitle>
           <CardDescription>Current progress in the sales pipeline</CardDescription>
@@ -152,66 +131,8 @@ export default function LeadViewPage({ params }: { params: Promise<{ id: string 
             })}
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
-      {/* Bookings */}
-      {lead.bookings && lead.bookings.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Related Bookings
-            </CardTitle>
-            <CardDescription>
-              {lead.bookings.length} {lead.bookings.length === 1 ? "booking" : "bookings"} associated with this lead
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {lead.bookings.map((booking) => (
-                <Link key={booking.id} href={`/dashboard/bookings/${booking.id}`}>
-                  <Card className="hover:bg-muted/50 cursor-pointer transition-colors">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="text-muted-foreground h-4 w-4" />
-                            <h4 className="font-semibold">{booking.trip.name}</h4>
-                          </div>
-                          <p className="text-muted-foreground text-sm">{booking.trip.destination}</p>
-                          <div className="flex items-center gap-4 text-sm">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="text-muted-foreground h-4 w-4" />
-                              <span>
-                                {format(new Date(booking.trip.startDate), "dd MMM yyyy")} -{" "}
-                                {format(new Date(booking.trip.endDate), "dd MMM yyyy")}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4 pt-2">
-                            <Badge className={getStatusColor(booking.status)}>{booking.status}</Badge>
-                            <Badge variant="outline">{booking.visaStatus.replace("_", " ")}</Badge>
-                          </div>
-                        </div>
-                        <div className="space-y-1 text-right">
-                          <p className="text-muted-foreground text-sm font-medium">Total</p>
-                          <p className="text-lg font-semibold">{formatDecimal(booking.totalAmount)}</p>
-                          <p className="text-muted-foreground text-sm">Paid: {formatDecimal(booking.paidAmount)}</p>
-                          {booking.paidAmount < booking.totalAmount && (
-                            <p className="text-sm text-yellow-600">
-                              Remaining: {formatDecimal(booking.totalAmount - booking.paidAmount)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
