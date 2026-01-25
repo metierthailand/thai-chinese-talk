@@ -64,7 +64,7 @@ export async function GET(request: Request) {
     const trips = await prisma.trip.findMany({
       where,
       orderBy: {
-        startDate: "desc",
+        createdAt: "desc",
       },
       include: {
         airlineAndAirport: true,
