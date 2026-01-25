@@ -297,6 +297,8 @@ async function createCustomer(data: CustomerFormValues): Promise<Customer> {
       errorWithField.field = "email";
     } else if (errorMessage.toLowerCase().includes("phone number") && errorMessage.toLowerCase().includes("already exists")) {
       errorWithField.field = "phoneNumber";
+    } else if (errorMessage.toLowerCase().includes("passport") && errorMessage.toLowerCase().includes("already exists")) {
+      errorWithField.field = "passports";
     }
     
     throw errorWithField;
@@ -346,6 +348,8 @@ async function updateCustomer({ id, data }: { id: string; data: CustomerFormValu
       errorWithField.field = "email";
     } else if (errorMessage.toLowerCase().includes("phone number") && errorMessage.toLowerCase().includes("already exists")) {
       errorWithField.field = "phoneNumber";
+    } else if (errorMessage.toLowerCase().includes("passport") && errorMessage.toLowerCase().includes("already exists")) {
+      errorWithField.field = "passports";
     }
     
     throw errorWithField;

@@ -51,7 +51,7 @@ export async function GET(request: Request) {
       skip,
       take: pageSize,
       where,
-      orderBy: { order: "desc" },
+      orderBy: { createdAt: "desc" },
       include: {
         _count: {
           select: { customers: true },

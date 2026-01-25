@@ -117,7 +117,7 @@ model Passport {
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  passportNumber String
+  passportNumber String @unique
   issuingCountry String
   issuingDate    DateTime
   expiryDate     DateTime

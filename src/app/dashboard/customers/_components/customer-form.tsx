@@ -136,6 +136,12 @@ export function CustomerForm({
                 message: err.message,
               });
               console.log(`Form errors after setError:`, form.formState.errors);
+            } else if (err.field === "passports") {
+              toast.error(err.message);
+              form.setError("passports", {
+                type: "server",
+                message: err.message,
+              });
             }
           });
         }

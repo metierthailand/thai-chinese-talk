@@ -50,8 +50,8 @@ export default function LeadEditPage() {
     };
 
     await updateLeadMutation.mutateAsync({ id, data: payload });
-    router.push(`/dashboard/leads/${id}`);
-    router.refresh();
+    router.push(`/dashboard/leads`);
+    // router.refresh();
   }
 
   if (isLoading || !lead) {

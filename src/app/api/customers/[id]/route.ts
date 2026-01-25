@@ -4,6 +4,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { FoodAllergyType } from "@prisma/client";
 
+interface PassportInput {
+  passportNumber: string;
+  issuingCountry: string;
+  issuingDate: string | Date;
+  expiryDate: string | Date;
+  imageUrl?: string | null;
+  isPrimary?: boolean;
+}
+
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
 
@@ -115,6 +124,35 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         })
       : null;
 
+    // Check for duplicate passport numbers (excluding current customer's passports)
+    const duplicatePassportNumbers: string[] = [];
+    if (passports && Array.isArray(passports) && passports.length > 0) {
+      const currentCustomerPassports = await prisma.passport.findMany({
+        where: { customerId: id },
+        select: { passportNumber: true },
+      });
+      const currentPassportNumbers = new Set(currentCustomerPassports.map((p) => p.passportNumber));
+      
+      const passportNumbers = (passports as PassportInput[]).map((p) => p.passportNumber).filter(Boolean);
+      
+      for (const passportNumber of passportNumbers) {
+        // Skip if it's the same passport number (already belongs to this customer)
+        if (currentPassportNumbers.has(passportNumber)) {
+          continue;
+        }
+        
+        const existingPassport = await prisma.passport.findFirst({
+          where: {
+            passportNumber,
+          },
+        });
+        
+        if (existingPassport) {
+          duplicatePassportNumbers.push(passportNumber);
+        }
+      }
+    }
+
     // Collect all errors
     const errors: { field: string; message: string }[] = [];
     if (existingEmail) {
@@ -122,6 +160,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
     if (existingPhoneNumber) {
       errors.push({ field: "phoneNumber", message: "This phone number already exists." });
+    }
+    if (duplicatePassportNumbers.length > 0) {
+      duplicatePassportNumbers.forEach((passportNumber) => {
+        errors.push({ 
+          field: "passports", 
+          message: `Passport number ${passportNumber} already exists.` 
+        });
+      });
     }
 
     // If there are errors, return them all
