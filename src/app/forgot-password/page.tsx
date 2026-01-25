@@ -124,7 +124,7 @@ export default function ForgotPasswordPage() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Forgot Password</h1>
           <p className="text-muted-foreground text-sm">
-            Enter your email address and we&apos;ll send you a link to reset your password.
+            Please enter your email and we&apos;ll send you a link to reset your password.
           </p>
         </div>
 
@@ -147,9 +147,6 @@ export default function ForgotPasswordPage() {
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>
-                        We&apos;ll send a password reset link to this email address.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -69,7 +69,7 @@ export async function sendResetPasswordEmail(email: string, name: string, resetT
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #2563eb;">Welcome to Thai Chinese Talk!</h1>
+          <h1 style="color: #2563eb;">Welcome to Thai Chinese Tour!</h1>
           <p>Hello ${name},</p>
           <p>Your account has been created. Please set your password by clicking the link below:</p>
           <p style="margin: 30px 0;">
@@ -88,7 +88,7 @@ export async function sendResetPasswordEmail(email: string, name: string, resetT
   `;
 
   const text = `
-    Welcome to Thai Chinese Talk!
+    Welcome to Thai Chinese Tour!
     
     Hello ${name},
     
@@ -100,7 +100,7 @@ export async function sendResetPasswordEmail(email: string, name: string, resetT
 
   await sendEmail({
     to: email,
-    subject: "Set Your Password - Thai Chinese Talk",
+    subject: "Set Your Password - Thai Chinese Tour",
     html,
     text,
   });
@@ -163,7 +163,7 @@ export async function sendForgotPasswordEmail(email: string, name: string, reset
 
   await sendEmail({
     to: email,
-    subject: "Reset Your Password - Thai Chinese Talk",
+    subject: "Reset Your Password - Thai Chinese Tour",
     html,
     text,
   });
@@ -234,7 +234,7 @@ export async function sendEmailVerificationEmail(
 
   await sendEmail({
     to: newEmail,
-    subject: "Verify Your New Email Address - Thai Chinese Talk",
+    subject: "Verify Your New Email Address - Thai Chinese Tour",
     html,
     text,
   });

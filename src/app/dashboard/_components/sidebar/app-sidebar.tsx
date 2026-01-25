@@ -36,11 +36,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <Link href="/dashboard" onClick={handleLinkClick}>
                 {open ? (
                   <picture>
-                    <img className="translate-y-2 object-contain" src="/banner.webp" alt="Thai Chinese Talk" />
+                    <img className="translate-y-2 object-contain" src="/banner.webp" alt="Thai Chinese Tour" />
                   </picture>
                 ) : (
                   <picture>
-                    <img className="translate-y-2 object-contain" src="/icon.webp" alt="Thai Chinese Talk" />
+                    <img className="translate-y-2 object-contain" src="/icon.webp" alt="Thai Chinese Tour" />
                   </picture>
                 )}
                 {/* <Command /> */}
