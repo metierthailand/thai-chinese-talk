@@ -17,6 +17,7 @@ import { useSearchCustomers, useCustomer } from "@/app/dashboard/customers/hooks
 import { LEAD_STATUS_VALUES, LEAD_STATUS_LABELS, LEAD_SOURCE_VALUES, LEAD_SOURCE_LABELS } from "@/lib/constants/lead";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { Lead } from "../hooks/use-leads";
 
 // Sales user interface
@@ -119,7 +120,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
       email: initialData?.email ?? undefined,
       lineId: initialData?.lineId ?? undefined,
       salesUserId: initialData?.salesUserId ?? "",
-      source: initialData?.source ?? "FACEBOOK",
+      source: initialData?.source ?? "",
       status: initialData?.status ?? "INTERESTED",
       tripInterest: initialData?.tripInterest ?? "",
       pax: initialData?.pax?.toString() ?? "1",
@@ -191,12 +192,57 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
 
   const handleSubmit = async (values: LeadFormValues) => {
     if (!onSubmit || mode === "view") return;
-    await onSubmit(values);
+    try {
+      await onSubmit(values);
+    } catch (error) {
+      if (error instanceof Error) {
+        const fieldError = error as Error & { field?: string; fields?: { field: string; message: string }[] };
+        // Handle multiple field errors
+        if (fieldError.fields && Array.isArray(fieldError.fields)) {
+          fieldError.fields.forEach((err) => {
+            if (err.field === "email") {
+              toast.error(err.message);
+              form.setError("email", {
+                type: "server",
+                message: err.message,
+              });
+            } else if (err.field === "phoneNumber") {
+              toast.error(err.message);
+              form.setError("phoneNumber", {
+                type: "server",
+                message: err.message,
+              });
+            }
+          });
+          return; // Return early after handling field errors
+        }
+
+        // Handle single field error
+        if (fieldError.field === "email") {
+          toast.error(error.message);
+          form.setError("email", {
+            type: "server",
+            message: error.message,
+          });
+          return; // Return early after handling field error
+        } else if (fieldError.field === "phoneNumber") {
+          toast.error(error.message);
+          form.setError("phoneNumber", {
+            type: "server",
+            message: error.message,
+          });
+          return; // Return early after handling field error
+        }
+      }
+      // Re-throw if it's not a handled field error
+      throw error;
+    }
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6" noValidate>
+        <h2 className="text-xl font-semibold">Lead information</h2>
         <FormField
           control={form.control}
           name="status"
@@ -228,9 +274,31 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
           name="tripInterest"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>Trip Interest</FormLabel>
+              <FormLabel required>Trip interest</FormLabel>
               <FormControl>
-                <Input placeholder="Trip Interest" {...field} disabled={disabled} />
+                <Input placeholder="Trip interest" {...field} disabled={disabled} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Pax */}
+        <FormField
+          control={form.control}
+          name="pax"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Passengers (PAX)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="Passengers (PAX)"
+                  {...field}
+                  value={field.value ?? ""}
+                  disabled={disabled}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -247,10 +315,9 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                 <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={disabled} />
               </FormControl>
               <div className="space-y-1 leading-none">
-                <FormLabel>New Customer</FormLabel>
+                <FormLabel>New customer</FormLabel>
                 <p className="text-muted-foreground text-sm">
-                  Check if this is a new customer not in the system. You will need to provide their name and contact
-                  information.
+                  Please check the box if the customer doesn’t exist in the system.
                 </p>
               </div>
             </FormItem>
@@ -260,14 +327,14 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
         {/* Customer Selection or New Customer Fields */}
         {newCustomer ? (
           <div className="space-y-4 rounded-md border p-4">
-            <h3 className="font-medium">New Customer Information</h3>
+            <h3 className="text-lg font-semibold">Customer information</h3>
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>First Name</FormLabel>
+                    <FormLabel required>First name</FormLabel>
                     <FormControl>
                       <Input placeholder="First name" {...field} disabled={disabled} />
                     </FormControl>
@@ -280,7 +347,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                 name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>Last Name</FormLabel>
+                    <FormLabel required>Last name</FormLabel>
                     <FormControl>
                       <Input placeholder="Last name" {...field} disabled={disabled} />
                     </FormControl>
@@ -289,28 +356,15 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                 )}
               />
             </div>
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="phoneNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
+                    <FormLabel>Phone number</FormLabel>
                     <FormControl>
                       <Input placeholder="Phone number" {...field} disabled={disabled} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="Email" {...field} disabled={disabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -330,6 +384,19 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="Email" {...field} disabled={disabled} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         ) : (
           <FormField
@@ -419,28 +486,8 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
           />
         )}
 
-        <div className="grid grid-cols-2 gap-4">
-          {/* Pax */}
-          <FormField
-            control={form.control}
-            name="pax"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Passengers (PAX)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="1"
-                    placeholder="Passengers (PAX)"
-                    {...field}
-                    value={field.value ?? ""}
-                    disabled={disabled}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <div className="grid grid-cols-1 gap-4">
+          <h3 className="text-lg font-semibold col-span-2">Source & Sales</h3>
           <FormField
             control={form.control}
             name="source"

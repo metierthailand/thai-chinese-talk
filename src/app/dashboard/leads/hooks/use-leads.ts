@@ -163,8 +163,34 @@ async function createLead(data: {
   });
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: "Failed to create lead" }));
-    throw new Error(error.message || error.error || "Failed to create lead");
+    const contentType = res.headers.get("content-type");
+    let errorData: { message?: string; errors?: Array<{ field: string; message: string }> };
+    
+    if (contentType?.includes("application/json")) {
+      errorData = await res.json();
+    } else {
+      errorData = { message: await res.text() };
+    }
+
+    // Check if response has errors array (multiple field errors)
+    if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+      const errorWithFields = new Error("Validation failed") as Error & { fields?: Array<{ field: string; message: string }> };
+      errorWithFields.fields = errorData.errors;
+      throw errorWithFields;
+    }
+
+    // Single error (backward compatibility)
+    const errorMessage = errorData.message || "Failed to create lead";
+    const errorWithField = new Error(errorMessage) as Error & { field?: string };
+    
+    // Map API errors to form fields
+    if (errorMessage.toLowerCase().includes("email") && errorMessage.toLowerCase().includes("already exists")) {
+      errorWithField.field = "email";
+    } else if (errorMessage.toLowerCase().includes("phone number") && errorMessage.toLowerCase().includes("already exists")) {
+      errorWithField.field = "phoneNumber";
+    }
+    
+    throw errorWithField;
   }
 
   return res.json();
@@ -246,7 +272,13 @@ export function useCreateLead() {
       toast.success("Created successfully.");
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Created unsuccessfully.");
+      // Don't show toast for field-specific errors, they will be handled by form
+      const fieldError = error as Error & { field?: string; fields?: Array<{ field: string; message: string }> };
+      if (!fieldError.field && !fieldError.fields) {
+        toast.error(error.message || "Created unsuccessfully.");
+      }
+      // Re-throw to let form component handle field errors
+      throw error;
     },
   });
 }

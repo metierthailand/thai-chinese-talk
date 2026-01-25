@@ -251,6 +251,35 @@ export async function POST(req: Request) {
         ? (status as LeadStatus)
         : LeadStatus.INTERESTED;
 
+    // If newCustomer = true, check for duplicate email and phoneNumber in customers
+    const errors: { field: string; message: string }[] = [];
+    if (newCustomer === true) {
+      if (email && email.trim()) {
+        const existingEmail = await prisma.customer.findFirst({
+          where: { email: email.trim() },
+        });
+        if (existingEmail) {
+          errors.push({ field: "email", message: "This email already exists." });
+        }
+      }
+      if (phoneNumber && phoneNumber.trim()) {
+        const existingPhoneNumber = await prisma.customer.findFirst({
+          where: { phoneNumber: phoneNumber.trim() },
+        });
+        if (existingPhoneNumber) {
+          errors.push({ field: "phoneNumber", message: "This phone number already exists." });
+        }
+      }
+    }
+
+    // If there are validation errors, return them
+    if (errors.length > 0) {
+      return new NextResponse(JSON.stringify({ errors }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const lead = await prisma.lead.create({
       data: {
         newCustomer: newCustomer || false,
