@@ -109,18 +109,18 @@ export default function FamilyDetailPage({ params }: { params: Promise<{ id: str
       <div className="bg-card rounded-md border p-6 space-y-4">
         <h3 className="font-semibold">Additional Information</h3>
         <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
+          <div className="col-span-2">
             <span className="text-muted-foreground">Members:</span>
             <div className="mt-1">
               {family.customers?.length || 0} {family.customers?.length === 1 ? "member" : "members"}
             </div>
           </div>
           <div>
-            <span className="text-muted-foreground">Created:</span>
+            <span className="text-muted-foreground">Created date:</span>
             <div className="mt-1">{format(new Date(family.createdAt), "dd MMM yyyy HH:mm")}</div>
           </div>
           <div>
-            <span className="text-muted-foreground">Updated:</span>
+            <span className="text-muted-foreground">Updated date:</span>
             <div className="mt-1">{format(new Date(family.updatedAt), "dd MMM yyyy HH:mm")}</div>
           </div>
         </div>

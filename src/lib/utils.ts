@@ -96,3 +96,23 @@ export function formatDecimal(
     maximumFractionDigits: noDecimals ? 0 : maximumFractionDigits,
   }).format(decimalValue.toNumber());
 }
+
+/**
+ * Calculate age from date of birth
+ * @param dateOfBirth - Date of birth (string in YYYY-MM-DD format or Date object)
+ * @returns Age as a number
+ */
+export function calculateAge(dateOfBirth: string | Date): number {
+  const birthDate = typeof dateOfBirth === "string" ? new Date(dateOfBirth) : dateOfBirth;
+  const today = new Date();
+  
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  // If birthday hasn't occurred this year yet, subtract 1 from age
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
+}

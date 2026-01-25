@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
 import { tripFormSchema, type TripFormValues } from "../hooks/use-trips";
 import { useAllAirlineAndAirports } from "@/app/dashboard/airline-and-airports/hooks/use-airline-and-airports";
+import { Label } from "@/components/ui/label";
 
 interface TripFormProps {
   mode: "create" | "edit" | "view";
@@ -356,13 +357,17 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
 
         {/* Day / Night Information */}
         {dayNightInfo && (
-          <div className="rounded-lg border bg-muted/50 p-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-muted-foreground">Duration:</span>
-              <span className="text-lg font-semibold">
-                {dayNightInfo.days}D{dayNightInfo.nights}N
-              </span>
-            </div>
+          // <div className="rounded-lg border bg-muted/50 p-4">
+          //   <div className="flex items-center gap-2">
+          //     <span className="text-sm font-medium text-muted-foreground">Duration:</span>
+          //     <span className="text-lg font-semibold">
+          //       {dayNightInfo.days}D{dayNightInfo.nights}N
+          //     </span>
+          //   </div>
+          // </div>
+          <div className="space-y-2">
+            <Label>Trip duration</Label>
+            <Input disabled value={`${dayNightInfo.days}D${dayNightInfo.nights}N`} />
           </div>
         )}
 

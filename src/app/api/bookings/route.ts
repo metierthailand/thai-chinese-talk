@@ -316,8 +316,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // Determine agentId (optional, can be null)
-    const finalAgentId = agentId || null;
+    // Determine agentId: use provided agentId, or default to session user if they have agent role
+    let finalAgentId: string | null = agentId || null;
+    
+    // If no agentId provided, use session user as agent if they have appropriate role
+    if (!finalAgentId && session.user.id) {
+      const sessionUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true, isActive: true },
+      });
+      
+      // Set agentId to session user if they are ADMIN, SUPER_ADMIN, or STAFF
+      if (sessionUser && sessionUser.isActive && (sessionUser.role === Role.ADMIN || sessionUser.role === Role.SUPER_ADMIN || sessionUser.role === Role.STAFF)) {
+        finalAgentId = session.user.id;
+      }
+    }
 
     // Use transaction to ensure data integrity
     const booking = await prisma.$transaction(async (tx) => {

@@ -11,5 +11,6 @@ export interface User {
   commissionPerHead: number | null;
   totalCommission?: number;
   createdAt?: string;
+  updatedAt?: string;
 }
 

@@ -109,6 +109,10 @@ export default function TripsPage() {
                 return "bg-orange-500";
               case "COMPLETED":
                 return "bg-green-500";
+              case "ON_TRIP":
+                return "bg-purple-500";
+              case "CANCELLED":
+                return "bg-red-500";
               default:
                 return "bg-gray-500";
             }
@@ -121,6 +125,10 @@ export default function TripsPage() {
                 return "Sold out";
               case "COMPLETED":
                 return "Completed";
+              case "ON_TRIP":
+                return "On trip";
+              case "CANCELLED":
+                return "Cancelled";
               default:
                 return status;
             }

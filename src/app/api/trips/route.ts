@@ -99,22 +99,30 @@ export async function GET(request: Request) {
       const activeBookingsCount = trip._count.bookings;
       const pax = trip.pax;
 
-      let status: "UPCOMING" | "SOLD_OUT" | "COMPLETED";
+      let status: "UPCOMING" | "SOLD_OUT" | "COMPLETED" | "ON_TRIP" | "CANCELLED";
+      
+      // Completed: When the end date has been passed
       if (endDate < now) {
         status = "COMPLETED";
-      } else if (startDate >= now) {
-        // Trip hasn't started yet
+      }
+      // Start date has not been reached
+      else if (startDate > now) {
+        // Sold out: When the start date has not been reached but the trip have been fully booked
         if (activeBookingsCount >= pax) {
           status = "SOLD_OUT";
         } else {
+          // Upcoming: When the start date has not been reached
           status = "UPCOMING";
         }
-      } else {
-        // Trip has started but not ended
-        if (activeBookingsCount >= pax) {
-          status = "SOLD_OUT";
+      }
+      // Start date has been reached (trip is ongoing or just started)
+      else {
+        // Cancelled: When the start date has been reached but the trip have no any bookings
+        if (activeBookingsCount === 0) {
+          status = "CANCELLED";
         } else {
-          status = "UPCOMING";
+          // On trip: When the start date has been reached
+          status = "ON_TRIP";
         }
       }
 

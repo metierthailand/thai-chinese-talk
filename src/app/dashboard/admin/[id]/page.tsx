@@ -8,6 +8,7 @@ import { useUser } from "../hooks/use-users-query";
 import { UserForm } from "../_components/user-form";
 import { UserFormValues } from "../hooks/use-users";
 import { Loading } from "@/components/page/loading";
+import { format } from "date-fns";
 
 export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -57,6 +58,26 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
       <div className="bg-card rounded-md border p-6">
         <UserForm mode="view" initialData={initialData} />
       </div>
+
+      {(user.createdAt || user.updatedAt) && (
+        <div className="bg-card rounded-md border p-6 space-y-4">
+          <h3 className="font-semibold text-xl">Additional Information</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            {user.createdAt && (
+              <div>
+                <span className="text-muted-foreground">Created date:</span>
+                <div className="mt-1">{format(new Date(user.createdAt), "dd MMM yyyy HH:mm")}</div>
+              </div>
+            )}
+            {user.updatedAt && (
+              <div>
+                <span className="text-muted-foreground">Updated date:</span>
+                <div className="mt-1">{format(new Date(user.updatedAt), "dd MMM yyyy HH:mm")}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

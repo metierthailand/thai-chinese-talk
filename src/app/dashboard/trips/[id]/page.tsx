@@ -241,6 +241,30 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             )}
           </CardContent>
         </Card>
+
+        {(trip.createdAt || trip.updatedAt) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {trip.createdAt && (
+                  <div>
+                    <span className="text-muted-foreground">Created date:</span>
+                    <div className="mt-1">{format(new Date(trip.createdAt), "dd MMM yyyy HH:mm")}</div>
+                  </div>
+                )}
+                {trip.updatedAt && (
+                  <div>
+                    <span className="text-muted-foreground">Updated date:</span>
+                    <div className="mt-1">{format(new Date(trip.updatedAt), "dd MMM yyyy HH:mm")}</div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

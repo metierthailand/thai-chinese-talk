@@ -34,6 +34,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         isActive: true,
         commissionPerHead: true,
         createdAt: true,
+        updatedAt: true,
       },
     });
 

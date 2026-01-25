@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -98,17 +98,22 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             control={form.control}
             name="isActive"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">Status</FormLabel>
+              <FormItem className="flex flex-col gap-2 rounded-lg border p-4">
+                <div className="flex flex-row items-center justify-between">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Status</FormLabel>
+                  </div>
+                  <FormControl>
+                    {readOnly ? (
+                      <Badge variant={field.value ? "default" : "destructive"}>{field.value ? "Active" : "Inactive"}</Badge>
+                    ) : (
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    )}
+                  </FormControl>
                 </div>
-                <FormControl>
-                  {readOnly ? (
-                    <Badge variant={field.value ? "default" : "destructive"}>{field.value ? "Active" : "Inactive"}</Badge>
-                  ) : (
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                </FormControl>
+                <FormDescription>
+                  When the toggle is off, this user can no longer access the system.
+                </FormDescription>
               </FormItem>
             )}
           />

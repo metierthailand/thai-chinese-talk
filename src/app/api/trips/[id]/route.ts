@@ -23,7 +23,15 @@ export async function GET(
       include: {
         airlineAndAirport: true,
         _count: {
-          select: { bookings: true },
+          select: {
+            bookings: {
+              where: {
+                paymentStatus: {
+                  not: "CANCELLED",
+                },
+              },
+            },
+          },
         },
       },
     });
@@ -32,7 +40,44 @@ export async function GET(
       return new NextResponse("Trip not found", { status: 404 });
     }
 
-    return NextResponse.json(trip);
+    // Calculate trip status
+    const now = new Date();
+    const startDate = new Date(trip.startDate);
+    const endDate = new Date(trip.endDate);
+    const activeBookingsCount = trip._count.bookings;
+    const pax = trip.pax;
+
+    let status: "UPCOMING" | "SOLD_OUT" | "COMPLETED" | "ON_TRIP" | "CANCELLED";
+    
+    // Completed: When the end date has been passed
+    if (endDate < now) {
+      status = "COMPLETED";
+    }
+    // Start date has not been reached
+    else if (startDate > now) {
+      // Sold out: When the start date has not been reached but the trip have been fully booked
+      if (activeBookingsCount >= pax) {
+        status = "SOLD_OUT";
+      } else {
+        // Upcoming: When the start date has not been reached
+        status = "UPCOMING";
+      }
+    }
+    // Start date has been reached (trip is ongoing or just started)
+    else {
+      // Cancelled: When the start date has been reached but the trip have no any bookings
+      if (activeBookingsCount === 0) {
+        status = "CANCELLED";
+      } else {
+        // On trip: When the start date has been reached
+        status = "ON_TRIP";
+      }
+    }
+
+    return NextResponse.json({
+      ...trip,
+      status,
+    });
   } catch (error) {
     console.error("[TRIP_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });
@@ -111,12 +156,57 @@ export async function PUT(
       include: {
         airlineAndAirport: true,
         _count: {
-          select: { bookings: true },
+          select: {
+            bookings: {
+              where: {
+                paymentStatus: {
+                  not: "CANCELLED",
+                },
+              },
+            },
+          },
         },
       },
     });
 
-    return NextResponse.json(trip);
+    // Calculate trip status
+    const now = new Date();
+    const startDateObj = new Date(trip.startDate);
+    const endDateObj = new Date(trip.endDate);
+    const activeBookingsCount = trip._count.bookings;
+    const tripPax = trip.pax;
+
+    let status: "UPCOMING" | "SOLD_OUT" | "COMPLETED" | "ON_TRIP" | "CANCELLED";
+    
+    // Completed: When the end date has been passed
+    if (endDateObj < now) {
+      status = "COMPLETED";
+    }
+    // Start date has not been reached
+    else if (startDateObj > now) {
+      // Sold out: When the start date has not been reached but the trip have been fully booked
+      if (activeBookingsCount >= tripPax) {
+        status = "SOLD_OUT";
+      } else {
+        // Upcoming: When the start date has not been reached
+        status = "UPCOMING";
+      }
+    }
+    // Start date has been reached (trip is ongoing or just started)
+    else {
+      // Cancelled: When the start date has been reached but the trip have no any bookings
+      if (activeBookingsCount === 0) {
+        status = "CANCELLED";
+      } else {
+        // On trip: When the start date has been reached
+        status = "ON_TRIP";
+      }
+    }
+
+    return NextResponse.json({
+      ...trip,
+      status,
+    });
   } catch (error) {
     console.error("[TRIP_PUT]", error);
     return new NextResponse("Internal Error", { status: 500 });

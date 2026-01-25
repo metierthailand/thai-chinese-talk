@@ -71,6 +71,27 @@ export async function GET(request: Request) {
       },
     });
 
+    // Helper function to split names by comma and trim
+    const splitNames = (names: string | null | undefined): string[] => {
+      if (!names || !names.trim()) return [];
+      return names.split(",").map((name) => name.trim()).filter(Boolean);
+    };
+
+    // Find maximum number of names in tl, tg, staff across all trips
+    let maxTlCount = 0;
+    let maxTgCount = 0;
+    let maxStaffCount = 0;
+
+    trips.forEach((trip) => {
+      const tlNames = splitNames(trip.tl);
+      const tgNames = splitNames(trip.tg);
+      const staffNames = splitNames(trip.staff);
+      
+      maxTlCount = Math.max(maxTlCount, tlNames.length);
+      maxTgCount = Math.max(maxTgCount, tgNames.length);
+      maxStaffCount = Math.max(maxStaffCount, staffNames.length);
+    });
+
     // Format trips for CSV
     const csvRows = trips.map((trip, index) => {
       const startDate = new Date(trip.startDate);
@@ -87,7 +108,6 @@ export async function GET(request: Request) {
       const startYear = startDate.getFullYear();
       const endDay = String(endDate.getDate()).padStart(2, "0");
       const endMonth = String(endDate.getMonth() + 1).padStart(2, "0");
-      const endYear = endDate.getFullYear();
 
       // Format START-END DATE (e.g., 2026010711)
       const startEndDate = `${startYear}${startMonth}${startDay}${endMonth}${endDay}`;
@@ -109,6 +129,16 @@ export async function GET(request: Request) {
           })
         : "";
 
+      // Split names by comma
+      const tlNames = splitNames(trip.tl);
+      const tgNames = splitNames(trip.tg);
+      const staffNames = splitNames(trip.staff);
+
+      // Pad arrays to max length with empty strings
+      const paddedTlNames = [...tlNames, ...Array(maxTlCount - tlNames.length).fill("")];
+      const paddedTgNames = [...tgNames, ...Array(maxTgCount - tgNames.length).fill("")];
+      const paddedStaffNames = [...staffNames, ...Array(maxStaffCount - staffNames.length).fill("")];
+
       return [
         index + 1, // NO.
         trip.name || "", // TRIP NAME
@@ -124,17 +154,20 @@ export async function GET(request: Request) {
         dayNight, // D/N
         trip.pax || "", // PAX
         trip.foc || "", // FOC
-        trip.tl || "", // TL
-        trip.tl || "", // TL (duplicate in CSV)
-        trip.tg || "", // TG
-        trip.staff || "", // STAFF
+        ...paddedTlNames, // TL columns (dynamic)
+        ...paddedTgNames, // TG columns (dynamic)
+        ...paddedStaffNames, // STAFF columns (dynamic)
         standardPrice ? `"${standardPrice}"` : "", // STANDARD PRICE (with quotes for comma)
         singlePrice ? `"${singlePrice}"` : "", // SINGLE PRICE (with quotes for comma)
         trip.note || "", // NOTE
       ];
     });
 
-    // CSV Header
+    // CSV Header - dynamically create TL, TG, STAFF headers (repeated)
+    const tlHeaders = Array.from({ length: maxTlCount }, () => "TL");
+    const tgHeaders = Array.from({ length: maxTgCount }, () => "TG");
+    const staffHeaders = Array.from({ length: maxStaffCount }, () => "STAFF");
+
     const header = [
       "NO.",
       "TRIP NAME",
@@ -150,10 +183,9 @@ export async function GET(request: Request) {
       "D/N",
       "PAX",
       "FOC",
-      "TL",
-      "TL",
-      "TG",
-      "STAFF",
+      ...tlHeaders, // TL columns (dynamic)
+      ...tgHeaders, // TG columns (dynamic)
+      ...staffHeaders, // STAFF columns (dynamic)
       "STANDARD PRICE",
       "SINGLE PRICE",
       "NOTE",

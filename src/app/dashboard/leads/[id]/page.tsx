@@ -2,29 +2,23 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Circle,
-  XCircle,
-} from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLead } from "../hooks/use-leads";
 import { LeadForm } from "../_components/lead-form";
-import { cn } from "@/lib/utils";
 import { Loading } from "@/components/page/loading";
+import { format } from "date-fns";
 
-const LEAD_STATUSES = [
-  { value: "INTERESTED", label: "Interested", icon: Circle },
-  { value: "BOOKED", label: "Booked", icon: CheckCircle2 },
-  { value: "COMPLETED", label: "Completed", icon: CheckCircle2 },
-  { value: "CANCELLED", label: "Cancelled", icon: XCircle },
-] as const;
+// const LEAD_STATUSES = [
+//   { value: "INTERESTED", label: "Interested", icon: Circle },
+//   { value: "BOOKED", label: "Booked", icon: CheckCircle2 },
+//   { value: "COMPLETED", label: "Completed", icon: CheckCircle2 },
+//   { value: "CANCELLED", label: "Cancelled", icon: XCircle },
+// ] as const;
 
-const getStatusIndex = (status: string): number => {
-  return LEAD_STATUSES.findIndex((s) => s.value === status);
-};
+// const getStatusIndex = (status: string): number => {
+//   return LEAD_STATUSES.findIndex((s) => s.value === status);
+// };
 
 export default function LeadViewPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -45,8 +39,6 @@ export default function LeadViewPage({ params }: { params: Promise<{ id: string 
     );
   }
 
-  const currentStatusIndex = getStatusIndex(lead.status);
-
   return (
     <div className="p-8 space-y-8 max-w-2xl mx-auto">
       {/* Header */}
@@ -66,6 +58,38 @@ export default function LeadViewPage({ params }: { params: Promise<{ id: string 
           initialData={lead}
         />
       </div>
+
+      {/* Additional Information */}
+      {(lead.createdAt || lead.updatedAt || lead.agent) && (
+        <div className="bg-card rounded-md border p-6 space-y-4">
+          <h3 className="font-semibold text-xl">Additional Information</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            {lead.agent && (
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Created by:</span>
+                <div className="mt-1">
+                  {lead.agent.firstName} {lead.agent.lastName}
+                  {lead.agent.email && (
+                    <span className="text-muted-foreground ml-2">({lead.agent.email})</span>
+                  )}
+                </div>
+              </div>
+            )}
+            {lead.createdAt && (
+              <div>
+                <span className="text-muted-foreground">Created date:</span>
+                <div className="mt-1">{format(new Date(lead.createdAt), "dd MMM yyyy HH:mm")}</div>
+              </div>
+            )}
+            {lead.updatedAt && (
+              <div>
+                <span className="text-muted-foreground">Updated date:</span>
+                <div className="mt-1">{format(new Date(lead.updatedAt), "dd MMM yyyy HH:mm")}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Status Pipeline */}
       {/* <Card>

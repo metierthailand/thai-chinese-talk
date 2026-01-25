@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, Check, ChevronsUpDown, Trash2, ChevronDown, Plus } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, calculateAge } from "@/lib/utils";
 import { countries } from "@/lib/countries";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { customerFormSchema, CustomerFormValues } from "../hooks/use-customers";
@@ -22,6 +22,7 @@ import { getProvinces, getDistrict, getSubDistrict, getPostCode } from "@/utils/
 import { DragDropUpload } from "@/components/upload-image";
 import { X } from "lucide-react";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
 
 interface Tag {
   id: string;
@@ -160,6 +161,9 @@ export function CustomerForm({
       }
     }
   }
+
+  // Watch dateOfBirth for real-time age calculation
+  const dateOfBirth = useWatch({ control: form.control, name: "dateOfBirth" });
 
   return (
     <Form {...form}>
@@ -354,6 +358,14 @@ export function CustomerForm({
               </FormItem>
             )}
           />
+
+          <div className="space-y-2">
+            <Label>Age</Label>
+            <Input disabled value={dateOfBirth ? calculateAge(dateOfBirth) : ""} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="phoneNumber"
@@ -362,6 +374,20 @@ export function CustomerForm({
                 <FormLabel>Phone number</FormLabel>
                 <FormControl>
                   <Input placeholder="Phone number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="lineId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>LINE ID</FormLabel>
+                <FormControl>
+                  <Input placeholder="LINE ID" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -377,20 +403,6 @@ export function CustomerForm({
               <FormLabel>Email</FormLabel>
               <FormControl>
                 <Input placeholder="Email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="lineId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>LINE ID</FormLabel>
-              <FormControl>
-                <Input placeholder="LINE ID" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -962,7 +974,6 @@ export function CustomerForm({
                             className="w-full"
                           />
                         )}
-                        <FormDescription>Upload a clear image of the passport (max 5MB)</FormDescription>
                         <FormMessage />
                       </FormItem>
                     );

@@ -2,12 +2,12 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { BookingForm, BookingFormValues } from "../_components/booking-form";
 import { useBooking } from "../hooks/use-bookings";
 import { Loading } from "@/components/page/loading";
+import { format } from "date-fns";
 
 export default function ViewBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -83,6 +83,38 @@ export default function ViewBookingPage({ params }: { params: Promise<{ id: stri
       <div className="bg-card rounded-md border p-6">
         {initialData && <BookingForm mode="view" initialData={initialData} booking={booking} />}
       </div>
+
+      {/* Additional Information */}
+      {booking && (booking.createdAt || booking.updatedAt || booking.agent) && (
+        <div className="bg-card rounded-md border p-6 space-y-4">
+          <h3 className="font-semibold text-xl">Additional Information</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            {booking.agent && (
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Created by:</span>
+                <div className="mt-1">
+                  {booking.agent.firstName} {booking.agent.lastName}
+                  {booking.agent.email && (
+                    <span className="text-muted-foreground ml-2">({booking.agent.email})</span>
+                  )}
+                </div>
+              </div>
+            )}
+            {booking.createdAt && (
+              <div>
+                <span className="text-muted-foreground">Created date:</span>
+                <div className="mt-1">{format(new Date(booking.createdAt), "dd MMM yyyy HH:mm")}</div>
+              </div>
+            )}
+            {booking.updatedAt && (
+              <div>
+                <span className="text-muted-foreground">Updated date:</span>
+                <div className="mt-1">{format(new Date(booking.updatedAt), "dd MMM yyyy HH:mm")}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

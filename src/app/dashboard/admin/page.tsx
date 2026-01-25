@@ -17,6 +17,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { useUsers } from "./hooks/use-users-query";
 import { format } from "date-fns";
+import { getRoleLabel } from "@/lib/constants/role";
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
@@ -103,7 +104,7 @@ export default function AdminPage() {
     {
       accessorKey: "role",
       header: "Role",
-      cell: ({ row }) => <Badge variant="outline">{row.original.role}</Badge>,
+      cell: ({ row }) => <Badge variant="outline">{getRoleLabel(row.original.role)}</Badge>,
     },
     {
       accessorKey: "commissionPerHead",
