@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import z from "zod";
 import { Passport } from "./types";
@@ -138,6 +138,24 @@ export function useDeletePassport(customerId: string) {
     onError: (error: Error) => {
       toast.error(error.message || "Deleted unsuccessfully.");
     },
+  });
+}
+
+// Fetch passports by customer ID
+async function fetchPassportsByCustomer(customerId: string): Promise<Passport[]> {
+  const response = await fetch(`/api/passports?customerId=${customerId}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch passports");
+  }
+  return response.json();
+}
+
+// Hook for fetching passports by customer
+export function usePassportsByCustomer(customerId: string | undefined) {
+  return useQuery({
+    queryKey: passportKeys.byCustomer(customerId || ""),
+    queryFn: () => fetchPassportsByCustomer(customerId!),
+    enabled: !!customerId,
   });
 }
 

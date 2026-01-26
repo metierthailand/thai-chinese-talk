@@ -22,6 +22,7 @@ export default function ViewBookingPage({ params }: { params: Promise<{ id: stri
       customerId: booking.customerId || "",
       tripId: booking.tripId || "",
       salesUserId: booking.salesUserId || "",
+      passportId: booking.passportId || "",
       companionCustomerIds: booking.companionCustomers?.map((c) => c.customer.id) || [],
       note: booking.note || "",
       extraPriceForSingleTraveller: booking.extraPriceForSingleTraveller?.toString() || "",

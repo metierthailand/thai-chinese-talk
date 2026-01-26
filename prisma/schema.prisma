@@ -124,6 +124,8 @@ model Passport {
   imageUrl       String?
   isPrimary      Boolean  @default(false)
 
+  bookings Booking[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -298,6 +300,8 @@ model Booking {
   companionCustomers BookingCompanion[] @relation("CompanionBookings")
   agentId            String?
   agent              User?      @relation("AgentBookings", fields: [agentId], references: [id])
+  passportId         String
+  passport           Passport   @relation(fields: [passportId], references: [id], onDelete: Restrict)
 
   note String? @db.Text
 

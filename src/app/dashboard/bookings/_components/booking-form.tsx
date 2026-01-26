@@ -21,6 +21,7 @@ import {
   useCreateCustomer,
   CustomerFormValues,
 } from "@/app/dashboard/customers/hooks/use-customers";
+import { usePassportsByCustomer } from "@/app/dashboard/customers/hooks/use-passport";
 import { CustomerForm } from "@/app/dashboard/customers/_components/customer-form";
 import { Booking } from "../hooks/use-bookings";
 import { useTrips, useTrip } from "@/app/dashboard/trips/hooks/use-trips";
@@ -56,6 +57,7 @@ const formSchema = z.object({
   customerId: z.string().min(1, { message: "Please select the information." }),
   tripId: z.string().min(1, { message: "Please select the information." }),
   salesUserId: z.string().min(1, { message: "Please select the information." }),
+  passportId: z.string().min(1, { message: "Please select a passport." }),
   companionCustomerIds: z.array(z.string()).optional(),
   note: z.string().optional(),
   extraPriceForSingleTraveller: z.string().optional(),
@@ -168,6 +170,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
       customerId: "",
       tripId: "",
       salesUserId: "",
+      passportId: "",
       companionCustomerIds: [],
       note: "",
       extraPriceForSingleTraveller: "",
@@ -193,6 +196,9 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
   const tripId = form.watch("tripId");
   const companionCustomerIdsValue = form.watch("companionCustomerIds");
   const companionCustomerIds = useMemo(() => companionCustomerIdsValue || [], [companionCustomerIdsValue]);
+
+  // Fetch passports for selected customer
+  const { data: customerPassports = [] } = usePassportsByCustomer(customerId);
   const extraPriceForSingleTraveller = form.watch("extraPriceForSingleTraveller");
   const extraPricePerBed = form.watch("extraPricePerBed");
   const extraPricePerSeat = form.watch("extraPricePerSeat");
@@ -414,6 +420,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
         customerId: initialData.customerId ?? "",
         tripId: initialData.tripId ?? "",
         salesUserId: initialData.salesUserId ?? "",
+        passportId: initialData.passportId ?? "",
         companionCustomerIds: initialData.companionCustomerIds ?? [],
         note: initialData.note ?? "",
         extraPriceForSingleTraveller: singleTravellerPrice,
@@ -460,6 +467,29 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
       }
     }
   }, [trips, initialData?.tripId, mode, form]);
+
+  // Set default passport to primary when customer is selected (only in create mode)
+  useEffect(() => {
+    // Skip in edit mode if initialData has passportId
+    if (mode === "edit" && initialData?.passportId) {
+      return;
+    }
+
+    const currentPassportId = form.getValues("passportId");
+    
+    if (customerId && customerPassports.length > 0 && !currentPassportId) {
+      const primaryPassport = customerPassports.find((p) => p.isPrimary);
+      if (primaryPassport) {
+        form.setValue("passportId", primaryPassport.id, { shouldDirty: false });
+      } else if (customerPassports.length > 0) {
+        // If no primary, use the first one
+        form.setValue("passportId", customerPassports[0].id, { shouldDirty: false });
+      }
+    } else if (!customerId && currentPassportId) {
+      // Clear passport when customer is cleared
+      form.setValue("passportId", "", { shouldDirty: false });
+    }
+  }, [customerId, customerPassports, form, mode, initialData?.passportId]);
 
   const handleTripChange = (newTripId: string) => {
     form.setValue("tripId", newTripId);
@@ -720,6 +750,49 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                         </Command>
                       </PopoverContent>
                     </Popover>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Passport */}
+            <FormField
+              control={form.control}
+              name="passportId"
+              render={({ field }) => (
+                <FormItem className="flex flex-col w-full">
+                  <FormLabel required={!readOnly}>Passport</FormLabel>
+                  {readOnly ? (
+                    <FormControl>
+                      <Input
+                        value={
+                          customerPassports.find((p) => p.id === field.value)
+                            ? `${customerPassports.find((p) => p.id === field.value)?.passportNumber} (${customerPassports.find((p) => p.id === field.value)?.issuingCountry})`
+                            : ""
+                        }
+                        disabled
+                      />
+                    </FormControl>
+                  ) : (
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || ""}
+                      disabled={!customerId || customerPassports.length === 0}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={customerId ? (customerPassports.length === 0 ? "No passports available" : "Select passport") : "Select customer first"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {customerPassports.map((passport) => (
+                          <SelectItem key={passport.id} value={passport.id}>
+                            {passport.passportNumber} ({passport.issuingCountry}){passport.isPrimary ? " - Primary" : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
                   <FormMessage />
                 </FormItem>

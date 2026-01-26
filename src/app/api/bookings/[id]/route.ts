@@ -131,6 +131,7 @@ export async function PUT(
       customerId,
       tripId,
       salesUserId,
+      passportId,
       companionCustomerIds,
       agentId,
       note,
@@ -211,6 +212,9 @@ export async function PUT(
     if (salesUserId !== undefined && salesUserId !== "") updateData.salesUser = { connect: { id: salesUserId } };
     if (tripId !== undefined && tripId !== "") updateData.trip = { connect: { id: tripId } };
     if (agentId !== undefined) updateData.agent = { connect: { id: agentId } };
+    if (passportId !== undefined && passportId !== "") {
+      updateData.passport = { connect: { id: passportId } };
+    }
 
     // Handle companion customers separately using explicit join table
     // Don't include in updateData as we'll handle it manually

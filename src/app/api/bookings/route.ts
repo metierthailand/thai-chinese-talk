@@ -199,6 +199,7 @@ export async function POST(req: Request) {
       customerId,
       tripId,
       salesUserId,
+      passportId,
       companionCustomerIds,
       agentId,
       note,
@@ -220,8 +221,8 @@ export async function POST(req: Request) {
       firstPaymentProof,
     } = body;
 
-    if (!customerId || !tripId || !salesUserId) {
-      return new NextResponse("Missing required fields: customerId, tripId, and salesUserId are required", {
+    if (!customerId || !tripId || !salesUserId || !passportId) {
+      return new NextResponse("Missing required fields: customerId, tripId, salesUserId, and passportId are required", {
         status: 400,
       });
     }
@@ -345,6 +346,7 @@ export async function POST(req: Request) {
           salesUserId,
           tripId,
           agentId: finalAgentId,
+          passportId: passportId,
           note: note || null,
           extraPriceForSingleTraveller: extraPriceForSingleTraveller ? Number(extraPriceForSingleTraveller) : null,
           roomType: roomType || "DOUBLE_BED",

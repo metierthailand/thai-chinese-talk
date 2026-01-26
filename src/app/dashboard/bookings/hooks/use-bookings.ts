@@ -9,6 +9,7 @@ export interface Booking {
   salesUserId: string;
   tripId: string;
   agentId?: string | null;
+  passportId?: string | null;
   customer: {
     firstNameTh: string;
     lastNameTh: string;

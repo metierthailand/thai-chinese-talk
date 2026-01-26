@@ -70,3 +70,33 @@ export async function POST(req: Request) {
   }
 }
 
+export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const customerId = searchParams.get("customerId");
+
+    if (!customerId) {
+      return new NextResponse("customerId is required", { status: 400 });
+    }
+
+    const passports = await prisma.passport.findMany({
+      where: { customerId },
+      orderBy: [
+        { isPrimary: "desc" },
+        { createdAt: "asc" },
+      ],
+    });
+
+    return NextResponse.json(passports);
+  } catch (error) {
+    console.error("[PASSPORT_GET]", error);
+    return new NextResponse("Internal Error", { status: 500 });
+  }
+}
+
