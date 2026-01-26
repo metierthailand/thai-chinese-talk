@@ -147,7 +147,7 @@ async function createLead(data: {
   email?: string;
   lineId?: string;
   salesUserId: string;
-  source: string;
+  source?: string;
   status: string;
   tripInterest: string;
   pax?: number;

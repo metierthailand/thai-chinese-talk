@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LeadForm } from "../../_components/lead-form";
 import { useLead, useUpdateLead } from "../../hooks/use-leads";
 import { Loading } from "@/components/page/loading";
+import type { LeadFormValues } from "../../_components/lead-form";
 
 export default function LeadEditPage() {
   const router = useRouter();
@@ -14,22 +15,7 @@ export default function LeadEditPage() {
   const { data: lead, isLoading } = useLead(typeof id === "string" ? id : undefined);
   const updateLeadMutation = useUpdateLead();
 
-  async function handleSubmit(values: {
-    newCustomer: boolean;
-    customerId?: string;
-    firstName?: string;
-    lastName?: string;
-    phoneNumber?: string;
-    email?: string;
-    lineId?: string;
-    salesUserId: string;
-    source: string;
-    status: string;
-    tripInterest: string;
-    pax: string | number;
-    leadNote?: string;
-    sourceNote?: string;
-  }) {
+  async function handleSubmit(values: LeadFormValues) {
     if (!id || typeof id !== "string") return;
 
     const payload = {

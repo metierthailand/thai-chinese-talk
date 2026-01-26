@@ -49,11 +49,14 @@ export async function GET() {
             },
             companionCustomers: {
               select: {
-                id: true,
-                firstNameEn: true,
-                lastNameEn: true,
-                firstNameTh: true,
-                lastNameTh: true,
+                customer: {
+                  select: {
+                    firstNameEn: true,
+                    lastNameEn: true,
+                    firstNameTh: true,
+                    lastNameTh: true,
+                  },
+                },
               },
             },
             payments: {

@@ -86,7 +86,7 @@ const formSchema = z
     }
   });
 
-type LeadFormValues = z.infer<typeof formSchema>;
+export type LeadFormValues = z.infer<typeof formSchema>;
 
 interface LeadFormProps {
   mode: "create" | "edit" | "view";

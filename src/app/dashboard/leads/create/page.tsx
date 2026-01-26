@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { LeadForm } from "../_components/lead-form";
+import { LeadForm, type LeadFormValues } from "../_components/lead-form";
 import { useCreateLead } from "../hooks/use-leads";
 import { toast } from "sonner";
 
@@ -11,22 +11,7 @@ export default function NewLeadPage() {
   const router = useRouter();
   const createLeadMutation = useCreateLead();
 
-  async function handleSubmit(values: {
-    newCustomer: boolean;
-    customerId?: string;
-    firstName?: string;
-    lastName?: string;
-    phoneNumber?: string;
-    email?: string;
-    lineId?: string;
-    salesUserId: string;
-    source: string;
-    status: string;
-    tripInterest: string;
-    pax: string | number;
-    leadNote?: string;
-    sourceNote?: string;
-  }) {
+  async function handleSubmit(values: LeadFormValues) {
     const payload = {
       newCustomer: values.newCustomer,
       customerId: values.customerId,

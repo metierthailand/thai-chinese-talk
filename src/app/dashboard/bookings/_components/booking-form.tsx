@@ -53,7 +53,8 @@ async function fetchSalesUsers(): Promise<SalesUser[]> {
   return res.json();
 }
 
-const formSchema = z.object({
+// Base schema without conditional validation
+const baseFormSchema = z.object({
   customerId: z.string().min(1, { message: "Please select the information." }),
   tripId: z.string().min(1, { message: "Please select the information." }),
   salesUserId: z.string().min(1, { message: "Please select the information." }),
@@ -78,7 +79,7 @@ const formSchema = z.object({
   firstPaymentProof: z.string().optional(),
 });
 
-export type BookingFormValues = z.infer<typeof formSchema>;
+export type BookingFormValues = z.infer<typeof baseFormSchema>;
 
 interface BookingFormProps {
   mode: "create" | "edit" | "view";
@@ -163,6 +164,71 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
       return tripStartDate > now;
     });
   }, [tripsResponse?.data, mode, booking?.tripId, currentTrip]);
+
+  // Create dynamic schema with conditional validation based on toggle states
+  const formSchema = useMemo(() => {
+    return baseFormSchema.refine(
+      (data) => {
+        // If bed price is enabled, extraPricePerBed is required
+        if (enableBedPrice && (!data.extraPricePerBed || data.extraPricePerBed.trim() === "")) {
+          return false;
+        }
+        return true;
+      },
+      {
+        message: "Please fill in the information.",
+        path: ["extraPricePerBed"],
+      }
+    ).refine(
+      (data) => {
+        // If seat price is enabled, extraPricePerSeat is required
+        if (enableSeatPrice && (!data.extraPricePerSeat || data.extraPricePerSeat.trim() === "")) {
+          return false;
+        }
+        return true;
+      },
+      {
+        message: "Please fill in the information.",
+        path: ["extraPricePerSeat"],
+      }
+    ).refine(
+      (data) => {
+        // If seat price is enabled, seatClass is required
+        if (enableSeatPrice && !data.seatClass) {
+          return false;
+        }
+        return true;
+      },
+      {
+        message: "Please select the information.",
+        path: ["seatClass"],
+      }
+    ).refine(
+      (data) => {
+        // If bag price is enabled, extraPricePerBag is required
+        if (enableBagPrice && (!data.extraPricePerBag || data.extraPricePerBag.trim() === "")) {
+          return false;
+        }
+        return true;
+      },
+      {
+        message: "Please fill in the information.",
+        path: ["extraPricePerBag"],
+      }
+    ).refine(
+      (data) => {
+        // If discount is enabled, discountPrice is required
+        if (enableDiscount && (!data.discountPrice || data.discountPrice.trim() === "")) {
+          return false;
+        }
+        return true;
+      },
+      {
+        message: "Please fill in the information.",
+        path: ["discountPrice"],
+      }
+    );
+  }, [enableBedPrice, enableSeatPrice, enableBagPrice, enableDiscount]);
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(formSchema),
@@ -1054,6 +1120,10 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                             setEnableBedPrice(checked);
                             if (!checked) {
                               field.onChange("");
+                              form.clearErrors("extraPricePerBed");
+                            } else {
+                              // Trigger validation when enabled
+                              setTimeout(() => form.trigger("extraPricePerBed"), 0);
                             }
                           }}
                           disabled={readOnly}
@@ -1150,8 +1220,16 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                             if (!checked) {
                               // Clear extraPricePerSeat when disable
                               form.setValue("extraPricePerSeat", "");
+                              form.clearErrors("extraPricePerSeat");
+                              form.clearErrors("seatClass");
                               // Clear seatClass when disable
                               form.setValue("seatClass", undefined);
+                            } else {
+                              // Trigger validation when enabled
+                              setTimeout(() => {
+                                form.trigger("extraPricePerSeat");
+                                form.trigger("seatClass");
+                              }, 0);
                             }
                           }}
                           disabled={readOnly}
@@ -1248,6 +1326,10 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                           setEnableBagPrice(checked);
                           if (!checked) {
                             field.onChange("");
+                            form.clearErrors("extraPricePerBag");
+                          } else {
+                            // Trigger validation when enabled
+                            setTimeout(() => form.trigger("extraPricePerBag"), 0);
                           }
                         }}
                         disabled={readOnly}
@@ -1309,6 +1391,10 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                           setEnableDiscount(checked);
                           if (!checked) {
                             field.onChange("");
+                            form.clearErrors("discountPrice");
+                          } else {
+                            // Trigger validation when enabled
+                            setTimeout(() => form.trigger("discountPrice"), 0);
                           }
                         }}
                         disabled={readOnly}
