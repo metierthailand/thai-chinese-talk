@@ -542,14 +542,14 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
     }
 
     const currentPassportId = form.getValues("passportId");
-    
+
     if (customerId && customerPassports.length > 0 && !currentPassportId) {
       const primaryPassport = customerPassports.find((p) => p.isPrimary);
       if (primaryPassport) {
-        form.setValue("passportId", primaryPassport.id, { shouldDirty: false });
+        form.setValue("passportId", primaryPassport.id, { shouldDirty: false, shouldValidate: true });
       } else if (customerPassports.length > 0) {
         // If no primary, use the first one
-        form.setValue("passportId", customerPassports[0].id, { shouldDirty: false });
+        form.setValue("passportId", customerPassports[0].id, { shouldDirty: false, shouldValidate: true });
       }
     } else if (!customerId && currentPassportId) {
       // Clear passport when customer is cleared
@@ -582,6 +582,18 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
 
   const handleSubmit = async (values: BookingFormValues) => {
     if (!onSubmit || readOnly) return;
+
+    // In create mode, ensure passportId is set if customer is selected
+    if (mode === "create" && values.customerId && customerPassports.length > 0 && !values.passportId) {
+      const primaryPassport = customerPassports.find((p) => p.isPrimary);
+      if (primaryPassport) {
+        values.passportId = primaryPassport.id;
+        form.setValue("passportId", primaryPassport.id);
+      } else if (customerPassports.length > 0) {
+        values.passportId = customerPassports[0].id;
+        form.setValue("passportId", customerPassports[0].id);
+      }
+    }
 
     // In create mode, ensure firstPaymentAmount matches calculated value
     if (mode === "create") {
@@ -630,7 +642,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           {/* Basic Information Section */}
           <div className="space-y-4">
-            {/* <h3 className="text-lg font-semibold">Basic Information</h3> */}
+            <h3 className="text-xl font-semibold">Booking information</h3>
 
             {/* Trip Field */}
             <FormField
@@ -1029,7 +1041,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                         <FormLabel>Extra price for single traveller</FormLabel>
                         <div className="flex items-center space-x-2">
                           <FormLabel htmlFor="single-traveller-toggle" className="cursor-pointer text-sm font-normal">
-                            {enableSingleTravellerPrice ? "Enabled" : "Disabled"}
+                            Add-on
                           </FormLabel>
                           <Switch
                             id="single-traveller-toggle"
@@ -1086,7 +1098,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                       <Select onValueChange={field.onChange} value={field.value} key={`roomType-${field.value}`}>
                         <FormControl>
                           <SelectTrigger className="w-full">
-                            <SelectValue />
+                            <SelectValue placeholder="Select room type" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -1108,10 +1120,10 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                 render={({ field }) => (
                   <FormItem>
                     <div className="flex items-center justify-between">
-                      <FormLabel>Extra price for extra bed</FormLabel>
+                      <FormLabel required={enableBedPrice}>Extra price for extra bed</FormLabel>
                       <div className="flex items-center space-x-2">
                         <FormLabel htmlFor="bed-price-toggle" className="cursor-pointer text-sm font-normal">
-                          {enableBedPrice ? "Enabled" : "Disabled"}
+                          Add-on
                         </FormLabel>
                         <Switch
                           id="bed-price-toggle"
@@ -1183,7 +1195,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue />
+                          <SelectValue placeholder="Select seat type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -1207,10 +1219,10 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                 render={({ field }) => (
                   <FormItem>
                     <div className="flex items-center justify-between">
-                      <FormLabel>Seat upgrade type</FormLabel>
+                      <FormLabel required={enableSeatPrice}>Seat upgrade type</FormLabel>
                       <div className="flex items-center space-x-2">
                         <FormLabel htmlFor="seat-price-toggle" className="cursor-pointer text-sm font-normal">
-                          {enableSeatPrice ? "Enabled" : "Disabled"}
+                          Add-on
                         </FormLabel>
                         <Switch
                           id="seat-price-toggle"
@@ -1269,7 +1281,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                 name="extraPricePerSeat"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Extra price for seat upgrade</FormLabel>
+                    <FormLabel required={enableSeatPrice}>Extra price for seat upgrade</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -1314,10 +1326,10 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
               render={({ field }) => (
                 <FormItem>
                   <div className="flex items-center justify-between">
-                    <FormLabel>Extra price for bag upgrade</FormLabel>
+                    <FormLabel required={enableBagPrice}>Extra price for bag upgrade</FormLabel>
                     <div className="flex items-center space-x-2">
                       <FormLabel htmlFor="bag-price-toggle" className="cursor-pointer text-sm font-normal">
-                        {enableBagPrice ? "Enabled" : "Disabled"}
+                        Add-on
                       </FormLabel>
                       <Switch
                         id="bag-price-toggle"
@@ -1379,10 +1391,10 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
               render={({ field }) => (
                 <FormItem>
                   <div className="flex items-center justify-between">
-                    <FormLabel>Discount price</FormLabel>
+                    <FormLabel required={enableDiscount}>Discount price</FormLabel>
                     <div className="flex items-center space-x-2">
                       <FormLabel htmlFor="discount-toggle" className="cursor-pointer text-sm font-normal">
-                        {enableDiscount ? "Enabled" : "Disabled"}
+                        Add-on
                       </FormLabel>
                       <Switch
                         id="discount-toggle"

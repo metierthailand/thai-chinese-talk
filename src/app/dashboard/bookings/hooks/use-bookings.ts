@@ -253,6 +253,7 @@ async function createBooking(data: {
   customerId: string;
   tripId: string;
   salesUserId: string;
+  passportId: string;
   companionCustomerIds?: string[];
   agentId?: string;
   note?: string;

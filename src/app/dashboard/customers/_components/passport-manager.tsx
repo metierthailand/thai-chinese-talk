@@ -242,7 +242,7 @@ export function PassportManager({ customerId, passports }: PassportManagerProps)
                   name="issuingCountry"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel required>Issuing Country</FormLabel>
+                      <FormLabel required>Issuing country</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>

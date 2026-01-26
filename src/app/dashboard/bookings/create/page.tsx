@@ -20,6 +20,7 @@ export default function NewBookingPage() {
         customerId: values.customerId,
         tripId: values.tripId,
         salesUserId: values.salesUserId,
+        passportId: values.passportId,
         companionCustomerIds: values.companionCustomerIds,
         note: values.note,
         extraPriceForSingleTraveller: values.extraPriceForSingleTraveller
