@@ -221,8 +221,8 @@ export async function POST(req: Request) {
       firstPaymentProof,
     } = body;
 
-    if (!customerId || !tripId || !salesUserId || !passportId) {
-      return new NextResponse("Missing required fields: customerId, tripId, salesUserId, and passportId are required", {
+    if (!customerId || !tripId || !salesUserId || !passportId || !roomType || !seatType) {
+      return new NextResponse("Missing required fields: customerId, tripId, salesUserId, passportId, roomType, and seatType are required", {
         status: 400,
       });
     }
@@ -349,10 +349,10 @@ export async function POST(req: Request) {
           passportId: passportId,
           note: note || null,
           extraPriceForSingleTraveller: extraPriceForSingleTraveller ? Number(extraPriceForSingleTraveller) : null,
-          roomType: roomType || "DOUBLE_BED",
+          roomType: roomType as "DOUBLE_BED" | "TWIN_BED",
           extraPricePerBed: extraPricePerBed ? Number(extraPricePerBed) : 0,
           roomNote: roomNote || null,
-          seatType: seatType || "WINDOW",
+          seatType: seatType as "WINDOW" | "MIDDLE" | "AISLE",
           seatClass: seatClass || null,
           extraPricePerSeat: extraPricePerSeat ? Number(extraPricePerSeat) : null,
           seatNote: seatNote || null,

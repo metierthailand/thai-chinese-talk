@@ -57,14 +57,14 @@ const formSchema = z.object({
   customerId: z.string().min(1, { message: "Please select the information." }),
   tripId: z.string().min(1, { message: "Please select the information." }),
   salesUserId: z.string().min(1, { message: "Please select the information." }),
-  passportId: z.string().min(1, { message: "Please select a passport." }),
+  passportId: z.string().min(1, { message: "Please select the information." }),
   companionCustomerIds: z.array(z.string()).optional(),
   note: z.string().optional(),
   extraPriceForSingleTraveller: z.string().optional(),
-  roomType: z.enum(["DOUBLE_BED", "TWIN_BED"]),
+  roomType: z.enum(["DOUBLE_BED", "TWIN_BED"], { message: "Please select the information." }),
   extraPricePerBed: z.string().optional(),
   roomNote: z.string().optional(),
-  seatType: z.enum(["WINDOW", "MIDDLE", "AISLE"]),
+  seatType: z.enum(["WINDOW", "MIDDLE", "AISLE"], { message: "Please select the information." }),
   seatClass: z.enum(["FIRST_CLASS", "BUSINESS_CLASS", "LONG_LEG"]).optional(),
   extraPricePerSeat: z.string().optional(),
   seatNote: z.string().optional(),
@@ -174,10 +174,10 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
       companionCustomerIds: [],
       note: "",
       extraPriceForSingleTraveller: "",
-      roomType: "DOUBLE_BED" as const,
+      roomType: undefined,
       extraPricePerBed: "",
       roomNote: "",
-      seatType: "WINDOW" as const,
+      seatType: undefined,
       seatClass: undefined,
       extraPricePerSeat: "",
       seatNote: "",
@@ -424,10 +424,10 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
         companionCustomerIds: initialData.companionCustomerIds ?? [],
         note: initialData.note ?? "",
         extraPriceForSingleTraveller: singleTravellerPrice,
-        roomType: (initialData.roomType as "DOUBLE_BED" | "TWIN_BED") ?? ("DOUBLE_BED" as const),
+        roomType: (initialData.roomType as "DOUBLE_BED" | "TWIN_BED") || ("" as unknown as "DOUBLE_BED" | "TWIN_BED"),
         extraPricePerBed: initialData.extraPricePerBed ?? "",
         roomNote: initialData.roomNote ?? "",
-        seatType: (initialData.seatType as "WINDOW" | "MIDDLE" | "AISLE") ?? ("WINDOW" as const),
+        seatType: (initialData.seatType as "WINDOW" | "MIDDLE" | "AISLE") || ("" as unknown as "WINDOW" | "MIDDLE" | "AISLE"),
         seatClass: initialData.seatClass
           ? (initialData.seatClass as "FIRST_CLASS" | "BUSINESS_CLASS" | "LONG_LEG")
           : undefined,
@@ -1461,7 +1461,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                 name="paymentStatus"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Payment status</FormLabel>
+                    <FormLabel required>Payment status</FormLabel>
                     {readOnly ? (
                       <FormControl>
                         <Input value={field.value} disabled />
