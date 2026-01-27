@@ -20,7 +20,7 @@ type Notification = {
   link: string | null;
   isRead: boolean;
   createdAt: string;
-  type: "PASSPORT_EXPIRY" | "TRIP_UPCOMING" | "SYSTEM";
+  type: "PASSPORT_EXPIRY" | "TRIP_UPCOMING" | "SYSTEM" | "TASK_DUE";
 };
 
 export function NotificationBell() {

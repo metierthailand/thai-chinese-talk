@@ -2,8 +2,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { addMonths, addDays, subDays } from "date-fns";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authHeader = request.headers.get("authorization");
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return new NextResponse("Unauthorized", {
+        status: 401,
+      });
+    }
+
     // 1. Passport Expiry Alerts
     // Find passports expiring within the next 6 months
     const sixMonthsFromNow = addMonths(new Date(), 6);
@@ -190,10 +197,64 @@ export async function GET() {
       }
     }
 
+    // 3. Task Due Alerts
+    // Find tasks due tomorrow
+    const startOfTomorrowDate = new Date();
+    startOfTomorrowDate.setDate(startOfTomorrowDate.getDate() + 1);
+    startOfTomorrowDate.setHours(0, 0, 0, 0);
+
+    const endOfTomorrowDate = new Date(startOfTomorrowDate);
+    endOfTomorrowDate.setHours(23, 59, 59, 999);
+
+    const tasksDueTomorrow = await prisma.task.findMany({
+      where: {
+        deadline: {
+          gte: startOfTomorrowDate,
+          lte: endOfTomorrowDate,
+        },
+        status: {
+          not: "COMPLETED",
+        },
+      },
+    });
+
+    let taskAlertsCount = 0;
+
+    for (const task of tasksDueTomorrow) {
+      if (task.userId) {
+        // Check for existing notification to avoid duplicates
+        const existingNotification = await prisma.notification.findFirst({
+          where: {
+            userId: task.userId,
+            type: "TASK_DUE",
+            entityId: task.id,
+            createdAt: {
+              gte: new Date(new Date().setHours(0, 0, 0, 0)), // Created today
+            },
+          },
+        });
+
+        if (!existingNotification) {
+          await prisma.notification.create({
+            data: {
+              userId: task.userId,
+              type: "TASK_DUE",
+              title: "Task Due Soon",
+              message: `Reminder: "${task.topic}" is due tomorrow. Please make sure it is completed on time!`,
+              link: `/dashboard/tasks?taskId=${task.id}`,
+              entityId: task.id,
+            },
+          });
+          taskAlertsCount++;
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       passportAlertsGenerated: passportAlertsCount,
       tripAlertsGenerated: tripAlertsCount,
+      taskAlertsGenerated: taskAlertsCount,
     });
   } catch (error) {
     console.error("[CRON_ALERTS]", error);
