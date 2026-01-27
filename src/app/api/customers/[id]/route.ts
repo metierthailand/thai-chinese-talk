@@ -242,37 +242,135 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
       // Handle passports updates if passports is provided
       if (passports !== undefined) {
-        // Delete existing passports
-        await tx.passport.deleteMany({
+        // Get existing passports
+        const existingPassports = await tx.passport.findMany({
           where: { customerId: id },
+          include: {
+            bookings: {
+              select: { id: true },
+            },
+          },
         });
 
-        // Create new passports
-        if (passports.length > 0) {
-          // If setting any as primary, unset others first
-          const hasPrimary = (passports as Array<{ isPrimary?: boolean }>).some((p) => p.isPrimary);
-          if (hasPrimary) {
-            // This is handled in the create below
-          }
+        // Create maps for easier lookup
+        const existingPassportMap = new Map(
+          existingPassports.map((p) => [p.passportNumber, p])
+        );
+        // const newPassportMap = new Map(
+        //   (passports as Array<{ passportNumber: string }>).map((p) => [p.passportNumber, p])
+        // );
 
-          await tx.passport.createMany({
-            data: (passports as Array<{
-              passportNumber: string;
-              issuingCountry: string;
-              issuingDate: string | Date;
-              expiryDate: string | Date;
-              imageUrl?: string | null;
-              isPrimary?: boolean;
-            }>).map((p, index) => ({
-              customerId: id,
-              passportNumber: p.passportNumber,
-              issuingCountry: p.issuingCountry,
-              issuingDate: new Date(p.issuingDate),
-              expiryDate: new Date(p.expiryDate),
-              imageUrl: p.imageUrl || null,
-              isPrimary: p.isPrimary !== undefined ? p.isPrimary : index === 0,
-            })),
-          });
+        // Process each new passport
+        const newPassports = passports as Array<{
+          passportNumber: string;
+          issuingCountry: string;
+          issuingDate: string | Date;
+          expiryDate: string | Date;
+          imageUrl?: string | null;
+          isPrimary?: boolean;
+        }>;
+
+        for (let index = 0; index < newPassports.length; index++) {
+          const newPassport = newPassports[index];
+          const existingPassport = existingPassportMap.get(newPassport.passportNumber);
+
+          if (existingPassport) {
+            // Update existing passport
+            await tx.passport.update({
+              where: { id: existingPassport.id },
+              data: {
+                issuingCountry: newPassport.issuingCountry,
+                issuingDate: new Date(newPassport.issuingDate),
+                expiryDate: new Date(newPassport.expiryDate),
+                imageUrl: newPassport.imageUrl || null,
+                isPrimary: newPassport.isPrimary !== undefined ? newPassport.isPrimary : index === 0,
+              },
+            });
+          } else {
+            // Create new passport
+            await tx.passport.create({
+              data: {
+                customerId: id,
+                passportNumber: newPassport.passportNumber,
+                issuingCountry: newPassport.issuingCountry,
+                issuingDate: new Date(newPassport.issuingDate),
+                expiryDate: new Date(newPassport.expiryDate),
+                imageUrl: newPassport.imageUrl || null,
+                isPrimary: newPassport.isPrimary !== undefined ? newPassport.isPrimary : index === 0,
+              },
+            });
+          }
+        }
+
+        // Delete passports that are no longer in the new list and not used in bookings
+        const newPassportNumbers = new Set(newPassports.map((p) => p.passportNumber));
+        for (const existingPassport of existingPassports) {
+          if (!newPassportNumbers.has(existingPassport.passportNumber)) {
+            // Check if passport is used in any booking
+            if (existingPassport.bookings.length === 0) {
+              // Safe to delete - not used in any booking
+              await tx.passport.delete({
+                where: { id: existingPassport.id },
+              });
+            }
+            // If passport is used in bookings, we keep it (can't delete due to foreign key constraint)
+          }
+        }
+
+        // Ensure at least one passport is primary if there are any passports
+        if (newPassports.length > 0) {
+          const hasPrimary = newPassports.some((p) => p.isPrimary);
+          if (!hasPrimary) {
+            // Set the first passport as primary
+            const firstPassportNumber = newPassports[0].passportNumber;
+            const firstPassport = await tx.passport.findFirst({
+              where: {
+                customerId: id,
+                passportNumber: firstPassportNumber,
+              },
+            });
+            if (firstPassport) {
+              // Unset all other passports as primary
+              await tx.passport.updateMany({
+                where: {
+                  customerId: id,
+                  id: { not: firstPassport.id },
+                },
+                data: { isPrimary: false },
+              });
+              // Set first passport as primary
+              await tx.passport.update({
+                where: { id: firstPassport.id },
+                data: { isPrimary: true },
+              });
+            }
+          } else {
+            // Ensure only one passport is primary
+            const primaryPassportNumber = newPassports.find((p) => p.isPrimary)?.passportNumber;
+            if (primaryPassportNumber) {
+              const primaryPassport = await tx.passport.findFirst({
+                where: {
+                  customerId: id,
+                  passportNumber: primaryPassportNumber,
+                },
+              });
+              if (primaryPassport) {
+                // Unset all other passports as primary
+                await tx.passport.updateMany({
+                  where: {
+                    customerId: id,
+                    id: { not: primaryPassport.id },
+                  },
+                  data: { isPrimary: false },
+                });
+                // Ensure this one is primary
+                await tx.passport.update({
+                  where: { id: primaryPassport.id },
+                  data: { isPrimary: true },
+                });
+              }
+            }
+          }
         }
       }
 
