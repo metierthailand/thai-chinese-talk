@@ -23,8 +23,9 @@ export default function TripsPage() {
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
   const searchQuery = searchParams.get("search") || "";
-  const startDateFromQuery = searchParams.get("startDateFrom") || "";
-  const startDateToQuery = searchParams.get("startDateTo") || "";
+  const selectedDateQuery = searchParams.get("selectedDate") || "";
+  const typeQuery = searchParams.get("type") || "ALL";
+  const statusQuery = searchParams.get("status") || "ALL";
 
   const columns: ColumnDef<Trip>[] = useMemo(
     () => [
@@ -167,7 +168,14 @@ export default function TripsPage() {
     data: tripsResponse,
     isLoading,
     error,
-  } = useTrips(page, pageSize, searchQuery || undefined, startDateFromQuery || undefined, startDateToQuery || undefined);
+  } = useTrips(
+    page,
+    pageSize,
+    searchQuery || undefined,
+    selectedDateQuery || undefined,
+    typeQuery !== "ALL" ? typeQuery : undefined,
+    statusQuery !== "ALL" ? statusQuery : undefined
+  );
 
   const trips = useMemo(() => tripsResponse?.data ?? [], [tripsResponse?.data]);
   const total = tripsResponse?.total ?? 0;
@@ -233,10 +241,11 @@ export default function TripsPage() {
   const handleExport = useCallback(() => {
     exportTrips(
       searchQuery || undefined,
-      startDateFromQuery || undefined,
-      startDateToQuery || undefined,
+      selectedDateQuery || undefined,
+      typeQuery !== "ALL" ? typeQuery : undefined,
+      statusQuery !== "ALL" ? statusQuery : undefined,
     );
-  }, [exportTrips, searchQuery, startDateFromQuery, startDateToQuery]);
+  }, [exportTrips, searchQuery, selectedDateQuery, typeQuery, statusQuery]);
 
   return (
     <div className="flex flex-col gap-8 p-8">

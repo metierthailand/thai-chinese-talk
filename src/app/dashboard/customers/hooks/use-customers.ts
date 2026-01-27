@@ -189,7 +189,8 @@ export const customerKeys = {
     type?: string,
     passportExpiryFrom?: string,
     passportExpiryTo?: string,
-  ) => [...customerKeys.lists(), page, pageSize, search, type, passportExpiryFrom, passportExpiryTo] as const,
+    tagIds?: string,
+  ) => [...customerKeys.lists(), page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, tagIds] as const,
   details: () => [...customerKeys.all, "detail"] as const,
   detail: (id: string) => [...customerKeys.details(), id] as const,
 };
@@ -202,6 +203,7 @@ async function fetchCustomers(
   type?: string,
   passportExpiryFrom?: string,
   passportExpiryTo?: string,
+  tagIds?: string,
 ): Promise<CustomersResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -218,6 +220,9 @@ async function fetchCustomers(
   }
   if (passportExpiryTo) {
     params.set("passportExpiryTo", passportExpiryTo);
+  }
+  if (tagIds) {
+    params.set("tagIds", tagIds);
   }
 
   const res = await fetch(`/api/customers?${params.toString()}`);
@@ -366,6 +371,7 @@ export function useCustomers({
   type,
   passportExpiryFrom,
   passportExpiryTo,
+  tagIds,
 }: {
   page: number;
   pageSize: number;
@@ -373,10 +379,11 @@ export function useCustomers({
   type?: string;
   passportExpiryFrom?: string;
   passportExpiryTo?: string;
+  tagIds?: string;
 }) {
   return useQuery({
-    queryKey: customerKeys.list(page, pageSize, search, type, passportExpiryFrom, passportExpiryTo),
-    queryFn: () => fetchCustomers(page, pageSize, search, type, passportExpiryFrom, passportExpiryTo),
+    queryKey: customerKeys.list(page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, tagIds),
+    queryFn: () => fetchCustomers(page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, tagIds),
     staleTime: 30 * 1000, // 30 seconds
   });
 }

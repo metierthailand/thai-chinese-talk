@@ -92,21 +92,21 @@ export default function LeadsPage() {
         },
       },
       {
-        accessorKey: "email",
-        header: "Email",
-        cell: ({ row }) => {
-          const lead = row.original;
-          const email = lead.newCustomer ? lead.email : lead.customer?.email;
-          return email || "-";
-        },
-      },
-      {
         accessorKey: "phoneNumber",
         header: "Phone number",
         cell: ({ row }) => {
           const lead = row.original;
           const phoneNumber = lead.newCustomer ? lead.phoneNumber : lead.customer?.phoneNumber;
           return phoneNumber || "-";
+        },
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ row }) => {
+          const lead = row.original;
+          const email = lead.newCustomer ? lead.email : lead.customer?.email;
+          return email || "-";
         },
       },
       {

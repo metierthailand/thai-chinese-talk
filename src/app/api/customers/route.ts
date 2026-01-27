@@ -27,6 +27,7 @@ export async function GET(request: Request) {
     const search = searchParams.get("search") || "";
     const passportExpiryFrom = searchParams.get("passportExpiryFrom") || "";
     const passportExpiryTo = searchParams.get("passportExpiryTo") || "";
+    const tagIdsParam = searchParams.get("tagIds") || "";
     const skip = (page - 1) * pageSize;
 
     // Build where clause for search
@@ -89,8 +90,21 @@ export async function GET(request: Request) {
           }
         : {};
 
+    const tagFilter: Prisma.CustomerWhereInput =
+      tagIdsParam
+        ? {
+            tags: {
+              some: {
+                tagId: {
+                  in: tagIdsParam.split(",").filter(Boolean),
+                },
+              },
+            },
+          }
+        : {};
+
     const where: Prisma.CustomerWhereInput = {
-      AND: [searchFilter, passportFilter],
+      AND: [searchFilter, passportFilter, tagFilter],
     };
 
     // Get total count for pagination

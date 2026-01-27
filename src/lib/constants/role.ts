@@ -19,3 +19,14 @@ export function getRoleLabel(role: string): string {
   return ROLE_LABELS[role as Role] || role;
 }
 
+export const USER_STATUS_VALUES = ["ACTIVE", "INACTIVE"] as const;
+export type UserStatus = (typeof USER_STATUS_VALUES)[number];
+
+export const USER_STATUS_LABELS: Record<UserStatus, string> = {
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+};
+
+export function getUserStatusLabel(status: string): string {
+  return USER_STATUS_LABELS[status as UserStatus] || status;
+}

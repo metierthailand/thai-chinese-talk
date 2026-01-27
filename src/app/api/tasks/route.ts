@@ -121,12 +121,18 @@ export async function GET(req: Request) {
         ? {
             OR: [
               {
+                topic: {
+                  contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+              {
                 relatedCustomer: {
                   OR: [
-                    { firstNameEn: { contains: search, mode: "insensitive" } },
-                    { lastNameEn: { contains: search, mode: "insensitive" } },
-                    { firstNameTh: { contains: search, mode: "insensitive" } },
-                    { lastNameTh: { contains: search, mode: "insensitive" } },
+                    { firstNameEn: { contains: search, mode: "insensitive" as const } },
+                    { lastNameEn: { contains: search, mode: "insensitive" as const } },
+                    { firstNameTh: { contains: search, mode: "insensitive" as const } },
+                    { lastNameTh: { contains: search, mode: "insensitive" as const } },
                   ],
                 },
               },

@@ -189,7 +189,7 @@ export function TaskFilter({ onFilterChange }: TaskFilterProps) {
         <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           type="text"
-          placeholder="Search by customer name"
+          placeholder="Search by topic, customer name"
           className="w-full pr-9 pl-9 lg:w-full lg:max-w-sm"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}

@@ -58,6 +58,28 @@ export async function GET(request: Request) {
                   },
                 },
               },
+              // Search in customer phone number (if customer exists)
+              {
+                customer: {
+                  is: {
+                    phoneNumber: {
+                      contains: search,
+                      mode: "insensitive",
+                    },
+                  },
+                },
+              },
+              // Search in customer email (if customer exists)
+              {
+                customer: {
+                  is: {
+                    email: {
+                      contains: search,
+                      mode: "insensitive",
+                    },
+                  },
+                },
+              },
               // Search in new customer fields (if newCustomer = true)
               {
                 firstName: {
@@ -67,6 +89,20 @@ export async function GET(request: Request) {
               },
               {
                 lastName: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+              // Search in lead phone number
+              {
+                phoneNumber: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+              // Search in lead email
+              {
+                email: {
                   contains: search,
                   mode: "insensitive",
                 },

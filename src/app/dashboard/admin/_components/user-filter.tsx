@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
-import { ROLE_LABELS, ROLE_VALUES } from "@/lib/constants/role";
+import { ROLE_LABELS, ROLE_VALUES, USER_STATUS_LABELS, USER_STATUS_VALUES } from "@/lib/constants/role";
 
 interface UserFilterProps {
   onFilterChange?: () => void;
@@ -15,6 +15,7 @@ interface UserFilterProps {
 type UpdateParams = {
   search?: string;
   role?: string;
+  status?: string;
 };
 
 export function UserFilter({ onFilterChange }: UserFilterProps) {
@@ -24,10 +25,12 @@ export function UserFilter({ onFilterChange }: UserFilterProps) {
   // Initial values from URL
   const searchQuery = searchParams.get("search") || "";
   const roleFilter = searchParams.get("role") || "ALL";
+  const statusFilter = searchParams.get("status") || "ALL";
 
   // Local state (init จาก URL แค่ตอน mount)
   const [searchInput, setSearchInput] = useState(searchQuery);
   const [role, setRole] = useState(roleFilter || "ALL");
+  const [status, setStatus] = useState(statusFilter || "ALL");
 
   // Debounced search
   const debouncedSearch = useDebounce(searchInput, 500);
@@ -49,9 +52,10 @@ export function UserFilter({ onFilterChange }: UserFilterProps) {
 
     setParam("search", updates.search);
     setParam("role", updates.role, "ALL");
+    setParam("status", updates.status, "ALL");
 
     // Reset to page 1 when filters change
-    if (updates.search !== undefined || updates.role !== undefined) {
+    if (updates.search !== undefined || updates.role !== undefined || updates.status !== undefined) {
       params.set("page", "1");
     }
 
@@ -76,10 +80,33 @@ export function UserFilter({ onFilterChange }: UserFilterProps) {
   useEffect(() => {
     setSearchInput(searchQuery);
     setRole(roleFilter || "ALL");
-  }, [searchQuery, roleFilter]);
+    setStatus(statusFilter || "ALL");
+  }, [searchQuery, roleFilter, statusFilter]);
 
   return (
     <div className="flex flex-col items-center justify-end gap-4 md:flex-row">
+
+      {/* Status filter */}
+      <Select
+        value={status}
+        onValueChange={(value) => {
+          setStatus(value);
+          pushWithParams({ status: value });
+        }}
+      >
+        <SelectTrigger className="w-full md:w-40">
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">All status</SelectItem>
+          {USER_STATUS_VALUES.map((statusValue) => (
+            <SelectItem key={statusValue} value={statusValue}>
+              {USER_STATUS_LABELS[statusValue]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      
       {/* Role filter */}
       <Select
         value={role}
@@ -92,7 +119,7 @@ export function UserFilter({ onFilterChange }: UserFilterProps) {
           <SelectValue placeholder="Role" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="ALL">All Roles</SelectItem>
+          <SelectItem value="ALL">All roles</SelectItem>
           {ROLE_VALUES.map((roleValue) => (
             <SelectItem key={roleValue} value={roleValue}>
               {ROLE_LABELS[roleValue]}

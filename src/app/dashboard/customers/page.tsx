@@ -94,7 +94,7 @@ export default function CustomersPage() {
   // --------------------
   // params
   // --------------------
-  const { page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, setParams } = useCustomerParams();
+  const { page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, tagIds, setParams } = useCustomerParams();
 
   const customerQuery = mapCustomerParamsToQuery({
     page,
@@ -103,6 +103,7 @@ export default function CustomersPage() {
     type,
     passportExpiryFrom,
     passportExpiryTo,
+    tagIds,
   });
 
   // --------------------

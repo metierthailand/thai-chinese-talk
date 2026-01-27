@@ -71,7 +71,7 @@ export function FamilyFilter({ onFilterChange }: FamilyFilterProps) {
       <div className="relative w-full flex-1 md:max-w-sm">
         <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
-          placeholder="Search by family name, or customer name..."
+          placeholder="Search by name, customer name"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="w-full pl-9 md:w-full md:max-w-sm"

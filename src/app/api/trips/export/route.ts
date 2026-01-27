@@ -15,8 +15,9 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
-    const startDateFrom = searchParams.get("startDateFrom") || "";
-    const startDateTo = searchParams.get("startDateTo") || "";
+    const selectedDate = searchParams.get("selectedDate") || "";
+    const type = searchParams.get("type") || "";
+    const status = searchParams.get("status") || "";
 
     const searchFilter: Prisma.TripWhereInput =
       search.trim().length > 0
@@ -47,29 +48,101 @@ export async function GET(request: Request) {
         : {};
 
     const dateFilter: Prisma.TripWhereInput =
-      startDateFrom || startDateTo
+      selectedDate
         ? {
-            startDate: {
-              ...(startDateFrom ? { gte: new Date(startDateFrom) } : {}),
-              ...(startDateTo ? { lte: new Date(startDateTo) } : {}),
-            },
+            AND: [
+              {
+                startDate: {
+                  lte: new Date(new Date(selectedDate).setHours(23, 59, 59, 999)),
+                },
+              },
+              {
+                endDate: {
+                  gte: new Date(new Date(selectedDate).setHours(0, 0, 0, 0)),
+                },
+              },
+            ],
+          }
+        : {};
+
+    const typeFilter: Prisma.TripWhereInput =
+      type && type !== "ALL"
+        ? {
+            type: type as "GROUP_TOUR" | "PRIVATE_TOUR",
           }
         : {};
 
     const where: Prisma.TripWhereInput = {
-      AND: [searchFilter, dateFilter],
+      AND: [searchFilter, dateFilter, typeFilter],
     };
 
     // Fetch all trips (no pagination for export)
-    const trips = await prisma.trip.findMany({
+    const tripsRaw = await prisma.trip.findMany({
       where,
       orderBy: {
         createdAt: "desc",
       },
       include: {
         airlineAndAirport: true,
+        _count: {
+          select: {
+            bookings: {
+              where: {
+                paymentStatus: {
+                  not: "CANCELLED",
+                },
+              },
+            },
+          },
+        },
       },
     });
+
+    // Calculate trip status for each trip
+    const now = new Date();
+    let trips = tripsRaw.map((trip) => {
+      const startDate = new Date(trip.startDate);
+      const endDate = new Date(trip.endDate);
+      const activeBookingsCount = trip._count.bookings;
+      const pax = trip.pax;
+
+      let tripStatus: "UPCOMING" | "SOLD_OUT" | "COMPLETED" | "ON_TRIP" | "CANCELLED";
+      
+      // Completed: When the end date has been passed
+      if (endDate < now) {
+        tripStatus = "COMPLETED";
+      }
+      // Start date has not been reached
+      else if (startDate > now) {
+        // Sold out: When the start date has not been reached but the trip have been fully booked
+        if (activeBookingsCount >= pax) {
+          tripStatus = "SOLD_OUT";
+        } else {
+          // Upcoming: When the start date has not been reached
+          tripStatus = "UPCOMING";
+        }
+      }
+      // Start date has been reached (trip is ongoing or just started)
+      else {
+        // Cancelled: When the start date has been reached but the trip have no any bookings
+        if (activeBookingsCount === 0) {
+          tripStatus = "CANCELLED";
+        } else {
+          // On trip: When the start date has been reached
+          tripStatus = "ON_TRIP";
+        }
+      }
+
+      return {
+        ...trip,
+        status: tripStatus,
+      };
+    });
+
+    // Filter by status if provided
+    if (status && status !== "ALL") {
+      trips = trips.filter((trip) => trip.status === status);
+    }
 
     // Helper function to split names by comma and trim
     const splitNames = (names: string | null | undefined): string[] => {

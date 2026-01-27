@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Search, X } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { CalendarIcon, Search, X, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useAllTags } from "@/app/dashboard/tags/hooks/use-tags";
 
 interface CustomerFilterProps {
   onFilterChange?: () => void;
@@ -21,6 +23,7 @@ type UpdateParams = {
   search?: string;
   passportExpiryFrom?: string;
   passportExpiryTo?: string;
+  tagIds?: string;
 };
 
 export function CustomerFilter({ onFilterChange }: CustomerFilterProps) {
@@ -31,11 +34,19 @@ export function CustomerFilter({ onFilterChange }: CustomerFilterProps) {
   const searchQuery = searchParams.get("search") || "";
   const passportExpiryFrom = searchParams.get("passportExpiryFrom") || "";
   const passportExpiryTo = searchParams.get("passportExpiryTo") || "";
+  const tagIdsParam = searchParams.get("tagIds") || "";
 
   // Local state (init จาก URL แค่ตอน mount)
   const [searchInput, setSearchInput] = useState(searchQuery);
   const [expiryFrom, setExpiryFrom] = useState(passportExpiryFrom);
   const [expiryTo, setExpiryTo] = useState(passportExpiryTo);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
+    tagIdsParam ? tagIdsParam.split(",").filter(Boolean) : []
+  );
+  const [tagSearchOpen, setTagSearchOpen] = useState(false);
+
+  // Fetch all tags
+  const { data: tags = [] } = useAllTags();
 
   // Debounced search
   const debouncedSearch = useDebounce(searchInput, 500);
@@ -60,6 +71,7 @@ export function CustomerFilter({ onFilterChange }: CustomerFilterProps) {
     setParam("search", updates.search);
     setParam("passportExpiryFrom", updates.passportExpiryFrom);
     setParam("passportExpiryTo", updates.passportExpiryTo);
+    setParam("tagIds", updates.tagIds);
 
     const qs = params.toString();
     return qs ? `?${qs}` : "";
@@ -78,8 +90,87 @@ export function CustomerFilter({ onFilterChange }: CustomerFilterProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch, searchQuery]);
 
+  // Sync URL → local state for tagIds
+  useEffect(() => {
+    const tagIdsFromUrl = tagIdsParam ? tagIdsParam.split(",").filter(Boolean) : [];
+    setSelectedTagIds(tagIdsFromUrl);
+  }, [tagIdsParam]);
+
+  const handleTagToggle = (tagId: string) => {
+    const newTagIds = selectedTagIds.includes(tagId)
+      ? selectedTagIds.filter((id) => id !== tagId)
+      : [...selectedTagIds, tagId];
+    setSelectedTagIds(newTagIds);
+    pushWithParams({
+      tagIds: newTagIds.length > 0 ? newTagIds.join(",") : "",
+      page: 1,
+    });
+  };
+
+  const handleClearTags = () => {
+    setSelectedTagIds([]);
+    pushWithParams({ tagIds: "", page: 1 });
+  };
+
   return (
     <div className="flex flex-col items-center justify-end gap-4 md:flex-row">
+      {/* Tag filter */}
+      <Popover open={tagSearchOpen} onOpenChange={setTagSearchOpen}>
+        <div className="relative w-full md:w-[260px]">
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              className={cn(
+                "w-full justify-between pr-8 text-left font-normal md:w-[260px]",
+                selectedTagIds.length === 0 && "text-muted-foreground",
+              )}
+            >
+              {selectedTagIds.length > 0
+                ? `${selectedTagIds.length} tag${selectedTagIds.length > 1 ? "s" : ""} selected`
+                : "Select tags"}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          {selectedTagIds.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClearTags();
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        <PopoverContent className="w-[300px] p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search tags..." />
+            <CommandList>
+              <CommandEmpty>No tags found.</CommandEmpty>
+              <CommandGroup>
+                {tags.map((tag) => {
+                  const isSelected = selectedTagIds.includes(tag.id);
+                  return (
+                    <CommandItem
+                      value={tag.name}
+                      key={tag.id}
+                      onSelect={() => handleTagToggle(tag.id)}
+                    >
+                      <Check className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
+                      {tag.name}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
       {/* Filter: Passport expiry range */}
       <Popover>
         <div className="relative w-full md:w-[260px]">
@@ -150,11 +241,11 @@ export function CustomerFilter({ onFilterChange }: CustomerFilterProps) {
       </Popover>
 
       {/* Search */}
-      <div className="relative w-full md:w-80">
+      <div className="relative w-full md:w-100">
         <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
-          placeholder="Search by name, email, or phone..."
-          className="w-full pr-9 pl-9 md:w-80"
+          placeholder="Search by customer name, phone number, email"
+          className="w-full pr-9 pl-9 lg:w-full lg:max-w-lg"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />

@@ -11,6 +11,7 @@ const customerDefaults = {
   type: "ALL", // ALL | INDIVIDUAL | CORPORATE
   passportExpiryFrom: "",
   passportExpiryTo: "",
+  tagIds: "",
 } satisfies ListQueryDefaults;
 
 export type CustomerListParams = typeof customerDefaults;
@@ -19,7 +20,7 @@ export function useCustomerParams() {
 }
 
 export function mapCustomerParamsToQuery(params: CustomerListParams) {
-  const { page, pageSize, search, type, passportExpiryFrom, passportExpiryTo } = params;
+  const { page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, tagIds } = params;
 
   return {
     page,
@@ -28,5 +29,6 @@ export function mapCustomerParamsToQuery(params: CustomerListParams) {
     type: type === "ALL" ? undefined : type,
     passportExpiryFrom: passportExpiryFrom || undefined,
     passportExpiryTo: passportExpiryTo || undefined,
+    tagIds: tagIds || undefined,
   };
 }

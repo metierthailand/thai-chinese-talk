@@ -10,6 +10,7 @@ import { CalendarIcon, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useDebounce } from "@/hooks/use-debounce";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface TripFilterProps {
   onFilterChange?: () => void;
@@ -19,8 +20,9 @@ type UpdateParams = {
   page?: number;
   pageSize?: number;
   search?: string;
-  startDateFrom?: string;
-  startDateTo?: string;
+  selectedDate?: string;
+  type?: string;
+  status?: string;
 };
 
 export function TripFilter({ onFilterChange }: TripFilterProps) {
@@ -29,13 +31,15 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
 
   // Initial values from URL
   const searchQuery = searchParams.get("search") || "";
-  const startDateFromQuery = searchParams.get("startDateFrom") || "";
-  const startDateToQuery = searchParams.get("startDateTo") || "";
+  const selectedDateQuery = searchParams.get("selectedDate") || "";
+  const typeQuery = searchParams.get("type") || "ALL";
+  const statusQuery = searchParams.get("status") || "ALL";
 
   // Local state (init จาก URL แค่ตอน mount)
   const [searchInput, setSearchInput] = useState(searchQuery);
-  const [startDateFrom, setStartDateFrom] = useState(startDateFromQuery);
-  const [startDateTo, setStartDateTo] = useState(startDateToQuery);
+  const [selectedDate, setSelectedDate] = useState(selectedDateQuery);
+  const [type, setType] = useState(typeQuery || "ALL");
+  const [status, setStatus] = useState(statusQuery || "ALL");
 
   // Debounced search
   const debouncedSearch = useDebounce(searchInput, 500);
@@ -58,8 +62,9 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
     setParam("page", updates.page?.toString(), "1");
     setParam("pageSize", updates.pageSize?.toString(), "10");
     setParam("search", updates.search);
-    setParam("startDateFrom", updates.startDateFrom);
-    setParam("startDateTo", updates.startDateTo);
+    setParam("selectedDate", updates.selectedDate);
+    setParam("type", updates.type, "ALL");
+    setParam("status", updates.status, "ALL");
 
     const qs = params.toString();
     return qs ? `?${qs}` : "";
@@ -81,13 +86,55 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
   // Sync URL → local state (รองรับ back/forward / external change)
   useEffect(() => {
     setSearchInput(searchQuery);
-    setStartDateFrom(startDateFromQuery);
-    setStartDateTo(startDateToQuery);
-  }, [searchQuery, startDateFromQuery, startDateToQuery]);
+    setSelectedDate(selectedDateQuery);
+    setType(typeQuery || "ALL");
+    setStatus(statusQuery || "ALL");
+  }, [searchQuery, selectedDateQuery, typeQuery, statusQuery]);
 
   return (
     <div className="flex flex-col items-end justify-end gap-4 md:flex-row">
-      {/* Filter: Trip start date range */}
+      <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row">
+        {/* Filter: Trip type */}
+        <Select
+          value={type}
+          onValueChange={(value) => {
+            setType(value);
+            pushWithParams({ type: value, page: 1 });
+          }}
+        >
+          <SelectTrigger className="w-full md:w-40">
+            <SelectValue placeholder="Trip type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Types</SelectItem>
+            <SelectItem value="GROUP_TOUR">Group Tour</SelectItem>
+            <SelectItem value="PRIVATE_TOUR">Private Tour</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Filter: Trip status */}
+        <Select
+          value={status}
+          onValueChange={(value) => {
+            setStatus(value);
+            pushWithParams({ status: value, page: 1 });
+          }}
+        >
+          <SelectTrigger className="w-full md:w-40">
+            <SelectValue placeholder="Trip status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Status</SelectItem>
+            <SelectItem value="UPCOMING">Upcoming</SelectItem>
+            <SelectItem value="SOLD_OUT">Sold Out</SelectItem>
+            <SelectItem value="ON_TRIP">On Trip</SelectItem>
+            <SelectItem value="COMPLETED">Completed</SelectItem>
+            <SelectItem value="CANCELLED">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Filter: Selected date */}
       <Popover>
         <div className="relative w-full md:w-[260px]">
           <PopoverTrigger asChild>
@@ -95,32 +142,29 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
               variant="outline"
               className={cn(
                 "w-full justify-start pr-8 text-left font-normal md:w-[260px]",
-                !startDateFrom && !startDateTo && "text-muted-foreground",
+                !selectedDate && "text-muted-foreground",
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {startDateFrom || startDateTo ? (
+              {selectedDate ? (
                 <span className="truncate">
-                  {startDateFrom ? format(new Date(startDateFrom), "dd MMM yyyy") : "..."} -{" "}
-                  {startDateTo ? format(new Date(startDateTo), "dd MMM yyyy") : "..."}
+                  {format(new Date(selectedDate), "dd MMM yyyy")}
                 </span>
               ) : (
-                "Trip start date range"
+                "Trip date range"
               )}
             </Button>
           </PopoverTrigger>
-          {(startDateFrom || startDateTo) && (
+          {selectedDate && (
             <Button
               variant="ghost"
               size="icon"
               className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
               onClick={(e) => {
                 e.stopPropagation();
-                setStartDateFrom("");
-                setStartDateTo("");
+                setSelectedDate("");
                 pushWithParams({
-                  startDateFrom: "",
-                  startDateTo: "",
+                  selectedDate: "",
                   page: 1,
                 });
               }}
@@ -132,20 +176,13 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
         <PopoverContent className="w-auto p-0" align="end">
           <Calendar
             captionLayout="dropdown"
-            mode="range"
-            numberOfMonths={2}
-            selected={{
-              from: startDateFrom ? new Date(startDateFrom) : undefined,
-              to: startDateTo ? new Date(startDateTo) : undefined,
-            }}
-            onSelect={(range) => {
-              const from = range?.from ? format(range.from, "yyyy-MM-dd") : "";
-              const to = range?.to ? format(range.to, "yyyy-MM-dd") : "";
-              setStartDateFrom(from);
-              setStartDateTo(to);
+            mode="single"
+            selected={selectedDate ? new Date(selectedDate) : undefined}
+            onSelect={(date) => {
+              const dateStr = date ? format(date, "yyyy-MM-dd") : "";
+              setSelectedDate(dateStr);
               pushWithParams({
-                startDateFrom: from,
-                startDateTo: to,
+                selectedDate: dateStr,
                 page: 1,
               });
             }}

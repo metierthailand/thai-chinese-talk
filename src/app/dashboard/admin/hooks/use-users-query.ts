@@ -25,8 +25,8 @@ interface ErrorResponse {
 export const userKeys = {
   all: ["users"] as const,
   lists: () => [...userKeys.all, "list"] as const,
-  list: (page: number, pageSize: number, search?: string, role?: string) =>
-    [...userKeys.lists(), page, pageSize, search, role] as const,
+  list: (page: number, pageSize: number, search?: string, role?: string, status?: string) =>
+    [...userKeys.lists(), page, pageSize, search, role, status] as const,
 };
 
 // Fetch users function
@@ -34,7 +34,8 @@ async function fetchUsers(
   page: number = 1,
   pageSize: number = 10,
   search?: string,
-  role?: string
+  role?: string,
+  status?: string
 ): Promise<UsersResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -45,6 +46,9 @@ async function fetchUsers(
   }
   if (role && role !== "ALL") {
     params.set("role", role);
+  }
+  if (status && status !== "ALL") {
+    params.set("status", status);
   }
   const url = `/api/users?${params.toString()}`;
 
@@ -60,11 +64,12 @@ export function useUsers(
   page: number = 1,
   pageSize: number = 10,
   search?: string,
-  role?: string
+  role?: string,
+  status?: string
 ) {
   return useQuery({
-    queryKey: userKeys.list(page, pageSize, search, role),
-    queryFn: () => fetchUsers(page, pageSize, search, role),
+    queryKey: userKeys.list(page, pageSize, search, role, status),
+    queryFn: () => fetchUsers(page, pageSize, search, role, status),
     staleTime: 30 * 1000, // 30 seconds
   });
 }

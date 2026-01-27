@@ -20,6 +20,7 @@ export async function GET(req: Request) {
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
     const search = searchParams.get("search") || "";
     const role = searchParams.get("role") || "";
+    const status = searchParams.get("status") || "";
     const skip = (page - 1) * pageSize;
 
     // Build where clause
@@ -58,6 +59,15 @@ export async function GET(req: Request) {
     // Add role filter
     if (role && role !== "ALL") {
       where.role = role as "SUPER_ADMIN" | "ADMIN" | "SALES" | "STAFF";
+    }
+
+    // Add status filter
+    if (status && status !== "ALL") {
+      if (status === "ACTIVE") {
+        where.isActive = true;
+      } else if (status === "INACTIVE") {
+        where.isActive = false;
+      }
     }
 
     // Get total count for pagination

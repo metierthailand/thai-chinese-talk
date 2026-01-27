@@ -18,8 +18,9 @@ export async function GET(request: Request) {
     const skip = (page - 1) * pageSize;
 
     const search = searchParams.get("search") || "";
-    const startDateFrom = searchParams.get("startDateFrom") || "";
-    const startDateTo = searchParams.get("startDateTo") || "";
+    const selectedDate = searchParams.get("selectedDate") || "";
+    const type = searchParams.get("type") || "";
+    const status = searchParams.get("status") || "";
 
     const searchFilter: Prisma.TripWhereInput =
       search.trim().length > 0
@@ -50,17 +51,32 @@ export async function GET(request: Request) {
         : {};
 
     const dateFilter: Prisma.TripWhereInput =
-      startDateFrom || startDateTo
+      selectedDate
         ? {
-            startDate: {
-              ...(startDateFrom ? { gte: new Date(startDateFrom) } : {}),
-              ...(startDateTo ? { lte: new Date(startDateTo) } : {}),
-            },
+            AND: [
+              {
+                startDate: {
+                  lte: new Date(new Date(selectedDate).setHours(23, 59, 59, 999)),
+                },
+              },
+              {
+                endDate: {
+                  gte: new Date(new Date(selectedDate).setHours(0, 0, 0, 0)),
+                },
+              },
+            ],
+          }
+        : {};
+
+    const typeFilter: Prisma.TripWhereInput =
+      type && type !== "ALL"
+        ? {
+            type: type as "GROUP_TOUR" | "PRIVATE_TOUR",
           }
         : {};
 
     const where: Prisma.TripWhereInput = {
-      AND: [searchFilter, dateFilter],
+      AND: [searchFilter, dateFilter, typeFilter],
     };
 
     // Get total count for pagination
@@ -93,7 +109,7 @@ export async function GET(request: Request) {
 
     // Calculate trip status for each trip
     const now = new Date();
-    const tripsWithStatus = trips.map((trip) => {
+    let tripsWithStatus = trips.map((trip) => {
       const startDate = new Date(trip.startDate);
       const endDate = new Date(trip.endDate);
       const activeBookingsCount = trip._count.bookings;
@@ -132,12 +148,21 @@ export async function GET(request: Request) {
       };
     });
 
+    // Filter by status if provided
+    if (status && status !== "ALL") {
+      tripsWithStatus = tripsWithStatus.filter((trip) => trip.status === status);
+    }
+
+    // Recalculate total after status filter
+    const finalTotal = status && status !== "ALL" ? tripsWithStatus.length : total;
+    const totalPages = Math.ceil(finalTotal / pageSize);
+
     return NextResponse.json({
       data: tripsWithStatus,
-      total,
+      total: finalTotal,
       page,
       pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      totalPages,
     });
   } catch (error) {
     console.error("[TRIPS_GET]", error);

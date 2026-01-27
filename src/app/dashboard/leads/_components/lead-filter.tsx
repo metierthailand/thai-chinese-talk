@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, X } from "lucide-react";
@@ -139,7 +138,7 @@ export function LeadFilter({ onFilterChange }: LeadFilterProps) {
         <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           type="text"
-          placeholder="Search by name, trip interest, or sales name..."
+          placeholder="Search by trip interest, customer name, phone number, email"
           className="w-full pr-9 pl-9 lg:w-full lg:max-w-sm"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}

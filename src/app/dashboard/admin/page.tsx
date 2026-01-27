@@ -20,18 +20,19 @@ import { format } from "date-fns";
 import { getRoleLabel } from "@/lib/constants/role";
 
 export default function AdminPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const search = searchParams.get("search") || "";
   const role = searchParams.get("role") || "ALL";
+  const status = searchParams.get("status") || "ALL";
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
 
   // Update search params helper
   const updateSearchParams = useCallback(
-    (updates: { page?: number; pageSize?: number; search?: string; role?: string }) => {
+    (updates: { page?: number; pageSize?: number; search?: string; role?: string; status?: string }) => {
       const params = new URLSearchParams(searchParams.toString());
       if (updates.page !== undefined) {
         params.set("page", updates.page.toString());
@@ -57,6 +58,15 @@ export default function AdminPage() {
         // Reset to page 1 when role changes
         params.set("page", "1");
       }
+      if (updates.status !== undefined) {
+        if (updates.status && updates.status !== "ALL") {
+          params.set("status", updates.status);
+        } else {
+          params.delete("status");
+        }
+        // Reset to page 1 when status changes
+        params.set("page", "1");
+      }
       router.push(`?${params.toString()}`);
     },
     [searchParams, router]
@@ -69,7 +79,8 @@ export default function AdminPage() {
     page,
     pageSize,
     search || undefined,
-    role !== "ALL" ? role : undefined
+    role !== "ALL" ? role : undefined,
+    status !== "ALL" ? status : undefined
   );
 
   const users = useMemo(() => usersResponse?.data ?? [], [usersResponse?.data]);
@@ -183,7 +194,7 @@ export default function AdminPage() {
   );
 
   // Show loading state while checking session
-  if (status === "loading") {
+  if (sessionStatus === "loading") {
     return <Loading />;
   }
 
