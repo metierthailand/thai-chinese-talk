@@ -217,8 +217,7 @@ export async function POST(req: Request) {
       discountNote,
       paymentStatus,
       firstPaymentRatio,
-      firstPaymentAmount,
-      firstPaymentProof,
+      payments,
     } = body;
 
     if (!customerId || !tripId || !salesUserId || !passportId || !roomType || !seatType) {
@@ -288,16 +287,12 @@ export async function POST(req: Request) {
     const discount = discountPrice ? Number(discountPrice) : 0;
     const totalAmount = basePrice + extraSingle + extraBedPrice + extraSeatPrice + extraBagPrice - discount;
 
-    // Validate firstPaymentRatio and firstPaymentAmount
+    // Validate firstPaymentRatio
     if (!firstPaymentRatio) {
       return new NextResponse("firstPaymentRatio is required", { status: 400 });
     }
 
-    if (!firstPaymentAmount || Number(firstPaymentAmount) <= 0) {
-      return new NextResponse("firstPaymentAmount is required and must be greater than 0", { status: 400 });
-    }
-
-    // Validate firstPaymentAmount matches ratio
+    // Calculate expected first payment amount based on ratio
     let expectedFirstPayment: number;
     switch (firstPaymentRatio) {
       case "FIRST_PAYMENT_100":
@@ -313,12 +308,27 @@ export async function POST(req: Request) {
         return new NextResponse("Invalid firstPaymentRatio", { status: 400 });
     }
 
-    const firstPaymentAmountNum = Number(firstPaymentAmount);
-    if (Math.abs(firstPaymentAmountNum - expectedFirstPayment) > 0.01) {
-      return new NextResponse(
-        `firstPaymentAmount (${firstPaymentAmountNum}) does not match firstPaymentRatio (${firstPaymentRatio}). Expected: ${expectedFirstPayment.toFixed(2)}`,
-        { status: 400 },
-      );
+    // Validate payment proofs if provided
+    const validProofs = (payments || []).filter(
+      (proof: { amount?: string; proofOfPayment?: string }) => 
+        proof?.proofOfPayment && proof.proofOfPayment.trim() !== ""
+    );
+
+    if (validProofs.length > 0) {
+      // Validate first payment amount if provided
+      const firstProof = validProofs[0];
+      if (firstProof.amount && firstProof.amount.trim() !== "") {
+        const firstPaymentAmountNum = parseFloat(firstProof.amount);
+        if (isNaN(firstPaymentAmountNum) || firstPaymentAmountNum <= 0) {
+          return new NextResponse("First payment amount must be greater than 0", { status: 400 });
+        }
+        if (Math.abs(firstPaymentAmountNum - expectedFirstPayment) > 0.01) {
+          return new NextResponse(
+            `First payment amount (${firstPaymentAmountNum}) does not match firstPaymentRatio (${firstPaymentRatio}). Expected: ${expectedFirstPayment.toFixed(2)}`,
+            { status: 400 },
+          );
+        }
+      }
     }
 
     // Determine agentId: use provided agentId, or default to session user if they have agent role
@@ -369,20 +379,48 @@ export async function POST(req: Request) {
         },
       });
 
-      // 2. Create first payment with bookingId
-      const firstPayment = await tx.payment.create({
-        data: {
-          bookingId: newBooking.id,
-          amount: firstPaymentAmountNum,
-          proofOfPayment: firstPaymentProof || null,
-        } as unknown as Prisma.PaymentCreateInput,
-      });
+      // 2. Create payment proofs (up to 3) and payments
+      const validProofs = (payments || []).filter(
+        (proof: { amount?: string; proofOfPayment?: string }) => 
+          proof?.amount && proof.amount.trim() !== ""
+      ).slice(0, 3);
+      
+      // Create payments from payment proofs
+      const createdPayments = [];
+      for (let i = 0; i < validProofs.length; i++) {
+        const proof = validProofs[i];
+        const amount = proof.amount && proof.amount.trim() !== "" 
+          ? parseFloat(proof.amount) 
+          : (i === 0 ? expectedFirstPayment : 0); // Use expectedFirstPayment for first payment if amount not provided
+        
+        const payment = await tx.payment.create({
+          data: {
+            bookingId: newBooking.id,
+            amount: amount,
+            proofOfPayment: proof.proofOfPayment || null,
+          } as unknown as Prisma.PaymentCreateInput,
+        });
+        createdPayments.push(payment);
+      }
 
-      // 3. Update Booking with firstPaymentId
-      await tx.booking.update({
-        where: { id: newBooking.id },
-        data: { firstPaymentId: firstPayment.id } as unknown as Prisma.BookingUpdateInput,
-      });
+      // 3. Update Booking with payment IDs
+      const updateData: any = {};
+      if (createdPayments.length > 0) {
+        updateData.firstPaymentId = createdPayments[0].id;
+      }
+      if (createdPayments.length > 1) {
+        updateData.secondPaymentId = createdPayments[1].id;
+      }
+      if (createdPayments.length > 2) {
+        updateData.thirdPaymentId = createdPayments[2].id;
+      }
+      
+      if (Object.keys(updateData).length > 0) {
+        await tx.booking.update({
+          where: { id: newBooking.id },
+          data: updateData as unknown as Prisma.BookingUpdateInput,
+        });
+      }
 
       // 4. Create symmetric companion relationships using explicit join table
       // If A is companion of B, then B should also be companion of A

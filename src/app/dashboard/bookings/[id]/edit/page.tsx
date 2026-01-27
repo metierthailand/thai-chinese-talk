@@ -43,7 +43,14 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
         firstPaymentRatio:
           (booking.firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30") ??
           "FIRST_PAYMENT_50",
-        firstPaymentAmount: booking.firstPayment?.amount.toString() || "",
+        payments: booking.payments
+          ? booking.payments
+              .map((p) => ({
+                amount: p.amount?.toString() || "",
+                proofOfPayment: p.proofOfPayment || "",
+              }))
+              .slice(0, 3)
+          : [],
       }
     : undefined;
 
@@ -71,6 +78,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
         discountNote: values.discountNote,
         paymentStatus: values.paymentStatus,
         firstPaymentRatio: values.firstPaymentRatio,
+        payments: values.payments,
       };
 
       await updateBookingMutation.mutateAsync({

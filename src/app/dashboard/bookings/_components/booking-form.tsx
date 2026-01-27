@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown, Plus, Eye, Trash2 } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -30,10 +30,11 @@ import { useAllTags } from "@/app/dashboard/tags/hooks/use-tags";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { DragDropUpload } from "@/components/upload-image";
-import { X } from "lucide-react";
+import { X, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { PaymentForm } from "./payment-form";
 import { DeleteDialog } from "../../_components/delete-dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useWatch } from "react-hook-form";
 
 // Sales User interface
 interface SalesUser {
@@ -75,8 +76,12 @@ const baseFormSchema = z.object({
   discountNote: z.string().optional(),
   paymentStatus: z.enum(["DEPOSIT_PENDING", "DEPOSIT_PAID", "FULLY_PAID", "CANCELLED"]),
   firstPaymentRatio: z.enum(["FIRST_PAYMENT_100", "FIRST_PAYMENT_50", "FIRST_PAYMENT_30"]),
-  firstPaymentAmount: z.string().min(1, { message: "Please fill in the information." }),
-  firstPaymentProof: z.string().optional(),
+  payments: z.array(
+    z.object({
+      amount: z.string().optional(),
+      proofOfPayment: z.string().optional(),
+    })
+  ).optional(),
 });
 
 export type BookingFormValues = z.infer<typeof baseFormSchema>;
@@ -106,11 +111,8 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
   const [enableDiscount, setEnableDiscount] = useState(false);
   const [enableBedPrice, setEnableBedPrice] = useState(false);
   const [enableSeatPrice, setEnableSeatPrice] = useState(false);
-  const [proofDialogOpen, setProofDialogOpen] = useState(false);
-  const [proofImageUrl, setProofImageUrl] = useState<string | null>(null);
-  const [proofTitle, setProofTitle] = useState<string>("");
   const [deletingCompanionId, setDeletingCompanionId] = useState<string | null>(null);
-
+  const [isPaymentProofsOpen, setIsPaymentProofsOpen] = useState(false);
 
   // Get today's date in YYYY-MM-DD format for filtering trips that haven't started
   const today = format(new Date(), "yyyy-MM-dd");
@@ -253,8 +255,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
       discountNote: "",
       paymentStatus: "DEPOSIT_PENDING" as const,
       firstPaymentRatio: "FIRST_PAYMENT_50" as const,
-      firstPaymentAmount: "",
-      firstPaymentProof: "",
+      payments: [],
     },
   });
 
@@ -272,6 +273,8 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
   const discountPrice = form.watch("discountPrice");
   const firstPaymentRatio = form.watch("firstPaymentRatio");
   const salesUserId = form.watch("salesUserId");
+  const payments = useWatch({ control: form.control, name: "payments" }) || [];
+
 
   // Update extraPriceForSingleTraveller when tripId changes and enableSingleTravellerPrice is true
   useEffect(() => {
@@ -321,18 +324,17 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
     firstPaymentRatio,
   ]);
 
-  // Update firstPaymentAmount when calculated amounts change
+  // Update first payment amount when calculated amounts change and payment proofs exist
   useEffect(() => {
-    if (calculatedAmounts.firstPaymentAmount > 0 && mode === "create") {
+    if (calculatedAmounts.firstPaymentAmount > 0 && mode === "create" && payments.length > 0) {
       const calculatedValue = calculatedAmounts.firstPaymentAmount.toFixed(2);
-      const currentValue = form.getValues("firstPaymentAmount");
-      // Only update if the calculated value is different from current value
-      // This prevents infinite loops but ensures it stays in sync
-      if (currentValue !== calculatedValue) {
-        form.setValue("firstPaymentAmount", calculatedValue, { shouldValidate: false });
+      const currentPayments = form.getValues("payments") || [];
+      // Auto-set amount for first payment proof if it doesn't have an amount
+      if (currentPayments.length > 0 && (!currentPayments[0]?.amount || currentPayments[0].amount.trim() === "")) {
+        form.setValue("payments.0.amount", calculatedValue, { shouldValidate: false });
       }
     }
-  }, [calculatedAmounts.firstPaymentAmount, form, mode]);
+  }, [calculatedAmounts.firstPaymentAmount, form, mode, payments.length]);
 
   // Fetch companion customers (customers already booked in the same trip)
   const { data: companionBookingsResponse } = useQuery({
@@ -513,13 +515,33 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
         firstPaymentRatio: initialData.firstPaymentRatio
           ? (initialData.firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30")
           : ("FIRST_PAYMENT_50" as const),
-        firstPaymentAmount: initialData.firstPaymentAmount ?? "",
-        firstPaymentProof: initialData.firstPaymentProof ?? "",
+        payments: initialData.payments ?? [],
       };
 
       form.reset(resetData, { keepDefaultValues: false });
     }
   }, [initialData, form]);
+
+  // Auto-open Payment Proofs collapsible in edit mode if there are existing payments
+  useEffect(() => {
+    if (mode === "edit" && initialData?.payments && initialData.payments.length > 0) {
+      setIsPaymentProofsOpen(true);
+    }
+  }, [mode, initialData?.payments]);
+
+  // Ensure passportId is set when customerPassports are loaded in edit mode
+  // This is needed because customerPassports may load after form.reset()
+  useEffect(() => {
+    if (mode === "edit" && initialData?.passportId && customerId && customerPassports.length > 0) {
+      const passportExists = customerPassports.some((p) => p.id === initialData.passportId);
+      const currentPassportId = form.getValues("passportId");
+
+      // If passport exists in list but form doesn't have it, set it
+      if (passportExists && currentPassportId !== initialData.passportId) {
+        form.setValue("passportId", initialData.passportId, { shouldDirty: false });
+      }
+    }
+  }, [customerPassports, initialData?.passportId, customerId, mode, form]);
 
   // Ensure tripId is set when trips are loaded (fixes issue where Select clears value)
   useEffect(() => {
@@ -534,6 +556,19 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
     }
   }, [trips, initialData?.tripId, mode, form]);
 
+  // Ensure passportId is set when customerPassports are loaded (fixes issue where Select doesn't show selected value)
+  useEffect(() => {
+    if (mode === "edit" && initialData?.passportId && customerId && customerPassports.length > 0) {
+      const passportExists = customerPassports.some((p) => p.id === initialData.passportId);
+      const currentPassportId = form.getValues("passportId");
+
+      // If passport exists in list but form doesn't have it, set it
+      if (passportExists && currentPassportId !== initialData.passportId) {
+        form.setValue("passportId", initialData.passportId, { shouldDirty: false });
+      }
+    }
+  }, [customerPassports, initialData?.passportId, customerId, mode, form]);
+
   // Set default passport to primary when customer is selected (only in create mode)
   useEffect(() => {
     // Skip in edit mode if initialData has passportId
@@ -543,13 +578,19 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
 
     const currentPassportId = form.getValues("passportId");
 
-    if (customerId && customerPassports.length > 0 && !currentPassportId) {
-      const primaryPassport = customerPassports.find((p) => p.isPrimary);
-      if (primaryPassport) {
-        form.setValue("passportId", primaryPassport.id, { shouldDirty: false, shouldValidate: true });
-      } else if (customerPassports.length > 0) {
-        // If no primary, use the first one
-        form.setValue("passportId", customerPassports[0].id, { shouldDirty: false, shouldValidate: true });
+    // Check if current passportId belongs to the selected customer
+    const currentPassportBelongsToCustomer = currentPassportId && customerPassports.some((p) => p.id === currentPassportId);
+
+    if (customerId && customerPassports.length > 0) {
+      // If current passport doesn't belong to the selected customer, or no passport is selected, set default
+      if (!currentPassportBelongsToCustomer || !currentPassportId) {
+        const primaryPassport = customerPassports.find((p) => p.isPrimary);
+        if (primaryPassport) {
+          form.setValue("passportId", primaryPassport.id, { shouldDirty: false, shouldValidate: true });
+        } else if (customerPassports.length > 0) {
+          // If no primary, use the first one
+          form.setValue("passportId", customerPassports[0].id, { shouldDirty: false, shouldValidate: true });
+        }
       }
     } else if (!customerId && currentPassportId) {
       // Clear passport when customer is cleared
@@ -595,15 +636,22 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
       }
     }
 
-    // In create mode, ensure firstPaymentAmount matches calculated value
-    if (mode === "create") {
+    // Filter payments to only include those with amount
+    if (values.payments) {
+      values.payments = values.payments.filter(
+        (p) => p?.amount && p.amount.trim() !== ""
+      );
+    }
+
+    // In create mode, ensure first payment amount matches calculated value
+    if (mode === "create" && values.payments && values.payments.length > 0 && values.payments[0]?.amount) {
       const calculatedValue = calculatedAmounts.firstPaymentAmount.toFixed(2);
-      const enteredValue = parseFloat(values.firstPaymentAmount);
+      const enteredValue = parseFloat(values.payments[0].amount);
       const expectedValue = parseFloat(calculatedValue);
 
       // If values don't match, use the calculated value
       if (Math.abs(enteredValue - expectedValue) > 0.01) {
-        values.firstPaymentAmount = calculatedValue;
+        values.payments[0].amount = calculatedValue;
       }
     }
 
@@ -1089,7 +1137,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                 name="roomType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Room type</FormLabel>
+                    <FormLabel required>Room type</FormLabel>
                     {readOnly ? (
                       <FormControl>
                         <Input value={field.value} disabled />
@@ -1192,7 +1240,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                       <Input value={field.value} disabled />
                     </FormControl>
                   ) : (
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} key={`seatType-${field.value}`}>
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select seat type" />
@@ -1550,6 +1598,58 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
           <Separator />
 
           {/* Payment Section */}
+          <h3 className="text-lg font-semibold">Payment summary</h3>
+
+          {/* Additional Payments Section (Edit Mode Only) - Outside form to avoid nested forms */}
+          {booking && (
+            <div className="mt-6 space-y-4">
+
+              {/* Calculate total amount and paid amount */}
+              {(() => {
+                const basePrice = booking.trip?.standardPrice || 0;
+                const extraSingle = booking.extraPriceForSingleTraveller || 0;
+                const extraBedPrice = booking.extraPricePerBed || 0;
+                const extraSeatPrice = booking.extraPricePerSeat || 0;
+                const extraBagPrice = booking.extraPricePerBag || 0;
+                const discount = booking.discountPrice || 0;
+                const totalAmount = basePrice + extraSingle + extraBedPrice + extraSeatPrice + extraBagPrice - discount;
+
+                const firstAmount = booking.firstPayment?.amount || 0;
+                const secondAmount = booking.secondPayment?.amount || 0;
+                const thirdAmount = booking.thirdPayment?.amount || 0;
+                const paidAmount = firstAmount + secondAmount + thirdAmount;
+                const remainingAmount = totalAmount - paidAmount;
+
+                return (
+                  <div className="space-y-4">
+                    <div className="bg-muted grid grid-cols-3 gap-4 rounded-md p-4">
+                      <div>
+                        <p className="text-muted-foreground text-sm">Total Amount</p>
+                        <p className="text-lg font-semibold">
+                          {totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-sm">Paid Amount</p>
+                        <p className="text-lg font-semibold">
+                          {paidAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-sm">Remaining</p>
+                        <p
+                          className={`text-lg font-semibold ${remainingAmount > 0 ? "text-destructive" : "text-green-600"}`}
+                        >
+                          {remainingAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
           <div className="space-y-4">
             {/* <h3 className="text-lg font-semibold">Payment Information</h3> */}
 
@@ -1638,175 +1738,237 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                 }}
               />
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 items-start gap-4">
-              <FormField
-                control={form.control}
-                name="firstPaymentAmount"
-                render={({ field }) => {
-                  // Disable if there's already a payment made
-                  const hasPayment = booking?.firstPayment !== undefined && booking?.firstPayment !== null;
-                  const isDisabled = readOnly || mode === "create" || hasPayment;
-
-                  return (
-                    <FormItem>
-                      <FormLabel required>1st payment</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          {...field}
-                          disabled={isDisabled}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            field.onChange(value);
-                            // If user manually changes the value in create mode, validate it matches calculated
-                            if (mode === "create" && value) {
-                              const calculated = calculatedAmounts.firstPaymentAmount.toFixed(2);
-                              const entered = parseFloat(value);
-                              const expected = parseFloat(calculated);
-                              if (Math.abs(entered - expected) > 0.01) {
-                                // Show warning but don't block - let backend validate
-                                console.warn(
-                                  `First payment amount (${entered}) does not match calculated value (${expected}). The calculated value will be used.`,
-                                );
-                              }
-                            }
-                          }}
-                        />
-                      </FormControl>
-                      {/* <FormDescription>
-                      {hasPayment
-                        ? "Cannot edit: Payment has already been made"
-                        : mode === "create"
-                          ? "Auto-calculated based on ratio"
-                          : "Enter the actual first payment amount"}
-                    </FormDescription> */}
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
-              />
+          {/* Payment Proofs Section */}
+          <Collapsible open={isPaymentProofsOpen} onOpenChange={setIsPaymentProofsOpen} className="space-y-4">
+            <div className="flex items-center justify-between">
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  className="flex items-center gap-2 p-0 text-lg font-semibold hover:bg-transparent"
+                >
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", !isPaymentProofsOpen && "-rotate-90")} />
+                  Payment
+                </Button>
+              </CollapsibleTrigger>
+              {!readOnly && (() => {
+                const currentPayments = form.getValues("payments") || [];
+                const existingPaymentsCount = booking?.payments?.length || 0;
+                const totalPayments = currentPayments.length + existingPaymentsCount;
+                return totalPayments < 3;
+              })() && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const currentPayments = form.getValues("payments") || [];
+                      if (currentPayments.length < 3) {
+                        form.setValue("payments", [...currentPayments, { amount: "", proofOfPayment: "" }]);
+                        setIsPaymentProofsOpen(true);
+                      }
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add
+                  </Button>
+                )}
             </div>
 
-            {mode === "create" && (
-              <FormField
-                control={form.control}
-                name="firstPaymentProof"
-                render={({ field }) => {
-                  // Generate folder name from customer and trip
-                  const getFolderName = () => {
-                    if (!selectedCustomer || !tripId) {
-                      return "payment-proofs";
-                    }
+            <CollapsibleContent className="space-y-4">
+              {payments.map((_, index) => {
 
-                    const customerName = selectedCustomer.firstNameEn || selectedCustomer.firstNameTh || "";
-                    const lastName = selectedCustomer.lastNameEn || selectedCustomer.lastNameTh || "";
-                    const customerFullName = `${customerName}_${lastName}`
-                      .replace(/[^a-zA-Z0-9ก-๙\s_]/g, "")
-                      .replace(/\s+/g, "_")
-                      .toLowerCase();
+                // Generate folder name from customer and trip
+                const getFolderName = () => {
+                  if (!selectedCustomer || !tripId) {
+                    return "payment-proofs";
+                  }
 
-                    const selectedTrip = trips.find((t) => t.id === tripId);
-                    if (!selectedTrip) {
-                      return `payment-proofs/${customerFullName}`;
-                    }
+                  const customerName = selectedCustomer.firstNameEn || selectedCustomer.firstNameTh || "";
+                  const lastName = selectedCustomer.lastNameEn || selectedCustomer.lastNameTh || "";
+                  const customerFullName = `${customerName}_${lastName}`
+                    .replace(/[^a-zA-Z0-9ก-๙\s_]/g, "")
+                    .replace(/\s+/g, "_")
+                    .toLowerCase();
 
-                    const tripName = selectedTrip.name
-                      .replace(/[^a-zA-Z0-9ก-๙\s_]/g, "")
-                      .replace(/\s+/g, "_")
-                      .toLowerCase();
+                  const selectedTrip = trips.find((t) => t.id === tripId);
+                  if (!selectedTrip) {
+                    return `payment-proofs/${customerFullName}`;
+                  }
 
-                    return `payment-proofs/${customerFullName}_${tripName}`;
-                  };
+                  const tripName = selectedTrip.name
+                    .replace(/[^a-zA-Z0-9ก-๙\s_]/g, "")
+                    .replace(/\s+/g, "_")
+                    .toLowerCase();
 
-                  return (
-                    <FormItem>
-                      <FormLabel>Proof of payment (1st payment)</FormLabel>
-                      {readOnly ? (
-                        <FormControl>
-                          {field.value ? (
-                            <div className="space-y-2">
-                              <div className="bg-muted relative h-48 w-full overflow-hidden rounded-md border">
-                                <picture>
-                                  <img src={field.value} alt="Proof of Payment" className="object-contain" />
-                                </picture>
-                              </div>
-                              <a
-                                href={field.value}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary text-sm underline"
-                              >
-                                View proof of payment
-                              </a>
-                            </div>
-                          ) : (
-                            <Input value="No proof uploaded" disabled />
-                          )}
-                        </FormControl>
-                      ) : (
-                        <>
-                          <FormControl>
-                            {field.value ? (
-                              <div className="space-y-2">
-                                <div className="bg-muted relative h-48 w-full overflow-hidden rounded-md border">
-                                  <picture>
-                                    <img src={field.value} alt="Proof of Payment" className="object-contain" />
-                                  </picture>
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="icon"
-                                    className="absolute top-2 right-2"
-                                    onClick={() => field.onChange("")}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                                <a
-                                  href={field.value}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-primary text-sm underline"
-                                >
-                                  View proof of payment
-                                </a>
-                              </div>
-                            ) : (
-                              <DragDropUpload
-                                acceptedFileTypes={[
-                                  "image/jpeg",
-                                  "image/png",
-                                  "image/jpg",
-                                  ".jpg",
-                                  ".jpeg",
-                                  ".png",
-                                  "application/pdf",
-                                  ".pdf",
-                                ]}
-                                maxFileSize={10 * 1024 * 1024} // 10MB
-                                folderName={getFolderName()}
-                                multiple={false}
-                                onUploadSuccess={(url) => {
-                                  field.onChange(url);
+                  return `payment-proofs/${customerFullName}_${tripName}`;
+                };
+
+                const paymentType = index === 0 ? "1st" : index === 1 ? "2nd" : "3rd";
+
+                return (
+                  <div key={index} className="relative rounded-md border p-4 space-y-4">
+                    {!readOnly && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                        onClick={() => {
+                          const current = form.getValues("payments") || [];
+                          form.setValue(
+                            "payments",
+                            current.filter((_, i) => i !== index),
+                          );
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+
+                    {/* Payment Amount */}
+                    <FormField
+                      control={form.control}
+                      name={`payments.${index}.amount`}
+                      render={({ field }) => {
+                        const isDisabled = readOnly;
+                        return (
+                          <FormItem>
+                            <FormLabel required>{paymentType} Payment</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="0.00"
+                                {...field}
+                                value={field.value || ""}
+                                disabled={isDisabled}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  field.onChange(value);
+                                  // If user manually changes the value in create mode for first payment, validate it matches calculated
+                                  if (mode === "create" && index === 0 && value) {
+                                    const calculated = calculatedAmounts.firstPaymentAmount.toFixed(2);
+                                    const entered = parseFloat(value);
+                                    const expected = parseFloat(calculated);
+                                    if (Math.abs(entered - expected) > 0.01) {
+                                      // Show warning but don't block - let backend validate
+                                      console.warn(
+                                        `First payment amount (${entered}) does not match calculated value (${expected}). The calculated value will be used.`,
+                                      );
+                                    }
+                                  }
                                 }}
-                                onUploadError={(error) => {
-                                  toast.error(error);
-                                }}
-                                className="w-full"
                               />
+                            </FormControl>
+                            {mode === "create" && index === 0 && (
+                              <FormDescription className="text-muted-foreground text-xs">
+                                Auto-calculated based on ratio: {calculatedAmounts.firstPaymentAmount.toFixed(2)} THB
+                              </FormDescription>
                             )}
-                          </FormControl>
-                        </>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
+                    />
+
+                    {/* Proof of Payment */}
+                    <FormField
+                      control={form.control}
+                      name={`payments.${index}.proofOfPayment`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{paymentType} Payment Upload</FormLabel>
+                          {readOnly ? (
+                            <FormControl>
+                              {field.value ? (
+                                <div className="space-y-2">
+                                  <div className="bg-muted relative h-48 w-full overflow-hidden rounded-md border">
+                                    <picture>
+                                      <img src={field.value} alt={`Proof of Payment ${index + 1}`} className="object-contain" />
+                                    </picture>
+                                  </div>
+                                  <a
+                                    href={field.value}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary text-sm underline"
+                                  >
+                                    View proof of payment
+                                  </a>
+                                </div>
+                              ) : (
+                                <Input value="No proof uploaded" disabled />
+                              )}
+                            </FormControl>
+                          ) : (
+                            <FormControl>
+                              {field.value ? (
+                                <div className="space-y-2">
+                                  <div className="bg-muted relative h-48 w-full overflow-hidden rounded-md border">
+                                    <picture>
+                                      <img src={field.value} alt={`Proof of Payment ${index + 1}`} className="object-contain" />
+                                    </picture>
+                                    <Button
+                                      type="button"
+                                      variant="destructive"
+                                      size="icon"
+                                      className="absolute top-2 right-2"
+                                      onClick={() => field.onChange("")}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                  <a
+                                    href={field.value}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary text-sm underline"
+                                  >
+                                    View proof of payment
+                                  </a>
+                                </div>
+                              ) : (
+                                <DragDropUpload
+                                  acceptedFileTypes={[
+                                    "image/jpeg",
+                                    "image/png",
+                                    "image/jpg",
+                                    ".jpg",
+                                    ".jpeg",
+                                    ".png",
+                                    "application/pdf",
+                                    ".pdf",
+                                  ]}
+                                  maxFileSize={10 * 1024 * 1024} // 10MB
+                                  folderName={getFolderName()}
+                                  multiple={false}
+                                  onUploadSuccess={(url) => {
+                                    field.onChange(url);
+                                  }}
+                                  onUploadError={(error) => {
+                                    toast.error(error);
+                                  }}
+                                  className="w-full"
+                                />
+                              )}
+                            </FormControl>
+                          )}
+                          <FormMessage />
+                        </FormItem>
                       )}
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
-              />
-            )}
-          </div>
+                    />
+                  </div>
+                );
+              })}
+              {payments.length === 0 && (!booking?.payments || booking.payments.length === 0) && (
+                <div className="text-muted-foreground rounded-md border p-4 text-center text-sm">
+                  No payment
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
 
           {!readOnly && (
             <div className="flex justify-end space-x-4">
@@ -1828,225 +1990,6 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
           )}
         </form>
 
-        {/* Additional Payments Section (Edit Mode Only) - Outside form to avoid nested forms */}
-        {booking && (
-          <div className="mt-6 space-y-4">
-            <Separator />
-            <h3 className="text-lg font-semibold">Additional Payments</h3>
-
-            {/* Calculate total amount and paid amount */}
-            {(() => {
-              const basePrice = booking.trip?.standardPrice || 0;
-              const extraSingle = booking.extraPriceForSingleTraveller || 0;
-              const extraBedPrice = booking.extraPricePerBed || 0;
-              const extraSeatPrice = booking.extraPricePerSeat || 0;
-              const extraBagPrice = booking.extraPricePerBag || 0;
-              const discount = booking.discountPrice || 0;
-              const totalAmount = basePrice + extraSingle + extraBedPrice + extraSeatPrice + extraBagPrice - discount;
-
-              const firstAmount = booking.firstPayment?.amount || 0;
-              const secondAmount = booking.secondPayment?.amount || 0;
-              const thirdAmount = booking.thirdPayment?.amount || 0;
-              const paidAmount = firstAmount + secondAmount + thirdAmount;
-              const remainingAmount = totalAmount - paidAmount;
-              const isFullyPaid = paidAmount >= totalAmount;
-
-              // Helper function to get proof of payment from payment ID
-              const getProofOfPayment = (paymentId: string | null | undefined): string | null => {
-                if (!paymentId || !booking.payments) return null;
-                const payment = booking.payments.find((p) => p.id === paymentId);
-                return payment?.proofOfPayment || null;
-              };
-
-              // Get proof of payment for each payment
-              const firstPaymentProof = booking.firstPaymentId
-                ? getProofOfPayment(booking.firstPaymentId)
-                : initialData?.firstPaymentProof || null;
-              const secondPaymentProof = booking.secondPaymentId
-                ? getProofOfPayment(booking.secondPaymentId)
-                : null;
-              const thirdPaymentProof = booking.thirdPaymentId ? getProofOfPayment(booking.thirdPaymentId) : null;
-
-              // Helper function to open proof dialog
-              const openProofDialog = (url: string, title: string) => {
-                setProofImageUrl(url);
-                setProofTitle(title);
-                setProofDialogOpen(true);
-              };
-
-              return (
-                <div className="space-y-4">
-                  <div className="bg-muted grid grid-cols-3 gap-4 rounded-md p-4">
-                    <div>
-                      <p className="text-muted-foreground text-sm">Total Amount</p>
-                      <p className="text-lg font-semibold">
-                        {totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-sm">Paid Amount</p>
-                      <p className="text-lg font-semibold">
-                        {paidAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-sm">Remaining</p>
-                      <p
-                        className={`text-lg font-semibold ${remainingAmount > 0 ? "text-destructive" : "text-green-600"}`}
-                      >
-                        {remainingAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Payment Details with Proof of Payment Buttons */}
-                  <div className="space-y-3 rounded-md border p-4">
-                    <h4 className="font-medium">Payment Details</h4>
-                    <div className="space-y-2">
-                      {/* First Payment */}
-                      {booking.firstPayment && (
-                        <div className="flex items-center justify-between rounded-md border p-3">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">1st payment</p>
-                            <p className="text-muted-foreground text-xs">
-                              Amount: {firstAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
-                              {booking.firstPayment.paidAt &&
-                                ` • Paid: ${format(new Date(booking.firstPayment.paidAt), "PPP")}`}
-                            </p>
-                          </div>
-                          {firstPaymentProof && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openProofDialog(firstPaymentProof, "First Payment Proof")}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Proof
-                            </Button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Second Payment */}
-                      {booking.secondPayment && (
-                        <div className="flex items-center justify-between rounded-md border p-3">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">2nd payment</p>
-                            <p className="text-muted-foreground text-xs">
-                              Amount: {secondAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
-                              {booking.secondPayment.paidAt &&
-                                ` • Paid: ${format(new Date(booking.secondPayment.paidAt), "PPP")}`}
-                            </p>
-                          </div>
-                          {secondPaymentProof && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openProofDialog(secondPaymentProof, "Second Payment Proof")}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Proof
-                            </Button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Third Payment */}
-                      {booking.thirdPayment && (
-                        <div className="flex items-center justify-between rounded-md border p-3">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">3rd payment</p>
-                            <p className="text-muted-foreground text-xs">
-                              Amount: {thirdAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
-                              {booking.thirdPayment.paidAt &&
-                                ` • Paid: ${format(new Date(booking.thirdPayment.paidAt), "PPP")}`}
-                            </p>
-                          </div>
-                          {thirdPaymentProof && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openProofDialog(thirdPaymentProof, "Third Payment Proof")}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Proof
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {isFullyPaid ? (
-                    <div className="rounded-md border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
-                      <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                        ✓ Payment Status: FULLY_PAID - All payments have been completed
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {!booking.secondPayment && (
-                        <div className="rounded-md border p-4">
-                          <h4 className="mb-2 font-medium">2nd payment</h4>
-                          <PaymentForm
-                            bookingId={booking.id}
-                            booking={{
-                              secondPaymentId:
-                                (booking as Booking & { secondPaymentId?: string | null }).secondPaymentId || null,
-                              thirdPaymentId:
-                                (booking as Booking & { thirdPaymentId?: string | null }).thirdPaymentId || null,
-                              customer: booking.customer,
-                              trip: booking.trip,
-                            }}
-                            onSuccess={() => {
-                              toast.success("Created successfully.");
-                              // Refresh the page or refetch booking data
-                              window.location.reload();
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {booking.secondPayment && !booking.thirdPayment && (
-                        <div className="rounded-md border p-4">
-                          <h4 className="mb-2 font-medium">3rd payment</h4>
-                          <PaymentForm
-                            bookingId={booking.id}
-                            booking={{
-                              secondPaymentId:
-                                (booking as Booking & { secondPaymentId?: string | null }).secondPaymentId || null,
-                              thirdPaymentId:
-                                (booking as Booking & { thirdPaymentId?: string | null }).thirdPaymentId || null,
-                              customer: booking.customer,
-                              trip: booking.trip,
-                            }}
-                            onSuccess={() => {
-                              toast.success("Created successfully.");
-                              // Refresh the page or refetch booking data
-                              window.location.reload();
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {booking.secondPayment && booking.thirdPayment && (
-                        <div className="bg-muted rounded-md p-4">
-                          <p className="text-muted-foreground text-sm">
-                            All payments have been added (maximum 3 payments)
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
         {/* Create Customer Dialog */}
         <Dialog open={createCustomerDialogOpen} onOpenChange={setCreateCustomerDialogOpen} modal={false}>
           <DialogContent className="max-h-[90vh] w-full! lg:w-[820px]! sm:max-w-7xl overflow-y-auto">
@@ -2063,43 +2006,6 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
           </DialogContent>
         </Dialog>
 
-        {/* Proof of Payment Dialog */}
-        <Dialog open={proofDialogOpen} onOpenChange={setProofDialogOpen}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>{proofTitle}</DialogTitle>
-            </DialogHeader>
-            {proofImageUrl && (
-              <div className="space-y-4">
-                <div className="bg-muted relative w-full overflow-hidden rounded-md border">
-                  {proofImageUrl.endsWith(".pdf") || proofImageUrl.includes("application/pdf") ? (
-                    <iframe
-                      src={proofImageUrl}
-                      className="h-[600px] w-full"
-                      title={proofTitle}
-                      style={{ border: "none" }}
-                    />
-                  ) : (
-                    <picture>
-                      <img src={proofImageUrl} alt={proofTitle} className="h-auto w-full object-contain" />
-                    </picture>
-                  )}
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      window.open(proofImageUrl, "_blank", "noopener,noreferrer");
-                    }}
-                  >
-                    Open in New Tab
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
       </Form>
 
       {/* Delete Dialog */}

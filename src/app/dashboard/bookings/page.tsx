@@ -35,7 +35,7 @@ export default function BookingsPage() {
   const calculateBookingAmounts = (booking: Booking) => {
     const basePrice = booking.trip?.standardPrice || 0;
     const extraSingle = booking.extraPriceForSingleTraveller || 0;
-    const extraBedPrice = booking.extraBed && booking.extraPricePerBed ? booking.extraPricePerBed : 0;
+    const extraBedPrice = booking.extraPricePerBed || 0;
     const extraSeatPrice = booking.extraPricePerSeat || 0;
     const extraBagPrice = booking.extraPricePerBag || 0;
     const discount = booking.discountPrice || 0;

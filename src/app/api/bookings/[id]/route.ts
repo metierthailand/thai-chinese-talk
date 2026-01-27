@@ -149,6 +149,7 @@ export async function PUT(
       discountNote,
       paymentStatus,
       firstPaymentRatio,
+      payments,
     } = body;
 
     // Get current booking to check existing data
@@ -240,7 +241,7 @@ export async function PUT(
     if (firstPaymentRatio !== undefined)
       updateData.firstPaymentRatio = firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30";
 
-    const booking = await prisma.$transaction(async (tx) => {
+    const updatedBooking = await prisma.$transaction(async (tx) => {
       // Update booking
       const updatedBooking = await tx.booking.update({
         where: { id },
@@ -420,6 +421,110 @@ export async function PUT(
         }
       }
 
+      // Handle payments update if provided
+      if (payments !== undefined) {
+        // Get existing payments for this booking
+        const existingPayments = await tx.payment.findMany({
+          where: { bookingId: id },
+          orderBy: { createdAt: "asc" },
+        });
+
+        // Filter valid payments (up to 3) - only those with amount
+        const validPayments = (payments || []).filter(
+          (payment: { amount?: string; proofOfPayment?: string }) =>
+            payment?.amount && payment.amount.trim() !== ""
+        ).slice(0, 3);
+
+        // Get existing payment proofOfPayment URLs
+        const existingProofs = existingPayments
+          .map((p) => p.proofOfPayment)
+          .filter(Boolean) as string[];
+        
+        // Get new payment proofOfPayment URLs
+        const newProofs = validPayments
+          .map((p: { proofOfPayment?: string }) => p.proofOfPayment)
+          .filter(Boolean) as string[];
+
+        // Find payments to delete (those with proofOfPayment that's not in new list)
+        const proofsToDelete = existingProofs.filter((proof) => !newProofs.includes(proof));
+        if (proofsToDelete.length > 0) {
+          const paymentsToDelete = existingPayments.filter(
+            (p) => p.proofOfPayment && proofsToDelete.includes(p.proofOfPayment)
+          );
+          
+          if (paymentsToDelete.length > 0) {
+            await tx.payment.deleteMany({
+              where: {
+                id: { in: paymentsToDelete.map((p) => p.id) },
+              },
+            });
+          }
+        }
+
+        // Create or update payments
+        const createdPayments = [];
+        for (let i = 0; i < validPayments.length; i++) {
+          const paymentData = validPayments[i];
+          const amount = paymentData.amount && paymentData.amount.trim() !== ""
+            ? parseFloat(paymentData.amount)
+            : 0;
+
+          // Check if payment with this proofOfPayment already exists
+          const existingPayment = existingPayments.find(
+            (p) => p.proofOfPayment === paymentData.proofOfPayment
+          );
+
+          if (existingPayment) {
+            // Update existing payment
+            const updatedPayment = await tx.payment.update({
+              where: { id: existingPayment.id },
+              data: {
+                amount: amount,
+                proofOfPayment: paymentData.proofOfPayment || null,
+              } as unknown as Prisma.PaymentUpdateInput,
+            });
+            createdPayments.push(updatedPayment);
+          } else {
+            // Create new payment
+            const newPayment = await tx.payment.create({
+              data: {
+                bookingId: id,
+                amount: amount,
+                proofOfPayment: paymentData.proofOfPayment || null,
+              } as unknown as Prisma.PaymentCreateInput,
+            });
+            createdPayments.push(newPayment);
+          }
+        }
+
+        // Update booking with payment IDs based on order
+        const paymentUpdateData: {
+          firstPaymentId?: string | null;
+          secondPaymentId?: string | null;
+          thirdPaymentId?: string | null;
+        } = {};
+        if (createdPayments.length > 0) {
+          paymentUpdateData.firstPaymentId = createdPayments[0].id;
+        } else {
+          paymentUpdateData.firstPaymentId = null;
+        }
+        if (createdPayments.length > 1) {
+          paymentUpdateData.secondPaymentId = createdPayments[1].id;
+        } else {
+          paymentUpdateData.secondPaymentId = null;
+        }
+        if (createdPayments.length > 2) {
+          paymentUpdateData.thirdPaymentId = createdPayments[2].id;
+        } else {
+          paymentUpdateData.thirdPaymentId = null;
+        }
+
+        await tx.booking.update({
+          where: { id },
+          data: paymentUpdateData as unknown as Prisma.BookingUpdateInput,
+        });
+      }
+
       return updatedBooking;
     });
 
@@ -438,7 +543,7 @@ export async function PUT(
       // Don't fail the booking update if commission calculation/update fails
     }
 
-    return NextResponse.json(booking);
+    return NextResponse.json(updatedBooking);
   } catch (error) {
     console.error("[BOOKING_PUT]", error);
     return new NextResponse("Internal Error", { status: 500 });

@@ -272,8 +272,7 @@ async function createBooking(data: {
   discountNote?: string;
   paymentStatus?: string;
   firstPaymentRatio: string;
-  firstPaymentAmount: number;
-  firstPaymentProof?: string;
+  payments?: Array<{ amount?: string; proofOfPayment?: string }>;
 }): Promise<Booking> {
   const res = await fetch("/api/bookings", {
     method: "POST",

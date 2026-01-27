@@ -39,8 +39,7 @@ export default function NewBookingPage() {
         discountNote: values.discountNote,
         paymentStatus: values.paymentStatus,
         firstPaymentRatio: values.firstPaymentRatio,
-        firstPaymentAmount: parseFloat(values.firstPaymentAmount),
-        firstPaymentProof: values.firstPaymentProof,
+        payments: values.payments,
       });
       router.push("/dashboard/bookings");
       router.refresh();

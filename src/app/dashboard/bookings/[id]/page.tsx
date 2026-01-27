@@ -43,11 +43,13 @@ export default function ViewBookingPage({ params }: { params: Promise<{ id: stri
       firstPaymentRatio:
         (booking.firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30") ??
         "FIRST_PAYMENT_50",
-      firstPaymentAmount: booking.firstPayment?.amount.toString() || "",
-      firstPaymentProof:
-        booking.firstPaymentId && booking.payments
-          ? (booking.payments.find((p) => p.id === booking.firstPaymentId)?.proofOfPayment ?? undefined)
-          : undefined,
+      payments: booking.payments
+        ? booking.payments
+            .map((p) => ({
+              amount: p.amount?.toString() || "",
+              proofOfPayment: p.proofOfPayment!,
+            }))
+        : [],
     }
     : undefined;
 
