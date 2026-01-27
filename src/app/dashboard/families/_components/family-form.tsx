@@ -251,11 +251,9 @@ export function FamilyForm({
                                   <span>
                                     {customer.firstNameEn} {customer.lastNameEn}
                                   </span>
-                                  {(customer.firstNameTh || customer.lastNameTh) && (
-                                    <span className="text-muted-foreground text-xs">
-                                      {customer.firstNameTh} {customer.lastNameTh}
-                                    </span>
-                                  )}
+                                  <span className="text-muted-foreground text-xs">
+                                    {customer.firstNameTh} {customer.lastNameTh}
+                                  </span>
                                 </div>
                               </CommandItem>
                             );

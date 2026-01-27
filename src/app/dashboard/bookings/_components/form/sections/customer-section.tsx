@@ -157,6 +157,9 @@ export function CustomerSection({
                                     <span className="font-medium">
                                       {customer.firstNameEn} {customer.lastNameEn}
                                     </span>
+                                    <span className="text-muted-foreground text-xs">
+                                      {customer.firstNameTh} {customer.lastNameTh}
+                                    </span>
                                   </div>
                                 </CommandItem>
                               ))}

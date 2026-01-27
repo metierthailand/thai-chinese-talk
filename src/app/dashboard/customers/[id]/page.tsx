@@ -64,16 +64,12 @@ export default function CustomerDetailPage() {
                             : ""}
                   </span>
                 )}
-                {customer.firstNameTh && customer.lastNameTh
-                  ? `${customer.firstNameTh} ${customer.lastNameTh}`
-                  : `${customer.firstNameEn} ${customer.lastNameEn}`}
+                {customer.firstNameEn && customer.lastNameEn}
               </h2>
             </div>
-            {(customer.firstNameEn || customer.lastNameEn) && (customer.firstNameTh || customer.lastNameTh) && (
+            {(customer.firstNameTh || customer.lastNameTh) && (
               <p className="text-muted-foreground mt-1 text-sm">
-                {customer.firstNameTh && customer.lastNameTh
-                  ? `${customer.firstNameEn} ${customer.lastNameEn}`
-                  : `${customer.firstNameTh} ${customer.lastNameTh}`}
+                {`(${customer.firstNameTh} ${customer.lastNameTh})`}
               </p>
             )}
           </div>

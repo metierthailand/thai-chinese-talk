@@ -96,9 +96,9 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
           render={({ field }) => (
             <FormItem>
               <FormLabel required>Status</FormLabel>
-              <Select 
-                onValueChange={field.onChange} 
-                value={field.value || ""} 
+              <Select
+                onValueChange={field.onChange}
+                value={field.value || ""}
                 disabled={readOnly || isLoading}
                 key={`status-${field.value || "TODO"}`}
               >
@@ -212,7 +212,14 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                                   field.value === customer.id ? "opacity-100" : "opacity-0",
                                 )}
                               />
-                              {customer.firstNameEn} {customer.lastNameEn}
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {customer.firstNameEn} {customer.lastNameEn}
+                                </span>
+                                <span className="text-muted-foreground text-xs">
+                                  {customer.firstNameTh} {customer.lastNameTh}
+                                </span>
+                              </div>
                             </CommandItem>
                           ))}
                         </CommandGroup>
