@@ -108,28 +108,33 @@ export async function GET(request: Request) {
 
       let tripStatus: "UPCOMING" | "SOLD_OUT" | "COMPLETED" | "ON_TRIP" | "CANCELLED";
       
-      // Completed: When the end date has been passed
-      if (endDate < now) {
-        tripStatus = "COMPLETED";
+      // Check if trip has started (startDate <= now)
+      if (startDate <= now) {
+        // Cancelled: When the start date has been reached but the trip have no any bookings
+        // This status persists even after endDate passes
+        if (activeBookingsCount === 0) {
+          tripStatus = "CANCELLED";
+        }
+        // Trip has bookings
+        else {
+          // Completed: When the end date has been passed and there are bookings
+          if (endDate < now) {
+            tripStatus = "COMPLETED";
+          }
+          // On trip: When the trip is ongoing (startDate <= now <= endDate) and there are bookings
+          else {
+            tripStatus = "ON_TRIP";
+          }
+        }
       }
-      // Start date has not been reached
-      else if (startDate > now) {
+      // Start date has not been reached (startDate > now)
+      else {
         // Sold out: When the start date has not been reached but the trip have been fully booked
         if (activeBookingsCount >= pax) {
           tripStatus = "SOLD_OUT";
         } else {
           // Upcoming: When the start date has not been reached
           tripStatus = "UPCOMING";
-        }
-      }
-      // Start date has been reached (trip is ongoing or just started)
-      else {
-        // Cancelled: When the start date has been reached but the trip have no any bookings
-        if (activeBookingsCount === 0) {
-          tripStatus = "CANCELLED";
-        } else {
-          // On trip: When the start date has been reached
-          tripStatus = "ON_TRIP";
         }
       }
 

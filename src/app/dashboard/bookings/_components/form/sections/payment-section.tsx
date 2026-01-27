@@ -117,31 +117,85 @@ export function PaymentSection({
           <FormField
             control={form.control}
             name="paymentStatus"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel required>Payment status</FormLabel>
-                {readOnly ? (
-                  <FormControl>
-                    <Input value={field.value} disabled />
-                  </FormControl>
-                ) : (
-                  <Select onValueChange={field.onChange} value={field.value} key={`paymentStatus-${field.value}`}>
+            render={({ field }) => {
+              // Calculate Total Amount
+              const basePrice = booking?.trip?.standardPrice || 0;
+              const extraSingle = booking?.extraPriceForSingleTraveller || 0;
+              const extraBedPrice = booking?.extraPricePerBed || 0;
+              const extraSeatPrice = booking?.extraPricePerSeat || 0;
+              const extraBagPrice = booking?.extraPricePerBag || 0;
+              const discount = booking?.discountPrice || 0;
+              const calculatedTotal =
+                basePrice + extraSingle + extraBedPrice + extraSeatPrice + extraBagPrice - discount;
+
+              // Use calculated amount from booking if available, otherwise from props
+              const totalAmount = booking ? calculatedTotal : calculatedAmounts.totalAmount;
+
+              // Calculate Paid Amount from existing booking payments
+              const existingPaid = booking?.payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+
+              // Calculate Paid Amount from form values (new payments)
+              const formPayments = form.watch("payments") || [];
+              const newPaid = formPayments.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+
+              const totalPaid = existingPaid + newPaid;
+
+              // Determine correct status
+              let calculatedStatus = "DEPOSIT_PENDING";
+              if (totalPaid >= totalAmount && totalAmount > 0) {
+                calculatedStatus = "FULLY_PAID";
+              } else if (totalPaid > 0) {
+                calculatedStatus = "DEPOSIT_PAID";
+              }
+
+              // Auto-update status if not manually cancelled
+              const currentStatus = field.value;
+              if (currentStatus !== "CANCELLED" && currentStatus !== calculatedStatus) {
+                // Use setTimeout to avoid render loop issues
+                setTimeout(() => {
+                  field.onChange(calculatedStatus);
+                }, 0);
+              }
+
+              return (
+                <FormItem>
+                  <FormLabel required>Payment status</FormLabel>
+                  {readOnly || currentStatus === "CANCELLED" ? (
                     <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
+                      <Input value={currentStatus === "CANCELLED" ? "Cancelled" : (
+                        currentStatus === "FULLY_PAID" ? "Fully paid" :
+                          currentStatus === "DEPOSIT_PAID" ? "Deposit paid" :
+                            "Deposit pending"
+                      )} disabled />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="DEPOSIT_PENDING">Deposit pending</SelectItem>
-                      <SelectItem value="DEPOSIT_PAID">Deposit paid</SelectItem>
-                      <SelectItem value="FULLY_PAID">Fully paid</SelectItem>
-                      <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-                <FormMessage />
-              </FormItem>
-            )}
+                  ) : (
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="DEPOSIT_PENDING" disabled>
+                          Deposit pending
+                        </SelectItem>
+                        <SelectItem value="DEPOSIT_PAID" disabled>
+                          Deposit paid
+                        </SelectItem>
+                        <SelectItem value="FULLY_PAID" disabled>
+                          Fully paid
+                        </SelectItem>
+                        <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           <FormField
@@ -222,9 +276,7 @@ export function PaymentSection({
           </CollapsibleTrigger>
           {!readOnly && (() => {
             const currentPayments = form.getValues("payments") || [];
-            const existingPaymentsCount = booking?.payments?.length || 0;
-            const totalPayments = currentPayments.length + existingPaymentsCount;
-            return totalPayments < 3;
+            return currentPayments.length < 3;
           })() && (
               <Button
                 type="button"

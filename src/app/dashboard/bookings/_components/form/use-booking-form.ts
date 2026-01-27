@@ -52,14 +52,14 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
   const [isPaymentProofsOpen, setIsPaymentProofsOpen] = useState(false);
 
   // Get today's date in YYYY-MM-DD format for filtering trips that haven't started
-  const today = format(new Date(), "yyyy-MM-dd");
+  // const today = format(new Date(), "yyyy-MM-dd");
 
   // In edit mode, fetch the current trip separately to ensure it's available
   const { data: currentTrip } = useTrip(mode === "edit" && booking?.tripId ? booking.tripId : undefined);
 
   // Fetch trips using TanStack Query - filter for trips that haven't started yet
   // In edit mode, we also need the current trip, so we fetch all trips
-  const { data: tripsResponse } = useTrips(1, 1000, undefined, mode === "edit" ? undefined : today, undefined);
+  const { data: tripsResponse } = useTrips(1, 1000);  console.log({tripsResponse});
   const { data: salesUsers = [] } = useQuery({
     queryKey: ["salesUsers"],
     queryFn: fetchSalesUsers,

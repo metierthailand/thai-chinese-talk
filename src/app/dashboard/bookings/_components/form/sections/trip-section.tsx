@@ -52,6 +52,9 @@ export function TripSection({
   handleTripChange,
   booking,
 }: TripSectionProps) {
+
+  console.log({trips});
+  console.log({filteredTrips});
   return (
     <FormField
       control={form.control}
