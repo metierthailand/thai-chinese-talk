@@ -40,7 +40,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </picture>
                 ) : (
                   <picture>
-                    <img className="translate-y-2 object-contain" src="/icon.webp" alt="Thai Chinese Tour" />
+                    <img className="object-contain" src="/icon.webp" alt="Thai Chinese Tour" />
                   </picture>
                 )}
                 {/* <Command /> */}

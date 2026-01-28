@@ -5,6 +5,8 @@ import { seedCustomers } from "./customers";
 import { seedFamilies } from "./families";
 import { seedAirlineAndAirports } from "./airline-and-airports";
 import { seedTrips } from "./trips";
+import { seedLeads } from "./leads";
+import { seedTasks } from "./tasks";
 
 export async function runSeeds(prisma: PrismaClient) {
   console.log("🌱 Starting database seeding...\n");
@@ -27,6 +29,12 @@ export async function runSeeds(prisma: PrismaClient) {
 
     // Seed families (depends on customers)
     await seedFamilies(prisma);
+
+    // Seed leads (depends on users, customers, and trips)
+    await seedLeads(prisma);
+
+    // Seed tasks (depends on users and customers)
+    await seedTasks(prisma);
 
     console.log("\n✨ Seeding completed successfully!");
   } catch (error) {
