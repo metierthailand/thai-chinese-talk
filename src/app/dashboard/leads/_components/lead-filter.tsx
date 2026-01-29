@@ -82,11 +82,6 @@ export function LeadFilter({ onFilterChange }: LeadFilterProps) {
     setSource(sourceFilter || "ALL");
   }, [searchQuery, statusFilter, sourceFilter]);
 
-  const handleClearSearch = () => {
-    setSearchInput("");
-    // ไม่ต้อง push ตรง ๆ ปล่อยให้ debounced effect จัดการ
-  };
-
   return (
     <div className="flex flex-col items-end justify-end gap-4 lg:flex-row">
       <div className="flex w-full flex-col gap-4 lg:w-auto md:flex-row">
@@ -134,12 +129,12 @@ export function LeadFilter({ onFilterChange }: LeadFilterProps) {
       </div>
 
       {/* Search by customer name */}
-      <div className="relative w-full lg:w-96">
+      <div className="relative w-full lg:w-lg">
         <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           type="text"
           placeholder="Search by trip interest, customer name, phone number, email"
-          className="w-full pr-9 pl-9 lg:w-full lg:max-w-sm"
+          className="pl-9"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />

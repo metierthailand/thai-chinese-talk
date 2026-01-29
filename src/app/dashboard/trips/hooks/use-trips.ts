@@ -65,8 +65,8 @@ export interface TripsResponse {
 export const tripKeys = {
   all: ["trips"] as const,
   lists: () => [...tripKeys.all, "list"] as const,
-  list: (page: number, pageSize: number, search?: string, selectedDate?: string, type?: string, status?: string) =>
-    [...tripKeys.lists(), page, pageSize, search, selectedDate, type, status] as const,
+  list: (page: number, pageSize: number, search?: string, tripDateFrom?: string, tripDateTo?: string, type?: string, status?: string) =>
+    [...tripKeys.lists(), page, pageSize, search, tripDateFrom, tripDateTo, type, status] as const,
   details: () => [...tripKeys.all, "detail"] as const,
   detail: (id: string) => [...tripKeys.details(), id] as const,
 };
@@ -76,7 +76,8 @@ async function fetchTrips(
   page: number = 1,
   pageSize: number = 10,
   search?: string,
-  selectedDate?: string,
+  tripDateFrom?: string,
+  tripDateTo?: string,
   type?: string,
   status?: string,
 ): Promise<TripsResponse> {
@@ -88,8 +89,11 @@ async function fetchTrips(
   if (search && search.trim()) {
     params.set("search", search.trim());
   }
-  if (selectedDate) {
-    params.set("selectedDate", selectedDate);
+  if (tripDateFrom) {
+    params.set("tripDateFrom", tripDateFrom);
+  }
+  if (tripDateTo) {
+    params.set("tripDateTo", tripDateTo);
   }
   if (type && type !== "ALL") {
     params.set("type", type);
@@ -165,13 +169,14 @@ export function useTrips(
   page: number,
   pageSize: number,
   search?: string,
-  selectedDate?: string,
+  tripDateFrom?: string,
+  tripDateTo?: string,
   type?: string,
   status?: string,
 ) {
   return useQuery({
-    queryKey: tripKeys.list(page, pageSize, search, selectedDate, type, status),
-    queryFn: () => fetchTrips(page, pageSize, search, selectedDate, type, status),
+    queryKey: tripKeys.list(page, pageSize, search, tripDateFrom, tripDateTo, type, status),
+    queryFn: () => fetchTrips(page, pageSize, search, tripDateFrom, tripDateTo, type, status),
     staleTime: 30 * 1000, // 30 seconds
   });
 }
@@ -231,15 +236,18 @@ export function useUpdateTrip() {
 // Hook to export trips as CSV
 export function useExportTrips() {
   return useCallback(
-    (search?: string, selectedDate?: string, type?: string, status?: string) => {
+    (search?: string, tripDateFrom?: string, tripDateTo?: string, type?: string, status?: string) => {
       const params = new URLSearchParams();
 
       // Add filter params (excluding page and pageSize)
       if (search) {
         params.set("search", search);
       }
-      if (selectedDate) {
-        params.set("selectedDate", selectedDate);
+      if (tripDateFrom) {
+        params.set("tripDateFrom", tripDateFrom);
+      }
+      if (tripDateTo) {
+        params.set("tripDateTo", tripDateTo);
       }
       if (type && type !== "ALL") {
         params.set("type", type);

@@ -19,7 +19,8 @@ export async function GET(request: Request) {
     const skip = (page - 1) * pageSize;
 
     const search = searchParams.get("search") || "";
-    const selectedDate = searchParams.get("selectedDate") || "";
+    const tripDateFrom = searchParams.get("tripDateFrom") || "";
+    const tripDateTo = searchParams.get("tripDateTo") || "";
     const type = searchParams.get("type") || "";
     const status = searchParams.get("status") || "";
 
@@ -51,20 +52,25 @@ export async function GET(request: Request) {
           }
         : {};
 
+    // Date range filter: trip overlaps with selected date range
+    // A trip overlaps if: trip.startDate <= tripDateTo AND trip.endDate >= tripDateFrom
+    const parseDateGte = (v: string) =>
+      v.includes("T") ? new Date(v) : new Date(`${v}T00:00:00.000Z`);
+    const parseDateLte = (v: string) =>
+      v.includes("T") ? new Date(v) : new Date(`${v}T23:59:59.999Z`);
+
     const dateFilter: Prisma.TripWhereInput =
-      selectedDate
+      tripDateFrom || tripDateTo
         ? {
             AND: [
-              {
-                startDate: {
-                  lte: new Date(new Date(selectedDate).setHours(23, 59, 59, 999)),
-                },
-              },
-              {
-                endDate: {
-                  gte: new Date(new Date(selectedDate).setHours(0, 0, 0, 0)),
-                },
-              },
+              // Trip must start before or on the end of selected range
+              ...(tripDateTo
+                ? [{ startDate: { lte: parseDateLte(tripDateTo) } }]
+                : []),
+              // Trip must end after or on the start of selected range
+              ...(tripDateFrom
+                ? [{ endDate: { gte: parseDateGte(tripDateFrom) } }]
+                : []),
             ],
           }
         : {};

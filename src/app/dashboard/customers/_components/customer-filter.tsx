@@ -122,14 +122,11 @@ export function CustomerFilter({ onFilterChange }: CustomerFilterProps) {
               <Button
                 variant="outline"
                 role="combobox"
-                className={cn(
-                  "w-full justify-between pr-8 text-left font-normal lg:w-[260px]",
-                  selectedTagIds.length === 0 && "text-muted-foreground",
-                )}
+                className="w-full justify-between pr-8 text-left font-normal lg:w-[260px]"
               >
                 {selectedTagIds.length > 0
                   ? `${selectedTagIds.length} tag${selectedTagIds.length > 1 ? "s" : ""} selected`
-                  : "Select tags"}
+                  : "All tags"}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>

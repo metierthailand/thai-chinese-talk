@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { Loading } from "@/components/page/loading";
 import { DeleteDialog } from "@/app/dashboard/_components/delete-dialog";
 import { format } from "date-fns";
-import { TASK_STATUS_LABELS } from "@/lib/constants/task";
+import { TASK_STATUS_LABELS, getTaskStatusVariant } from "@/lib/constants/task";
 
 export default function TasksPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -82,15 +82,11 @@ export default function TasksPage() {
         header: "Status",
         cell: ({ row }) => {
           const status = row.original.status;
-          const variant =
-            status === "COMPLETED"
-              ? "default"
-              : status === "IN_PROGRESS"
-                ? "secondary"
-                : status === "CANCELLED"
-                  ? "destructive"
-                  : "outline";
-          return <Badge variant={variant}>{TASK_STATUS_LABELS[status]}</Badge>;
+          return (
+            <Badge variant={getTaskStatusVariant(status)}>
+              {TASK_STATUS_LABELS[status]}
+            </Badge>
+          );
         },
       },
       {

@@ -24,7 +24,8 @@ export default function TripsPage() {
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
   const searchQuery = searchParams.get("search") || "";
-  const selectedDateQuery = searchParams.get("selectedDate") || "";
+  const tripDateFromQuery = searchParams.get("tripDateFrom") || "";
+  const tripDateToQuery = searchParams.get("tripDateTo") || "";
   const typeQuery = searchParams.get("type") || "ALL";
   const statusQuery = searchParams.get("status") || "ALL";
 
@@ -141,7 +142,8 @@ export default function TripsPage() {
     page,
     pageSize,
     searchQuery || undefined,
-    selectedDateQuery || undefined,
+    tripDateFromQuery || undefined,
+    tripDateToQuery || undefined,
     typeQuery !== "ALL" ? typeQuery : undefined,
     statusQuery !== "ALL" ? statusQuery : undefined
   );
@@ -210,11 +212,12 @@ export default function TripsPage() {
   const handleExport = useCallback(() => {
     exportTrips(
       searchQuery || undefined,
-      selectedDateQuery || undefined,
+      tripDateFromQuery || undefined,
+      tripDateToQuery || undefined,
       typeQuery !== "ALL" ? typeQuery : undefined,
       statusQuery !== "ALL" ? statusQuery : undefined,
     );
-  }, [exportTrips, searchQuery, selectedDateQuery, typeQuery, statusQuery]);
+  }, [exportTrips, searchQuery, tripDateFromQuery, tripDateToQuery, typeQuery, statusQuery]);
 
   return (
     <div className="flex flex-col gap-8 p-8">

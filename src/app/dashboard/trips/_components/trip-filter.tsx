@@ -21,7 +21,8 @@ type UpdateParams = {
   page?: number;
   pageSize?: number;
   search?: string;
-  selectedDate?: string;
+  tripDateFrom?: string;
+  tripDateTo?: string;
   type?: string;
   status?: string;
 };
@@ -32,13 +33,15 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
 
   // Initial values from URL
   const searchQuery = searchParams.get("search") || "";
-  const selectedDateQuery = searchParams.get("selectedDate") || "";
+  const tripDateFromQuery = searchParams.get("tripDateFrom") || "";
+  const tripDateToQuery = searchParams.get("tripDateTo") || "";
   const typeQuery = searchParams.get("type") || "ALL";
   const statusQuery = searchParams.get("status") || "ALL";
 
   // Local state (init จาก URL แค่ตอน mount)
   const [searchInput, setSearchInput] = useState(searchQuery);
-  const [selectedDate, setSelectedDate] = useState(selectedDateQuery);
+  const [tripDateFrom, setTripDateFrom] = useState(tripDateFromQuery);
+  const [tripDateTo, setTripDateTo] = useState(tripDateToQuery);
   const [type, setType] = useState(typeQuery || "ALL");
   const [status, setStatus] = useState(statusQuery || "ALL");
 
@@ -63,7 +66,8 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
     setParam("page", updates.page?.toString(), "1");
     setParam("pageSize", updates.pageSize?.toString(), "10");
     setParam("search", updates.search);
-    setParam("selectedDate", updates.selectedDate);
+    setParam("tripDateFrom", updates.tripDateFrom);
+    setParam("tripDateTo", updates.tripDateTo);
     setParam("type", updates.type, "ALL");
     setParam("status", updates.status, "ALL");
 
@@ -87,10 +91,11 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
   // Sync URL → local state (รองรับ back/forward / external change)
   useEffect(() => {
     setSearchInput(searchQuery);
-    setSelectedDate(selectedDateQuery);
+    setTripDateFrom(tripDateFromQuery);
+    setTripDateTo(tripDateToQuery);
     setType(typeQuery || "ALL");
     setStatus(statusQuery || "ALL");
-  }, [searchQuery, selectedDateQuery, typeQuery, statusQuery]);
+  }, [searchQuery, tripDateFromQuery, tripDateToQuery, typeQuery, statusQuery]);
 
   return (
     <div className="flex flex-col items-end justify-end gap-4 lg:flex-row">
@@ -136,7 +141,7 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
       </div>
 
       <div className="flex w-full flex-col gap-4 lg:w-auto md:flex-row">
-        {/* Filter: Selected date */}
+        {/* Filter: Trip date range */}
         <Popover>
           <div className="relative w-full lg:w-[260px]">
             <PopoverTrigger asChild>
@@ -144,29 +149,32 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
                 variant="outline"
                 className={cn(
                   "w-full justify-start pr-8 text-left font-normal lg:w-[260px]",
-                  !selectedDate && "text-muted-foreground",
+                  !tripDateFrom && !tripDateTo && "text-muted-foreground",
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? (
+                {tripDateFrom || tripDateTo ? (
                   <span className="truncate">
-                    {format(new Date(selectedDate), "dd MMM yyyy")}
+                    {tripDateFrom ? format(new Date(tripDateFrom), "dd MMM yyyy") : "..."} -{" "}
+                    {tripDateTo ? format(new Date(tripDateTo), "dd MMM yyyy") : "..."}
                   </span>
                 ) : (
                   "Trip date range"
                 )}
               </Button>
             </PopoverTrigger>
-            {selectedDate && (
+            {(tripDateFrom || tripDateTo) && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedDate("");
+                  setTripDateFrom("");
+                  setTripDateTo("");
                   pushWithParams({
-                    selectedDate: "",
+                    tripDateFrom: "",
+                    tripDateTo: "",
                     page: 1,
                   });
                 }}
@@ -178,13 +186,25 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
           <PopoverContent className="w-auto p-0" align="end">
             <Calendar
               captionLayout="dropdown"
-              mode="single"
-              selected={selectedDate ? new Date(selectedDate) : undefined}
-              onSelect={(date) => {
-                const dateStr = date ? format(date, "yyyy-MM-dd") : "";
-                setSelectedDate(dateStr);
+              mode="range"
+              numberOfMonths={2}
+              selected={{
+                from: tripDateFrom ? new Date(tripDateFrom) : undefined,
+                to: tripDateTo ? new Date(tripDateTo) : undefined,
+              }}
+              onSelect={(range) => {
+                // Send start/end of selected day(s) in user's timezone as ISO
+                const from = range?.from
+                  ? new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate(), 0, 0, 0, 0).toISOString()
+                  : "";
+                const to = range?.to
+                  ? new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate(), 23, 59, 59, 999).toISOString()
+                  : "";
+                setTripDateFrom(from);
+                setTripDateTo(to);
                 pushWithParams({
-                  selectedDate: dateStr,
+                  tripDateFrom: from,
+                  tripDateTo: to,
                   page: 1,
                 });
               }}
