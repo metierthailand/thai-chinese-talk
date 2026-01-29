@@ -166,8 +166,14 @@ export function TaskFilter({ onFilterChange }: TaskFilterProps) {
                 to: deadlineTo ? new Date(deadlineTo) : undefined,
               }}
               onSelect={(range) => {
-                const from = range?.from ? format(range.from, "yyyy-MM-dd") : "";
-                const to = range?.to ? format(range.to, "yyyy-MM-dd") : "";
+                // Send start/end of selected day(s) in user's timezone as ISO so API
+                // filters by "that calendar day" (e.g. 31 Jan in Bangkok = 2026-01-30T17:00Z–2026-01-31T16:59Z).
+                const from = range?.from
+                  ? new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate(), 0, 0, 0, 0).toISOString()
+                  : "";
+                const to = range?.to
+                  ? new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate(), 23, 59, 59, 999).toISOString()
+                  : "";
                 setDeadlineFrom(from);
                 setDeadlineTo(to);
                 pushWithParams({

@@ -22,19 +22,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ agentId:
     const createdAtFrom = searchParams.get("createdAtFrom") || "";
     const createdAtTo = searchParams.get("createdAtTo") || "";
 
-    // Build where clause for date range filter
-    // Filter commissions by createdAt within the date range
-    const dateFilter: { gte?: Date; lte?: Date } = {};
+    const parseDateGte = (v: string) =>
+      v.includes("T") ? new Date(v) : new Date(`${v}T00:00:00.000Z`);
+    const parseDateLte = (v: string) =>
+      v.includes("T") ? new Date(v) : new Date(`${v}T23:59:59.999Z`);
 
-    if (createdAtFrom) {
-      dateFilter.gte = new Date(createdAtFrom);
-    }
-    
-    if (createdAtTo) {
-      const endDate = new Date(createdAtTo);
-      endDate.setHours(23, 59, 59, 999);
-      dateFilter.lte = endDate;
-    }
+    const dateFilter: { gte?: Date; lte?: Date } = {};
+    if (createdAtFrom) dateFilter.gte = parseDateGte(createdAtFrom);
+    if (createdAtTo) dateFilter.lte = parseDateLte(createdAtTo);
 
     const where: Prisma.CommissionWhereInput = {
       agentId,

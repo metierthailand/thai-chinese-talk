@@ -166,8 +166,14 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
                 to: tripStartDateTo ? new Date(tripStartDateTo) : undefined,
               }}
               onSelect={(range) => {
-                const from = range?.from ? format(range.from, "yyyy-MM-dd") : "";
-                const to = range?.to ? format(range.to, "yyyy-MM-dd") : "";
+                // Send start/end of selected day(s) in user's timezone as ISO so API
+                // filters by "that calendar day" (avoids timezone mismatch).
+                const from = range?.from
+                  ? new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate(), 0, 0, 0, 0).toISOString()
+                  : "";
+                const to = range?.to
+                  ? new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate(), 23, 59, 59, 999).toISOString()
+                  : "";
                 setTripStartDateFrom(from);
                 setTripStartDateTo(to);
                 pushWithParams({

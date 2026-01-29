@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { addDays, subDays } from "date-fns";
 
 export async function GET(request: Request) {
   try {
     // Check authorization: either CRON_SECRET (for cron jobs) or session (for UI calls)
     const authHeader = request.headers.get("authorization");
     const hasValidCronSecret = authHeader === `Bearer ${process.env.CRON_SECRET}`;
-    
+
     // If no valid cron secret, check for session
     if (!hasValidCronSecret) {
       const session = await getServerSession(authOptions);
@@ -71,7 +72,7 @@ export async function GET(request: Request) {
     //   // 2. If no lead, use agent from most recent booking's lead
     //   // 3. If no booking lead, use agent from most recent interaction
     //   let agentId: string | undefined;
-      
+
     //   if (passport.customer.leads.length > 0) {
     //     agentId = passport.customer.leads[0]?.agentId;
     //   } else if (passport.customer.bookings.length > 0) {
@@ -111,99 +112,52 @@ export async function GET(request: Request) {
     //   }
     // }
 
-    // // 2. Trip Upcoming Alerts
-    // // Find trips starting within the next 7 days
-    // const sevenDaysFromNow = addDays(now, 7);
-    // const upcomingTrips = await prisma.trip.findMany({
-    //   where: {
-    //     startDate: {
-    //       lt: sevenDaysFromNow,
-    //       gt: now,
-    //     },
-    //   },
-    //   include: {
-    //     bookings: {
-    //       where: {
-    //         paymentStatus: {
-    //           in: ["DEPOSIT_PAID", "FULLY_PAID"],
-    //         },
-    //       },
-    //       include: {
-    //         customer: {
-    //           include: {
-    //             leads: {
-    //               orderBy: {
-    //                 createdAt: "desc",
-    //               },
-    //               take: 1,
-    //             },
-    //           },
-    //         },
-    //         salesUser: {
-    //           select: {
-    //             id: true,
-    //           },
-    //         },
-    //         agent: {
-    //           select: {
-    //             id: true,
-    //           },
-    //         },
-    //       },
-    //     },
-    //   },
-    // });
+    // 2. Trip Upcoming Alerts — trips ที่ startDate อยู่ในอีก 7 วัน
+    const now = new Date();
+    const sevenDaysFromNow = addDays(now, 7);
+    const upcomingTrips = await prisma.trip.findMany({
+      where: {
+        startDate: {
+          gt: now,
+          lte: sevenDaysFromNow,
+        },
+      },
+    });
 
-    // let tripAlertsCount = 0;
+    const sevenDaysAgo = subDays(now, 7);
+    const fallbackAdmin = await prisma.user.findFirst({
+      where: { role: { in: ["SUPER_ADMIN", "ADMIN"] }, isActive: true },
+      select: { id: true },
+    });
 
-    // for (const trip of upcomingTrips) {
-    //   for (const booking of trip.bookings) {
-    //     // Determine the agent to notify
-    //     // Strategy:
-    //     // 1. Use salesUser (SALES role) from booking
-    //     // 2. If no salesUser, use agent from booking
-    //     // 3. If no booking agent, use agent from customer's most recent lead
-    //     let agentId: string | undefined;
-        
-    //     if (booking.salesUser?.id) {
-    //       agentId = booking.salesUser.id;
-    //     } else if (booking.agent?.id) {
-    //       agentId = booking.agent.id;
-    //     } else if (booking.customer.leads.length > 0) {
-    //       agentId = booking.customer.leads[0]?.agentId;
-    //     }
+    let tripAlertsCount = 0;
 
-    //     if (agentId) {
-    //       // Check for existing notification created within the alert window (7 days)
-    //       // This prevents duplicate notifications even if the previous one was read
-    //       const sevenDaysAgo = subDays(now, 7);
-    //       const existingNotification = await prisma.notification.findFirst({
-    //         where: {
-    //           userId: agentId,
-    //           type: "TRIP_UPCOMING",
-    //           entityId: booking.id,
-    //           createdAt: {
-    //             gte: sevenDaysAgo,
-    //           },
-    //         },
-    //       });
+    for (const trip of upcomingTrips) {
+      if (!fallbackAdmin) continue;
 
-    //       if (!existingNotification) {
-    //         await prisma.notification.create({
-    //           data: {
-    //             userId: agentId,
-    //             type: "TRIP_UPCOMING",
-    //             title: "Upcoming Trip",
-    //             message: `Trip "${trip.name}" for ${booking.customer.firstNameEn} ${booking.customer.lastNameEn} starts on ${trip.startDate.toLocaleDateString()}`,
-    //             link: `/dashboard/bookings/${booking.id}/edit`,
-    //             entityId: booking.id,
-    //           },
-    //         });
-    //         tripAlertsCount++;
-    //       }
-    //     }
-    //   }
-    // }
+      const existing = await prisma.notification.findFirst({
+        where: {
+          userId: fallbackAdmin.id,
+          type: "TRIP_UPCOMING",
+          entityId: trip.id,
+          createdAt: { gte: sevenDaysAgo },
+        },
+      });
+
+      if (!existing) {
+        await prisma.notification.create({
+          data: {
+            userId: fallbackAdmin.id,
+            type: "TRIP_UPCOMING",
+            title: "Upcoming Trip",
+            message: `Trip "${trip.name}" starts on ${new Date(trip.startDate).toLocaleDateString()}.`,
+            link: `/dashboard/trips/${trip.id}`,
+            entityId: trip.id,
+          },
+        });
+        tripAlertsCount++;
+      }
+    }
 
     // 3. Task Due Alerts
     // Find tasks due today
@@ -260,7 +214,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       // passportAlertsGenerated: passportAlertsCount,
-      // tripAlertsGenerated: tripAlertsCount,
+      tripAlertsGenerated: tripAlertsCount,
       taskAlertsGenerated: taskAlertsCount,
     });
   } catch (error) {

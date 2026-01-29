@@ -4,7 +4,7 @@ import { toast } from "sonner";
 export interface Notification {
   id: string;
   userId: string;
-  type: "PASSPORT_EXPIRY" | "TRIP_UPCOMING" | "SYSTEM";
+  type: "PASSPORT_EXPIRY" | "TRIP_UPCOMING" | "SYSTEM" | "TASK_DUE";
   title: string;
   message: string;
   link: string | null;

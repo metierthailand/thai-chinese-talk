@@ -91,6 +91,15 @@ export async function GET(req: Request) {
     const deadlineTo = searchParams.get("deadlineTo");
     const search = searchParams.get("search");
 
+    // Deadline range: support both ISO (user TZ range) and YYYY-MM-DD (UTC day).
+    // Frontend sends ISO for "this calendar day in my timezone" so 31 Jan in Bangkok
+    // becomes 2026-01-30T17:00:00.000Z–2026-01-31T16:59:59.999Z and tasks like
+    // 2026-01-30T17:00:00.000Z (31 Jan 00:00 Bangkok) are included.
+    const parseDeadlineGte = (v: string) =>
+      v.includes("T") ? new Date(v) : new Date(`${v}T00:00:00.000Z`);
+    const parseDeadlineLte = (v: string) =>
+      v.includes("T") ? new Date(v) : new Date(`${v}T23:59:59.999Z`);
+
     // Build where clause with proper types
     const where: Prisma.TaskWhereInput = {
       ...(userId
@@ -108,12 +117,8 @@ export async function GET(req: Request) {
       ...(deadlineFrom || deadlineTo
         ? {
             deadline: {
-              ...(deadlineFrom ? { gte: new Date(deadlineFrom) } : {}),
-              ...(deadlineTo
-                ? {
-                    lte: new Date(new Date(deadlineTo).setHours(23, 59, 59, 999)),
-                  }
-                : {}),
+              ...(deadlineFrom ? { gte: parseDeadlineGte(deadlineFrom) } : {}),
+              ...(deadlineTo ? { lte: parseDeadlineLte(deadlineTo) } : {}),
             },
           }
         : {}),

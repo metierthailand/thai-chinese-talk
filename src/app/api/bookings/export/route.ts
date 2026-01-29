@@ -43,6 +43,11 @@ export async function GET(request: Request) {
     const tripStartDateFrom = searchParams.get("tripStartDateFrom") || "";
     const tripStartDateTo = searchParams.get("tripStartDateTo") || "";
 
+    const parseDateGte = (v: string) =>
+      v.includes("T") ? new Date(v) : new Date(`${v}T00:00:00.000Z`);
+    const parseDateLte = (v: string) =>
+      v.includes("T") ? new Date(v) : new Date(`${v}T23:59:59.999Z`);
+
     // Build where clause (same as GET /api/bookings)
     const searchFilter: Prisma.BookingWhereInput =
       search.trim().length > 0
@@ -90,8 +95,8 @@ export async function GET(request: Request) {
             trip: {
               is: {
                 startDate: {
-                  ...(tripStartDateFrom ? { gte: new Date(tripStartDateFrom) } : {}),
-                  ...(tripStartDateTo ? { lte: new Date(tripStartDateTo) } : {}),
+                  ...(tripStartDateFrom ? { gte: parseDateGte(tripStartDateFrom) } : {}),
+                  ...(tripStartDateTo ? { lte: parseDateLte(tripStartDateTo) } : {}),
                 },
               },
             },

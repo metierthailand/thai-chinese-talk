@@ -22,20 +22,18 @@ export async function GET(req: Request) {
     const createdAtFrom = searchParams.get("createdAtFrom") || "";
     const createdAtTo = searchParams.get("createdAtTo") || "";
 
+    // Date range: support both ISO (user TZ range) and YYYY-MM-DD (UTC day).
+    const parseDateGte = (v: string) =>
+      v.includes("T") ? new Date(v) : new Date(`${v}T00:00:00.000Z`);
+    const parseDateLte = (v: string) =>
+      v.includes("T") ? new Date(v) : new Date(`${v}T23:59:59.999Z`);
+
     // Build where clause for date range filter
     // Filter commissions by createdAt within the date range
     // Commission is only created when booking paymentStatus is FULLY_PAID
     const dateFilter: { gte?: Date; lte?: Date } = {};
-    
-    if (createdAtFrom) {
-      dateFilter.gte = new Date(createdAtFrom);
-    }
-    
-    if (createdAtTo) {
-      const endDate = new Date(createdAtTo);
-      endDate.setHours(23, 59, 59, 999); // Include the entire end date
-      dateFilter.lte = endDate;
-    }
+    if (createdAtFrom) dateFilter.gte = parseDateGte(createdAtFrom);
+    if (createdAtTo) dateFilter.lte = parseDateLte(createdAtTo);
 
     // Build where clause
     const where: Prisma.CommissionWhereInput = {

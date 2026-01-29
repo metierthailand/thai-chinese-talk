@@ -66,6 +66,12 @@ export async function GET(request: Request) {
       ? ({ paymentStatus: status } as unknown as Prisma.BookingWhereInput)
       : {};
 
+    // Trip start date range: support both ISO (user TZ range) and YYYY-MM-DD (UTC day).
+    const parseDateGte = (v: string) =>
+      v.includes("T") ? new Date(v) : new Date(`${v}T00:00:00.000Z`);
+    const parseDateLte = (v: string) =>
+      v.includes("T") ? new Date(v) : new Date(`${v}T23:59:59.999Z`);
+
     // Build where clause for trip start date range filter
     const tripDateFilter: Prisma.BookingWhereInput =
       tripStartDateFrom || tripStartDateTo
@@ -73,8 +79,8 @@ export async function GET(request: Request) {
             trip: {
               is: {
                 startDate: {
-                  ...(tripStartDateFrom ? { gte: new Date(tripStartDateFrom) } : {}),
-                  ...(tripStartDateTo ? { lte: new Date(tripStartDateTo) } : {}),
+                  ...(tripStartDateFrom ? { gte: parseDateGte(tripStartDateFrom) } : {}),
+                  ...(tripStartDateTo ? { lte: parseDateLte(tripStartDateTo) } : {}),
                 },
               },
             },

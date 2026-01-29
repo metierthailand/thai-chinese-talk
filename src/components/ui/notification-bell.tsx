@@ -50,8 +50,8 @@ export function NotificationBell() {
     try {
       const res = await fetch("/api/cron/alerts");
       if (res.ok) {
-        const data = await res.json();
-        toast.success(`Checked alerts: ${data.passportAlertsGenerated} passport, ${data.tripAlertsGenerated} trip alerts generated.`);
+        // const data = await res.json();
+        toast.success(`Checked alerts successfully`);
         fetchNotifications();
       } else {
         toast.error("Failed to check alerts");

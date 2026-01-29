@@ -34,9 +34,11 @@ export default function NotificationsPage() {
       case "PASSPORT_EXPIRY":
         return "destructive";
       case "TRIP_UPCOMING":
-        return "default";
+        return "warning";
       case "SYSTEM":
-        return "secondary";
+        return "info";
+      case "TASK_DUE":
+        return "info";
       default:
         return "outline";
     }
@@ -50,6 +52,8 @@ export default function NotificationsPage() {
         return "Trip Upcoming";
       case "SYSTEM":
         return "System";
+      case "TASK_DUE":
+        return "Task Due";
       default:
         return type;
     }

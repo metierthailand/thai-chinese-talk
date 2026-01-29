@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useTrip, useUpdateTrip, type TripFormValues } from "../../hooks/use-trips";
@@ -60,8 +61,8 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
             type: trip.type,
             code: trip.code,
             name: trip.name,
-            startDate: trip.startDate.split("T")[0],
-            endDate: trip.endDate.split("T")[0],
+            startDate: format(new Date(trip.startDate), "yyyy-MM-dd"),
+            endDate: format(new Date(trip.endDate), "yyyy-MM-dd"),
             pax: trip.pax.toString(),
             foc: trip.foc.toString(),
             tl: trip.tl || "",

@@ -72,7 +72,9 @@ export default function TasksPage() {
         cell: ({ row }) => {
           const deadline = row.original.deadline;
           if (!deadline) return <div className="text-muted-foreground">-</div>;
-          return <div>{format(new Date(deadline), "dd MMM yyyy")}</div>;
+          return <div>
+            {format(new Date(deadline), "dd MMM yyyy")}
+          </div>;
         },
       },
       {
