@@ -1,9 +1,20 @@
 "use client";
 
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { CustomerForm } from "@/app/dashboard/customers/_components/customer-form";
 import { DeleteDialog } from "../../_components/delete-dialog";
@@ -87,8 +98,33 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
     setIsPaymentProofsOpen,
     payments,
     handleSubmit,
-    tripId
+    tripId,
+    thirdPaymentWarningOpen,
+    confirmThirdPaymentSubmit,
+    cancelThirdPaymentWarning,
+    pendingSubmitValues,
   } = useBookingForm({ mode, initialData, booking, onSubmit });
+
+  // Calculate predicted payment status after third payment
+  const predictedPaymentStatus = useMemo(() => {
+    if (!pendingSubmitValues || !pendingSubmitValues.payments) return "Deposit Paid";
+    
+    // Calculate total paid from pending payments
+    const totalPaid = pendingSubmitValues.payments.reduce(
+      (sum, p) => sum + (Number(p?.amount) || 0),
+      0
+    );
+    
+    // Get total amount from calculatedAmounts
+    const totalAmount = calculatedAmounts.totalAmount;
+    
+    if (totalPaid >= totalAmount && totalAmount > 0) {
+      return "Fully Paid";
+    } else if (totalPaid > 0) {
+      return "Deposit Paid";
+    }
+    return "Deposit Pending";
+  }, [pendingSubmitValues, calculatedAmounts.totalAmount]);
 
   return (
     <>
@@ -270,6 +306,38 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
         title="Are you sure?"
         description="This action cannot be undone."
       />
+
+      {/* Third Payment Warning Dialog */}
+      <AlertDialog open={thirdPaymentWarningOpen} onOpenChange={cancelThirdPaymentWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Final Payment Confirmation</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  You are about to submit the <strong>3rd (final) payment</strong>. This action cannot be undone.
+                </p>
+                <p>
+                  After this payment is submitted:
+                </p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>This payment <strong>cannot be edited or deleted</strong></li>
+                  <li>The booking status will be changed to <strong>&quot;{predictedPaymentStatus}&quot;</strong></li>
+                </ul>
+                <p className="font-medium mt-2">
+                  Are you sure you want to proceed?
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelThirdPaymentWarning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmThirdPaymentSubmit} disabled={isLoading}>
+              {isLoading ? "Submitting..." : "Confirm Payment"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

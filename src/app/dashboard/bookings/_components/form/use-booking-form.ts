@@ -51,6 +51,8 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
   const [enableSeatPrice, setEnableSeatPrice] = useState(false);
   const [deletingCompanionId, setDeletingCompanionId] = useState<string | null>(null);
   const [isPaymentProofsOpen, setIsPaymentProofsOpen] = useState(false);
+  const [thirdPaymentWarningOpen, setThirdPaymentWarningOpen] = useState(false);
+  const [pendingSubmitValues, setPendingSubmitValues] = useState<BookingFormValues | null>(null);
 
   // Get today's date in YYYY-MM-DD format for filtering trips that haven't started
   // const today = format(new Date(), "yyyy-MM-dd");
@@ -616,7 +618,35 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
       }
     }
 
+    // In edit mode, check if this is a new third payment (payment without id at index 2)
+    // Third payment is the final payment and cannot be edited after submission
+    if (mode === "edit" && values.payments && values.payments.length === 3) {
+      const thirdPayment = values.payments[2];
+      // Check if third payment is new (no id means it's a new payment)
+      if (thirdPayment && !thirdPayment.id && thirdPayment.amount && thirdPayment.amount.trim() !== "") {
+        // Show warning dialog before submitting
+        setPendingSubmitValues(values);
+        setThirdPaymentWarningOpen(true);
+        return;
+      }
+    }
+
     await onSubmit(values);
+  };
+
+  // Confirm and submit with third payment
+  const confirmThirdPaymentSubmit = async () => {
+    if (!onSubmit || !pendingSubmitValues) return;
+    
+    setThirdPaymentWarningOpen(false);
+    await onSubmit(pendingSubmitValues);
+    setPendingSubmitValues(null);
+  };
+
+  // Cancel third payment warning
+  const cancelThirdPaymentWarning = () => {
+    setThirdPaymentWarningOpen(false);
+    setPendingSubmitValues(null);
   };
 
   const handleCreateCustomer = async (values: CustomerFormValues) => {
@@ -702,6 +732,11 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
     setIsPaymentProofsOpen,
     payments,
     handleSubmit,
-    tripId
+    tripId,
+    thirdPaymentWarningOpen,
+    setThirdPaymentWarningOpen,
+    pendingSubmitValues,
+    confirmThirdPaymentSubmit,
+    cancelThirdPaymentWarning,
   };
 }
