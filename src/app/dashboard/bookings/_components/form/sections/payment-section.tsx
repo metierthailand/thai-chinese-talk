@@ -133,14 +133,11 @@ export function PaymentSection({
               // Use calculated amount from booking if available, otherwise from props
               const totalAmount = booking ? calculatedTotal : calculatedAmounts.totalAmount;
 
-              // Calculate Paid Amount from existing booking payments
-              const existingPaid = booking?.payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-
-              // Calculate Paid Amount from form values (new payments)
+              // Calculate Paid Amount from form values
+              // Note: In edit mode, form payments are already initialized from booking.payments,
+              // so we should NOT add existingPaid separately (it would count twice)
               const formPayments = form.watch("payments") || [];
-              const newPaid = formPayments.reduce((sum: number, p: PaymentFormValue) => sum + (Number(p.amount) || 0), 0);
-
-              const totalPaid = existingPaid + newPaid;
+              const totalPaid = formPayments.reduce((sum: number, p: PaymentFormValue) => sum + (Number(p.amount) || 0), 0);
 
               // Determine correct status
               let calculatedStatus = "DEPOSIT_PENDING";
@@ -365,6 +362,7 @@ export function PaymentSection({
                             {...field}
                             value={field.value || ""}
                             disabled={isDisabled}
+                            onWheel={(e) => e.currentTarget.blur()}
                             onChange={(e) => {
                               const value = e.target.value;
                               field.onChange(value);

@@ -138,7 +138,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <div className="space-y-1">
-              <CardTitle className="text-sm font-medium">Active Leads</CardTitle>
+              <CardTitle className="text-sm font-medium">Active leads</CardTitle>
               <CardDescription className="text-xs">Includes interested / booked</CardDescription>
             </div>
             <FileText className="text-muted-foreground h-4 w-4" />

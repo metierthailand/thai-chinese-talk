@@ -20,6 +20,7 @@ export type SelectedCustomer = Pick<Customer, "id" | "firstNameEn" | "lastNameEn
 
 // Type for payment form values
 export type PaymentFormValue = {
+  id?: string; // Existing payment ID (for edit mode)
   amount?: string;
   proofOfPayment?: string;
 };
@@ -48,6 +49,7 @@ export const baseFormSchema = z.object({
   firstPaymentRatio: z.enum(["FIRST_PAYMENT_100", "FIRST_PAYMENT_50", "FIRST_PAYMENT_30"]),
   payments: z.array(
     z.object({
+      id: z.string().optional(), // Existing payment ID (for edit mode)
       amount: z.string().optional(),
       proofOfPayment: z.string().optional(),
     })

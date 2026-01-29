@@ -166,12 +166,10 @@ export async function GET(request: Request) {
       const discount = Number(booking.discountPrice) || 0;
       const totalAmount = basePrice + extraSingle + extraBedPrice + extraSeatPrice + extraBagPrice - discount;
 
-      // Calculate paid amount
-      const firstAmount = booking.firstPayment ? Number(booking.firstPayment.amount) : 0;
-      const secondAmount = booking.secondPayment ? Number(booking.secondPayment.amount) : 0;
-      const thirdAmount = booking.thirdPayment ? Number(booking.thirdPayment.amount) : 0;
-      const additionalPayments = booking.payments?.reduce((acc: number, p) => acc + Number(p.amount), 0) || 0;
-      const paidAmount = firstAmount + secondAmount + thirdAmount + additionalPayments;
+      // Calculate paid amount from payments relation (includes first/second/third payments)
+      // Note: payments relation already includes all payments (first, second, third, and any additional)
+      // so we should NOT add firstPayment + secondPayment + thirdPayment separately
+      const paidAmount = booking.payments?.reduce((acc: number, p) => acc + Number(p.amount), 0) || 0;
 
       // Calculate remaining amount
       const remaining = totalAmount - paidAmount;
@@ -214,12 +212,10 @@ export async function GET(request: Request) {
     (allBookingsForCustomerRevenue || []).forEach((booking) => {
       if (!booking.customer) return;
 
-      // Calculate paid amount
-      const firstAmount = booking.firstPayment ? Number(booking.firstPayment.amount) : 0;
-      const secondAmount = booking.secondPayment ? Number(booking.secondPayment.amount) : 0;
-      const thirdAmount = booking.thirdPayment ? Number(booking.thirdPayment.amount) : 0;
-      const additionalPayments = booking.payments?.reduce((acc: number, p) => acc + Number(p.amount), 0) || 0;
-      const paidAmount = firstAmount + secondAmount + thirdAmount + additionalPayments;
+      // Calculate paid amount from payments relation (includes first/second/third payments)
+      // Note: payments relation already includes all payments (first, second, third, and any additional)
+      // so we should NOT add firstPayment + secondPayment + thirdPayment separately
+      const paidAmount = booking.payments?.reduce((acc: number, p) => acc + Number(p.amount), 0) || 0;
 
       // Use paid amount as revenue (only count what's actually paid)
       const revenue = paidAmount;

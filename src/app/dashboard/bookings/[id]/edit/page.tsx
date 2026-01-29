@@ -46,6 +46,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
         payments: booking.payments
           ? booking.payments
               .map((p) => ({
+                id: p.id, // Include existing payment ID for proper matching
                 amount: p.amount?.toString() || "",
                 proofOfPayment: p.proofOfPayment || "",
               }))

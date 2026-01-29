@@ -664,7 +664,7 @@ export async function seedCustomers(prisma: PrismaClient) {
       lastNameTh: "คิง",
       title: Title.MRS,
       email: "nancy.king@example.com",
-      phoneNumber: "0901234567",
+      phoneNumber: "0801234567",
       lineId: "nancyk",
       dateOfBirth: new Date("1990-09-25"),
       note: "VIP customer",

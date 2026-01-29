@@ -432,48 +432,40 @@ export async function PUT(
 
         // Filter valid payments (up to 3) - only those with amount
         const validPayments = (payments || []).filter(
-          (payment: { amount?: string; proofOfPayment?: string }) =>
+          (payment: { id?: string; amount?: string; proofOfPayment?: string }) =>
             payment?.amount && payment.amount.trim() !== ""
         ).slice(0, 3);
 
-        // Get existing payment proofOfPayment URLs
-        const existingProofs = existingPayments
-          .map((p) => p.proofOfPayment)
-          .filter(Boolean) as string[];
-        
-        // Get new payment proofOfPayment URLs
-        const newProofs = validPayments
-          .map((p: { proofOfPayment?: string }) => p.proofOfPayment)
+        // Get IDs of payments that should be kept (from form data)
+        const paymentIdsToKeep = validPayments
+          .map((p: { id?: string }) => p.id)
           .filter(Boolean) as string[];
 
-        // Find payments to delete (those with proofOfPayment that's not in new list)
-        const proofsToDelete = existingProofs.filter((proof) => !newProofs.includes(proof));
-        if (proofsToDelete.length > 0) {
-          const paymentsToDelete = existingPayments.filter(
-            (p) => p.proofOfPayment && proofsToDelete.includes(p.proofOfPayment)
-          );
-          
-          if (paymentsToDelete.length > 0) {
-            await tx.payment.deleteMany({
-              where: {
-                id: { in: paymentsToDelete.map((p) => p.id) },
-              },
-            });
-          }
+        // Delete payments that are no longer in the form (by ID)
+        const paymentsToDelete = existingPayments.filter(
+          (p) => !paymentIdsToKeep.includes(p.id)
+        );
+        
+        if (paymentsToDelete.length > 0) {
+          await tx.payment.deleteMany({
+            where: {
+              id: { in: paymentsToDelete.map((p) => p.id) },
+            },
+          });
         }
 
         // Create or update payments
         const createdPayments = [];
         for (let i = 0; i < validPayments.length; i++) {
-          const paymentData = validPayments[i];
+          const paymentData = validPayments[i] as { id?: string; amount?: string; proofOfPayment?: string };
           const amount = paymentData.amount && paymentData.amount.trim() !== ""
             ? parseFloat(paymentData.amount)
             : 0;
 
-          // Check if payment with this proofOfPayment already exists
-          const existingPayment = existingPayments.find(
-            (p) => p.proofOfPayment === paymentData.proofOfPayment
-          );
+          // Check if payment exists by ID (existing payment from edit mode)
+          const existingPayment = paymentData.id
+            ? existingPayments.find((p) => p.id === paymentData.id)
+            : null;
 
           if (existingPayment) {
             // Update existing payment
@@ -486,7 +478,7 @@ export async function PUT(
             });
             createdPayments.push(updatedPayment);
           } else {
-            // Create new payment
+            // Create new payment (no ID means it's a new payment)
             const newPayment = await tx.payment.create({
               data: {
                 bookingId: id,
