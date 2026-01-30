@@ -48,7 +48,7 @@ export default function LeadsPage() {
           const lead = row.original;
           if (lead.newCustomer) {
             return (
-              <div className="flex flex-col">
+              <div className="flex items-center gap-2">
                 <Badge variant="outline" className="mt-1 w-fit">
                   New
                 </Badge>
