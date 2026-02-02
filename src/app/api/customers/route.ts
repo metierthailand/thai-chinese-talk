@@ -201,9 +201,23 @@ export async function POST(req: Request) {
 
     // Check for duplicate passport numbers
     const duplicatePassportNumbers: string[] = [];
+    const internalDuplicatePassports: string[] = [];
     if (passports && Array.isArray(passports) && passports.length > 0) {
       const passportNumbers = (passports as PassportInput[]).map((p) => p.passportNumber).filter(Boolean);
       
+      // Check for duplicate passport numbers within the submitted array
+      const seenPassportNumbers = new Set<string>();
+      for (const passportNumber of passportNumbers) {
+        if (seenPassportNumbers.has(passportNumber)) {
+          if (!internalDuplicatePassports.includes(passportNumber)) {
+            internalDuplicatePassports.push(passportNumber);
+          }
+        } else {
+          seenPassportNumbers.add(passportNumber);
+        }
+      }
+      
+      // Check for duplicate passport numbers in the database
       for (const passportNumber of passportNumbers) {
         const existingPassport = await prisma.passport.findFirst({
           where: {
@@ -224,6 +238,14 @@ export async function POST(req: Request) {
     }
     if (existingPhoneNumber) {
       errors.push({ field: "phoneNumber", message: "This phone number already exists." });
+    }
+    if (internalDuplicatePassports.length > 0) {
+      internalDuplicatePassports.forEach((passportNumber) => {
+        errors.push({ 
+          field: "passports", 
+          message: `Duplicate passport number ${passportNumber} in the form.` 
+        });
+      });
     }
     if (duplicatePassportNumbers.length > 0) {
       duplicatePassportNumbers.forEach((passportNumber) => {

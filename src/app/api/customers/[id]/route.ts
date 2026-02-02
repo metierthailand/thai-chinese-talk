@@ -126,6 +126,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     // Check for duplicate passport numbers (excluding current customer's passports)
     const duplicatePassportNumbers: string[] = [];
+    const internalDuplicatePassports: string[] = [];
     if (passports && Array.isArray(passports) && passports.length > 0) {
       const currentCustomerPassports = await prisma.passport.findMany({
         where: { customerId: id },
@@ -135,6 +136,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       
       const passportNumbers = (passports as PassportInput[]).map((p) => p.passportNumber).filter(Boolean);
       
+      // Check for duplicate passport numbers within the submitted array
+      const seenPassportNumbers = new Set<string>();
+      for (const passportNumber of passportNumbers) {
+        if (seenPassportNumbers.has(passportNumber)) {
+          if (!internalDuplicatePassports.includes(passportNumber)) {
+            internalDuplicatePassports.push(passportNumber);
+          }
+        } else {
+          seenPassportNumbers.add(passportNumber);
+        }
+      }
+      
+      // Check for duplicate passport numbers in the database
       for (const passportNumber of passportNumbers) {
         // Skip if it's the same passport number (already belongs to this customer)
         if (currentPassportNumbers.has(passportNumber)) {
@@ -160,6 +174,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
     if (existingPhoneNumber) {
       errors.push({ field: "phoneNumber", message: "This phone number already exists." });
+    }
+    if (internalDuplicatePassports.length > 0) {
+      internalDuplicatePassports.forEach((passportNumber) => {
+        errors.push({ 
+          field: "passports", 
+          message: `Duplicate passport number ${passportNumber} in the form.` 
+        });
+      });
     }
     if (duplicatePassportNumbers.length > 0) {
       duplicatePassportNumbers.forEach((passportNumber) => {

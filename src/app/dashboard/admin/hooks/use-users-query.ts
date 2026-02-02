@@ -223,9 +223,13 @@ export function useCreateUser() {
       queryClient.invalidateQueries({ queryKey: userKeys.all });
       toast.success("Created successfully.");
     },
-    onError: (error: Error & { field?: string }) => {
-      // Only show toast if error doesn't have a field (field errors are shown in form)
-      if (!error.field) {
+    onError: (error: Error & { field?: string; fields?: FieldError[] }) => {
+      // Show toast with field error messages if available
+      if (error.fields && error.fields.length > 0) {
+        error.fields.forEach((fieldError) => {
+          toast.error(fieldError.message);
+        });
+      } else {
         toast.error(error.message || "Created unsuccessfully.");
       }
     },
@@ -250,9 +254,13 @@ export function useUpdateUser() {
         );
       }
     },
-    onError: (error: Error & { field?: string }) => {
-      // Only show toast if error doesn't have a field (field errors are shown in form)
-      if (!error.field) {
+    onError: (error: Error & { field?: string; fields?: FieldError[] }) => {
+      // Show toast with field error messages if available
+      if (error.fields && error.fields.length > 0) {
+        error.fields.forEach((fieldError) => {
+          toast.error(fieldError.message);
+        });
+      } else {
         toast.error(error.message || "Updated unsuccessfully.");
       }
     },

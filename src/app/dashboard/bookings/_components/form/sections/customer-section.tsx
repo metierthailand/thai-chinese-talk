@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { Check, ChevronsUpDown, Plus, Eye, Pencil } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Eye, Pencil, CircleAlert, Cake } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -287,9 +287,10 @@ export function CustomerSection({
                       {isReChecked ? "The customer's information has been rechecked." : "The customer's information has not been rechecked."}
                     </FormDescription>
                     {birthdayWarning && (
-                      <FormDescription className="text-green-600 dark:text-green-400">
-                        {birthdayWarning}
-                      </FormDescription>
+                      <div className="bg-blue-50 p-4 rounded-md border flex gap-2 border-blue-400">
+                        <Cake className="h-6 w-6 text-blue-400" />
+                        <p className="text-muted-foreground text-xs">{birthdayWarning}</p>
+                      </div>
                     )}
                   </>
                 )}

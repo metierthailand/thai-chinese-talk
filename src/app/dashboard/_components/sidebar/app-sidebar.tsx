@@ -35,11 +35,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
               <Link href="/dashboard" onClick={handleLinkClick}>
                 {open ? (
-                  <picture>
-                    <img className="translate-y-2 object-contain" src="/banner.webp" alt="Thai Chinese Tour" />
-                  </picture>
+                  <div className="flex items-center justify-center gap-2">
+                    <picture className="size-6">
+                      <img className="object-contain" src="/icon.webp" alt="Thai Chinese Tour" />
+                    </picture>
+                    <p className="text-sm font-medium">ThaiChinese Tour</p>
+                  </div>
                 ) : (
-                  <picture>
+                  <picture className="size-6">
                     <img className="object-contain" src="/icon.webp" alt="Thai Chinese Tour" />
                   </picture>
                 )}
