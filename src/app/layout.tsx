@@ -13,19 +13,19 @@ import { Providers } from "@/components/Providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Thai Chinese Tour - Admin",
+  title: "ThaiChinese Tour - Admin",
   description: "Travel Agent CRM & Trip Management",
   openGraph: {
     images: ["/banner.webp"],
-    title: "Thai Chinese Tour - Admin",
+    title: "ThaiChinese Tour - Admin",
     description: "Travel Agent CRM & Trip Management",
-    siteName: "Thai Chinese Tour",
+    siteName: "ThaiChinese Tour",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Thai Chinese Tour - Admin",
+    title: "ThaiChinese Tour - Admin",
     description: "Travel Agent CRM & Trip Management",
     images: ["/banner.webp"],
   },

@@ -37,13 +37,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {open ? (
                   <div className="flex items-center justify-center gap-2">
                     <picture className="size-6">
-                      <img className="object-contain" src="/icon.webp" alt="Thai Chinese Tour" />
+                      <img className="object-contain" src="/icon.webp" alt="ThaiChinese Tour" />
                     </picture>
                     <p className="text-sm font-medium">ThaiChinese Tour</p>
                   </div>
                 ) : (
                   <picture className="size-6">
-                    <img className="object-contain" src="/icon.webp" alt="Thai Chinese Tour" />
+                    <img className="object-contain" src="/icon.webp" alt="ThaiChinese Tour" />
                   </picture>
                 )}
                 {/* <Command /> */}

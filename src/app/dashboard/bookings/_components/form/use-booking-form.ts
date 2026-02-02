@@ -62,7 +62,7 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
 
   // Fetch trips using TanStack Query - filter for trips that haven't started yet
   // In edit mode, we also need the current trip, so we fetch all trips
-  const { data: tripsResponse } = useTrips(1, 1000);  console.log({tripsResponse});
+  const { data: tripsResponse } = useTrips(1, 1000);
   const { data: salesUsers = [] } = useQuery({
     queryKey: ["salesUsers"],
     queryFn: fetchSalesUsers,
@@ -637,7 +637,7 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
   // Confirm and submit with third payment
   const confirmThirdPaymentSubmit = async () => {
     if (!onSubmit || !pendingSubmitValues) return;
-    
+
     setThirdPaymentWarningOpen(false);
     await onSubmit(pendingSubmitValues);
     setPendingSubmitValues(null);

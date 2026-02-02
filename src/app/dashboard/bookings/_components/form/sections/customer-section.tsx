@@ -348,7 +348,13 @@ export function CustomerSection({
               >
                 <FormControl>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={customerId ? (customerPassports.length === 0 ? "No passports available" : "Select passport") : "Select customer first"} />
+                    <SelectValue placeholder={customerId ? (customerPassports.length === 0 ? "No passports available" : "Select passport") : "Select customer first"}>
+                      {(() => {
+                        const selectedPassport = customerPassports.find((p) => p.id === field.value);
+                        if (!selectedPassport) return null;
+                        return `${selectedPassport.passportNumber} (${selectedPassport.issuingCountry})${selectedPassport.isPrimary ? " - Primary" : ""}`;
+                      })()}
+                    </SelectValue>
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
