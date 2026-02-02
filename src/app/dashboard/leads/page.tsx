@@ -49,12 +49,12 @@ export default function LeadsPage() {
           if (lead.newCustomer) {
             return (
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="mt-1 w-fit">
-                  New
-                </Badge>
                 <p className="font-medium">
                   {lead.firstName} {lead.lastName}
                 </p>
+                <Badge variant="outline" className="mt-1 w-fit">
+                  New
+                </Badge>
               </div>
             );
           }

@@ -39,7 +39,7 @@ import { Customer, useCustomer } from "@/app/dashboard/customers/hooks/use-custo
 import { Passport } from "@/app/dashboard/customers/hooks/types";
 import { Trip } from "@/app/dashboard/trips/hooks/use-trips";
 import { useWatch } from "react-hook-form";
-import { differenceInMonths } from "date-fns";
+import { differenceInMonths, format } from "date-fns";
 
 interface CustomerSectionProps {
   form: UseFormReturn<BookingFormValues>;
@@ -92,9 +92,9 @@ export function CustomerSection({
     }
 
     // Get customer dateOfBirth from fullCustomerData or selectedCustomer
-    const customerDateOfBirth = fullCustomerData?.dateOfBirth || 
+    const customerDateOfBirth = fullCustomerData?.dateOfBirth ||
       (selectedCustomer && "dateOfBirth" in selectedCustomer ? selectedCustomer.dateOfBirth : null);
-    
+
     if (!customerDateOfBirth || typeof customerDateOfBirth !== "string") {
       return null;
     }
@@ -144,7 +144,7 @@ export function CustomerSection({
 
     const tripStartDate = new Date(selectedTrip.startDate);
     const passportExpiryDate = new Date(selectedPassport.expiryDate);
-    
+
     // Calculate months between trip start date and passport expiry date
     const monthsUntilExpiry = differenceInMonths(passportExpiryDate, tripStartDate);
 
@@ -326,14 +326,18 @@ export function CustomerSection({
             <FormLabel required={!readOnly}>Passport</FormLabel>
             {readOnly ? (
               <FormControl>
-                <Input
-                  value={
-                    customerPassports.find((p) => p.id === field.value)
-                      ? `${customerPassports.find((p) => p.id === field.value)?.passportNumber} (${customerPassports.find((p) => p.id === field.value)?.issuingCountry})`
-                      : ""
-                  }
-                  disabled
-                />
+                {(() => {
+                  const selectedPassport = customerPassports.find((p) => p.id === field.value);
+                  if (!selectedPassport) return <Input value="" disabled />;
+                  return (
+                    <div className="flex flex-col rounded-md border px-3 py-2 bg-muted/50">
+                      <p className="text-sm">
+                        {selectedPassport.passportNumber} ({selectedPassport.issuingCountry}){selectedPassport.isPrimary ? " - Primary" : ""}
+                      </p>
+                      <p className="text-muted-foreground text-xs">Expired: {format(new Date(selectedPassport.expiryDate), "PP")}</p>
+                    </div>
+                  );
+                })()}
               </FormControl>
             ) : (
               <Select
@@ -349,7 +353,12 @@ export function CustomerSection({
                 <SelectContent>
                   {customerPassports.map((passport) => (
                     <SelectItem key={passport.id} value={passport.id}>
-                      {passport.passportNumber} ({passport.issuingCountry}){passport.isPrimary ? " - Primary" : ""}
+                      <div className="flex flex-col items-start">
+                        <p>
+                          {passport.passportNumber} ({passport.issuingCountry}){passport.isPrimary ? " - Primary" : ""}
+                        </p>
+                        <p className="text-muted-foreground text-xs">Expired: {format(new Date(passport.expiryDate), "PP")}</p>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

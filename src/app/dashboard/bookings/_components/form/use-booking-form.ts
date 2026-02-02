@@ -57,8 +57,8 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
   // Get today's date in YYYY-MM-DD format for filtering trips that haven't started
   // const today = format(new Date(), "yyyy-MM-dd");
 
-  // In edit mode, fetch the current trip separately to ensure it's available
-  const { data: currentTrip } = useTrip(mode === "edit" && booking?.tripId ? booking.tripId : undefined);
+  // In edit/view mode, fetch the current trip separately to ensure it's available
+  const { data: currentTrip } = useTrip((mode === "edit" || mode === "view") && booking?.tripId ? booking.tripId : undefined);
 
   // Fetch trips using TanStack Query - filter for trips that haven't started yet
   // In edit mode, we also need the current trip, so we fetch all trips
@@ -78,23 +78,23 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
     })) || [];
 
   // Filter trips to only include those that haven't started (startDate > today)
-  // In edit mode, also include the trip that's already selected in the booking
+  // In edit/view mode, also include the trip that's already selected in the booking
   const trips = useMemo((): Trip[] => {
     const allTrips = tripsResponse?.data || [];
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     now.setMinutes(0, 0, 0);
 
-    const currentTripId = mode === "edit" && booking?.tripId ? booking.tripId : null;
+    const currentTripId = (mode === "edit" || mode === "view") && booking?.tripId ? booking.tripId : null;
 
-    // In edit mode, add current trip if it's not in the list
+    // In edit/view mode, add current trip if it's not in the list
     const tripsList: Trip[] = [...allTrips];
-    if (mode === "edit" && currentTrip && !tripsList.find((t) => t.id === currentTrip.id)) {
+    if ((mode === "edit" || mode === "view") && currentTrip && !tripsList.find((t) => t.id === currentTrip.id)) {
       tripsList.push(currentTrip);
     }
 
     return tripsList.filter((trip) => {
-      // In edit mode, always include the trip that's already selected
+      // In edit/view mode, always include the trip that's already selected
       if (currentTripId && trip.id === currentTripId) {
         return true;
       }

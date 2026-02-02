@@ -204,7 +204,7 @@ export function PassportManager({ className, customerId, customerFirstName, cust
                           Issued: {format(new Date(passport.issuingDate), "PP")}
                         </div>
                       )}
-                      <div className="text-red-500">Expires: {format(new Date(passport.expiryDate), "PP")}</div>
+                      <div className="text-red-500">Expired: {format(new Date(passport.expiryDate), "PP")}</div>
                     </div>
                   </div>
                   <div className="flex gap-2 transition-opacity md:opacity-0 md:group-hover:opacity-100">

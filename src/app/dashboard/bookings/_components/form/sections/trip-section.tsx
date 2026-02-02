@@ -127,7 +127,14 @@ export function TripSection({
                                   {trip._count?.bookings >= trip.pax ? " [FULL]" : ""}
                                 </span>
                                 <span className="text-muted-foreground text-sm">
-                                  {trip.name} ({format(new Date(trip.startDate), "dd MMM")} - {format(new Date(trip.endDate), "dd MMM")})
+                                  {trip.name} ({(() => {
+                                    const start = new Date(trip.startDate);
+                                    const end = new Date(trip.endDate);
+                                    const sameYear = start.getFullYear() === end.getFullYear();
+                                    return sameYear
+                                      ? `${format(start, "dd MMM")} - ${format(end, "dd MMM yyyy")}`
+                                      : `${format(start, "dd MMM yyyy")} - ${format(end, "dd MMM yyyy")}`;
+                                  })()})
                                 </span>
                               </div>
                             </CommandItem>

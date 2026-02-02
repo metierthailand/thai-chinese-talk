@@ -88,13 +88,13 @@ export function PaymentSection({
               <div className="space-y-4">
                 <div className="bg-muted grid grid-cols-3 gap-4 rounded-md p-4">
                   <div>
-                    <p className="text-muted-foreground text-sm">Total Amount</p>
+                    <p className="text-muted-foreground text-sm">Total amount</p>
                     <p className="text-lg font-semibold">
                       {totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Paid Amount</p>
+                    <p className="text-muted-foreground text-sm">Paid amount</p>
                     <p className="text-lg font-semibold">
                       {paidAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
                     </p>

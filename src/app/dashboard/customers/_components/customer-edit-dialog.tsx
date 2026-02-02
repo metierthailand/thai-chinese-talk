@@ -72,7 +72,7 @@ export function CustomerEditDialog({ open, onOpenChange, customerId, onReChecked
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] w-full! lg:w-[820px]! sm:max-w-7xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-3xl">Edit Customer</DialogTitle>
+          <DialogTitle className="text-3xl">Customer</DialogTitle>
         </DialogHeader>
 
         {/* Re-check the customer data checkbox */}
