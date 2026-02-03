@@ -69,7 +69,20 @@ export function TagForm({
 
   async function handleSubmit(values: TagFormValues) {
     if (!onSubmit || readOnly) return;
-    await onSubmit(values);
+    try {
+      await onSubmit(values);
+    } catch (error) {
+      if (error instanceof Error) {
+        const fieldError = error as Error & { field?: string; fields?: { field: string; message: string }[] };
+
+        if (fieldError.field === "name") {
+          form.setError("name", {
+            type: "server",
+            message: error.message,
+          });
+        }
+      }
+    }
   }
 
   return (

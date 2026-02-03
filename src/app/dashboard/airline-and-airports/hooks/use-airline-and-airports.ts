@@ -190,10 +190,7 @@ export function useCreateAirlineAndAirport() {
       toast.success("Created successfully.");
     },
     onError: (error: Error & { field?: string }) => {
-      // Only show toast if error doesn't have a field (field errors are shown in form)
-      if (!error.field) {
-        toast.error(error.message || "Created unsuccessfully.");
-      }
+      toast.error(error.message || "Created unsuccessfully.");
     },
   });
 }
@@ -210,10 +207,7 @@ export function useUpdateAirlineAndAirport() {
       toast.success("Updated successfully.");
     },
     onError: (error: Error & { field?: string }) => {
-      // Only show toast if error doesn't have a field (field errors are shown in form)
-      if (!error.field) {
-        toast.error(error.message || "Updated unsuccessfully.");
-      }
+      toast.error(error.message || "Updated unsuccessfully.");
     },
   });
 }

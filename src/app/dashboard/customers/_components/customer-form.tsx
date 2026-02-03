@@ -130,16 +130,12 @@ export function CustomerForm({
         // Handle multiple field errors
         if (fieldError.fields && Array.isArray(fieldError.fields)) {
           fieldError.fields.forEach((err) => {
-            if (err.field === "email" || err.field === "phoneNumber") {
-              toast.error(err.message);
-              console.log(`Setting form error for ${err.field}:`, err.message);
-              form.setError(err.field as "email" | "phoneNumber", {
+            if (err.field === "email" || err.field === "phoneNumber" || err.field === "lineId") {
+              form.setError(err.field as "email" | "phoneNumber" | "lineId", {
                 type: "server",
                 message: err.message,
               });
-              console.log(`Form errors after setError:`, form.formState.errors);
             } else if (err.field === "passports") {
-              toast.error(err.message);
               form.setError("passports", {
                 type: "server",
                 message: err.message,
@@ -155,6 +151,11 @@ export function CustomerForm({
           });
         } else if (fieldError.field === "phoneNumber") {
           form.setError("phoneNumber", {
+            type: "server",
+            message: error.message,
+          });
+        } else if (fieldError.field === "lineId") {
+          form.setError("lineId", {
             type: "server",
             message: error.message,
           });
@@ -301,7 +302,7 @@ export function CustomerForm({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 items-start">
           <FormField
             control={form.control}
             name="firstNameTh"
@@ -330,7 +331,7 @@ export function CustomerForm({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 items-start">
           <FormField
             control={form.control}
             name="dateOfBirth"
@@ -374,7 +375,7 @@ export function CustomerForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 items-start">
           <FormField
             control={form.control}
             name="phoneNumber"

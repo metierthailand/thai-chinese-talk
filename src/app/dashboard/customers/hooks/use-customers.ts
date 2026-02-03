@@ -302,6 +302,8 @@ async function createCustomer(data: CustomerFormValues): Promise<Customer> {
       errorWithField.field = "email";
     } else if (errorMessage.toLowerCase().includes("phone number") && errorMessage.toLowerCase().includes("already exists")) {
       errorWithField.field = "phoneNumber";
+    } else if (errorMessage.toLowerCase().includes("line id") && errorMessage.toLowerCase().includes("already exists")) {
+      errorWithField.field = "lineId";
     } else if (errorMessage.toLowerCase().includes("passport") && errorMessage.toLowerCase().includes("already exists")) {
       errorWithField.field = "passports";
     }
@@ -353,6 +355,8 @@ async function updateCustomer({ id, data }: { id: string; data: CustomerFormValu
       errorWithField.field = "email";
     } else if (errorMessage.toLowerCase().includes("phone number") && errorMessage.toLowerCase().includes("already exists")) {
       errorWithField.field = "phoneNumber";
+    } else if (errorMessage.toLowerCase().includes("line id") && errorMessage.toLowerCase().includes("already exists")) {
+      errorWithField.field = "lineId";
     } else if (errorMessage.toLowerCase().includes("passport") && errorMessage.toLowerCase().includes("already exists")) {
       errorWithField.field = "passports";
     }
@@ -419,8 +423,12 @@ export function useCreateCustomer() {
       toast.success("Created successfully.");
     },
     onError: (error: Error & { field?: string; fields?: Array<{ field: string; message: string }> }) => {
-      // Only show toast if error doesn't have a field or fields (field errors are shown in form)
-      if (!error.field && !error.fields) {
+      // Show toast for each field error
+      if (error.fields && error.fields.length > 0) {
+        error.fields.forEach((fieldError) => {
+          toast.error(fieldError.message);
+        });
+      } else {
         toast.error(error.message || "Created unsuccessfully.");
       }
     },
@@ -441,8 +449,12 @@ export function useUpdateCustomer() {
       toast.success("Updated successfully.");
     },
     onError: (error: Error & { field?: string; fields?: Array<{ field: string; message: string }> }) => {
-      // Only show toast if error doesn't have a field or fields (field errors are shown in form)
-      if (!error.field && !error.fields) {
+      // Show toast for each field error
+      if (error.fields && error.fields.length > 0) {
+        error.fields.forEach((fieldError) => {
+          toast.error(fieldError.message);
+        });
+      } else {
         toast.error(error.message || "Updated unsuccessfully.");
       }
     },

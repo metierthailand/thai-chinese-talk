@@ -13,13 +13,9 @@ export default function CreateTagPage() {
   const { data: allTags, isLoading: isLoadingTags } = useAllTags();
 
   async function handleSubmit(values: TagFormValues) {
-    try {
-      await createTagMutation.mutateAsync(values);
-      router.push("/dashboard/tags");
-      router.refresh();
-    } catch {
-      toast.error("Created unsuccessfully.");
-    }
+    await createTagMutation.mutateAsync(values);
+    router.push("/dashboard/tags");
+    router.refresh();
   }
 
   return (

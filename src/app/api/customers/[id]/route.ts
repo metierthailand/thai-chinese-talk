@@ -105,7 +105,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return new NextResponse("First name and last name (English) are required", { status: 400 });
     }
 
-    // Check for duplicate email and phone number (excluding current customer)
+    // Check for duplicate email, phone number, and lineId (excluding current customer)
     const existingEmail = email
       ? await prisma.customer.findFirst({
           where: {
@@ -119,6 +119,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       ? await prisma.customer.findFirst({
           where: {
             phoneNumber,
+            id: { not: id },
+          },
+        })
+      : null;
+
+    const existingLineId = lineId
+      ? await prisma.customer.findFirst({
+          where: {
+            lineId,
             id: { not: id },
           },
         })
@@ -174,6 +183,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
     if (existingPhoneNumber) {
       errors.push({ field: "phoneNumber", message: "This phone number already exists." });
+    }
+    if (existingLineId) {
+      errors.push({ field: "lineId", message: "This LINE ID already exists." });
     }
     if (internalDuplicatePassports.length > 0) {
       internalDuplicatePassports.forEach((passportNumber) => {

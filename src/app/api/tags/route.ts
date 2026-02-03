@@ -36,11 +36,11 @@ export async function GET(request: Request) {
     const where =
       search.trim().length > 0
         ? {
-            name: {
-              contains: search,
-              mode: "insensitive" as const,
-            },
-          }
+          name: {
+            contains: search,
+            mode: "insensitive" as const,
+          },
+        }
         : {};
 
     // Get total count for pagination
@@ -91,6 +91,7 @@ export async function POST(request: Request) {
       orderBy: { order: "desc" },
       select: { order: true },
     });
+
     const newOrder = order !== undefined ? Number(order) : (maxOrderTag?.order ?? -1) + 1;
 
     // If order is provided and conflicts with existing order, shift existing tags
@@ -116,6 +117,15 @@ export async function POST(request: Request) {
       }
     }
 
+    // Check for duplicate tag name
+    const existingTag = await prisma.tag.findFirst({
+      where: { name: name.trim() },
+    });
+
+    if (existingTag) {
+      return NextResponse.json({ message: "This tag name already exists.", field: "name" }, { status: 409 });
+    }
+
     const tag = await prisma.tag.create({
       data: {
         name: name.trim(),
@@ -124,16 +134,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(tag, { status: 201 });
-  } catch (error: unknown) {
-    console.error("Error creating tag:", error);
-    
-    // Handle unique constraint violation
-    if (error && typeof error === "object" && "code" in error) {
-      if (error.code === "P2002") {
-        return NextResponse.json({ error: "This tag name already exists." }, { status: 409 });
-      }
-    }
-    
+  } catch {
     return NextResponse.json({ error: "Failed to create tag" }, { status: 500 });
   }
 }

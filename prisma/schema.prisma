@@ -76,15 +76,15 @@ model Customer {
   lastNameTh  String?
 
   dateOfBirth DateTime
-  phoneNumber String?
-  email       String?
-  lineId      String?
+  phoneNumber String?  @unique
+  email       String?  @unique
+  lineId      String?  @unique
 
   note String? @db.Text
 
   tags              CustomerTag[]
   leads             Lead[]
-  bookings          Booking[]     @relation("CustomerBookings")
+  bookings          Booking[]          @relation("CustomerBookings")
   companionBookings BookingCompanion[] @relation("CompanionCustomers")
 
   addresses     Address[]
@@ -117,7 +117,7 @@ model Passport {
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  passportNumber String @unique
+  passportNumber String   @unique
   issuingCountry String
   issuingDate    DateTime
   expiryDate     DateTime
@@ -164,9 +164,9 @@ model CustomerTag {
 // Explicit join table for companion relationship (symmetric)
 model BookingCompanion {
   bookingId  String
-  booking   Booking  @relation("CompanionBookings", fields: [bookingId], references: [id], onDelete: Cascade)
+  booking    Booking  @relation("CompanionBookings", fields: [bookingId], references: [id], onDelete: Cascade)
   customerId String
-  customer  Customer @relation("CompanionCustomers", fields: [customerId], references: [id], onDelete: Cascade)
+  customer   Customer @relation("CompanionCustomers", fields: [customerId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -199,7 +199,7 @@ model Lead {
   salesUser   User      @relation("SalesLeads", fields: [salesUserId], references: [id])
 
   source LeadSource?
-  status LeadStatus @default(INTERESTED)
+  status LeadStatus  @default(INTERESTED)
 
   tripInterest String
 
@@ -216,8 +216,8 @@ model Lead {
   leadNote   String? @db.Text
   sourceNote String? @db.Text
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // 4. Trip & Booking Management
@@ -290,18 +290,18 @@ model Trip {
 }
 
 model Booking {
-  id                 String     @id @default(uuid())
+  id                 String             @id @default(uuid())
   customerId         String
-  customer           Customer   @relation("CustomerBookings", fields: [customerId], references: [id])
+  customer           Customer           @relation("CustomerBookings", fields: [customerId], references: [id])
   salesUserId        String
-  salesUser          User       @relation("SalesBookings", fields: [salesUserId], references: [id])
+  salesUser          User               @relation("SalesBookings", fields: [salesUserId], references: [id])
   tripId             String
-  trip               Trip       @relation(fields: [tripId], references: [id])
+  trip               Trip               @relation(fields: [tripId], references: [id])
   companionCustomers BookingCompanion[] @relation("CompanionBookings")
   agentId            String?
-  agent              User?      @relation("AgentBookings", fields: [agentId], references: [id])
+  agent              User?              @relation("AgentBookings", fields: [agentId], references: [id])
   passportId         String
-  passport           Passport   @relation(fields: [passportId], references: [id], onDelete: Restrict)
+  passport           Passport           @relation(fields: [passportId], references: [id], onDelete: Restrict)
 
   note String? @db.Text
 

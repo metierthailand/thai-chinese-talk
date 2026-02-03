@@ -81,8 +81,11 @@ async function createTag(data: { name: string; order?: number }): Promise<Tag> {
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || "Failed to create tag");
+    const errorData = await res.json();
+    const error = new Error(errorData.error || errorData.message || "Failed to create tag") as Error & { field?: string; fields?: { field: string; message: string }[] };
+    if (errorData.field) error.field = errorData.field;
+    if (errorData.fields) error.fields = errorData.fields;
+    throw error;
   }
 
   return res.json();
@@ -99,8 +102,11 @@ async function updateTag({ id, data }: { id: string; data: { name: string; order
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || "Failed to update tag");
+    const errorData = await res.json();
+    const error = new Error(errorData.error || errorData.message || "Failed to update tag") as Error & { field?: string; fields?: { field: string; message: string }[] };
+    if (errorData.field) error.field = errorData.field;
+    if (errorData.fields) error.fields = errorData.fields;
+    throw error;
   }
 
   return res.json();

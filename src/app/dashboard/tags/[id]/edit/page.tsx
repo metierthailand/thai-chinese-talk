@@ -19,16 +19,12 @@ export default function EditTagPage({ params }: { params: Promise<{ id: string }
   const { data: allTags, isLoading: isLoadingTags } = useAllTags();
 
   async function handleSubmit(values: TagFormValues) {
-    try {
-      await updateTagMutation.mutateAsync({
-        id: tagId,
-        data: values,
-      });
-      router.push("/dashboard/tags");
-      router.refresh();
-    } catch {
-      toast.error("Updated unsuccessfully.");
-    }
+    await updateTagMutation.mutateAsync({
+      id: tagId,
+      data: values,
+    });
+    router.push("/dashboard/tags");
+    router.refresh();
   }
 
   if (isLoadingTag) {
