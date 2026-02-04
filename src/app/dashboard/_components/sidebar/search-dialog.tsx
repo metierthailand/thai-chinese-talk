@@ -76,7 +76,7 @@ export function SearchDialog() {
           group: group.label || "Other",
           icon: item.icon || User,
           label: item.title,
-          url: item.url,
+          url: item.getUrl?.() ?? item.url,
         });
       });
     });

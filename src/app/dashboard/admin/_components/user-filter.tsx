@@ -95,7 +95,7 @@ export function UserFilter({ onFilterChange }: UserFilterProps) {
           }}
         >
           <SelectTrigger className="w-full lg:w-40">
-            <SelectValue placeholder="Status" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All status</SelectItem>
@@ -116,7 +116,7 @@ export function UserFilter({ onFilterChange }: UserFilterProps) {
           }}
         >
           <SelectTrigger className="w-full lg:w-40">
-            <SelectValue placeholder="Role" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All roles</SelectItem>

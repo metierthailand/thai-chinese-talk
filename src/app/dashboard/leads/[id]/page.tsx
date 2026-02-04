@@ -78,13 +78,13 @@ export default function LeadViewPage({ params }: { params: Promise<{ id: string 
             {lead.createdAt && (
               <div>
                 <span className="text-muted-foreground">Created date:</span>
-                <div className="mt-1">{format(new Date(lead.createdAt), "dd MMM yyyy HH:mm")}</div>
+                <div className="mt-1">{format(new Date(lead.createdAt), "dd MMM yyyy hh:mm a")}</div>
               </div>
             )}
             {lead.updatedAt && (
               <div>
                 <span className="text-muted-foreground">Updated date:</span>
-                <div className="mt-1">{format(new Date(lead.updatedAt), "dd MMM yyyy HH:mm")}</div>
+                <div className="mt-1">{format(new Date(lead.updatedAt), "dd MMM yyyy hh:mm a")}</div>
               </div>
             )}
           </div>

@@ -66,13 +66,13 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             {user.createdAt && (
               <div>
                 <span className="text-muted-foreground">Created date:</span>
-                <div className="mt-1">{format(new Date(user.createdAt), "dd MMM yyyy HH:mm")}</div>
+                <div className="mt-1">{format(new Date(user.createdAt), "dd MMM yyyy hh:mm a")}</div>
               </div>
             )}
             {user.updatedAt && (
               <div>
                 <span className="text-muted-foreground">Updated date:</span>
-                <div className="mt-1">{format(new Date(user.updatedAt), "dd MMM yyyy HH:mm")}</div>
+                <div className="mt-1">{format(new Date(user.updatedAt), "dd MMM yyyy hh:mm a")}</div>
               </div>
             )}
           </div>

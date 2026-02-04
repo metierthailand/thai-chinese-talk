@@ -77,16 +77,16 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
           {task.deadline && (
             <div>
               <span className="text-muted-foreground">Deadline:</span>
-              <div className="mt-1">{format(new Date(task.deadline), "dd MMM yyyy")}</div>
+              <div className="mt-1">{format(new Date(task.deadline), "dd MMM yyyy hh:mm a")}</div>
             </div>
           )}
           <div>
             <span className="text-muted-foreground">Created date:</span>
-            <div className="mt-1">{format(new Date(task.createdAt), "dd MMM yyyy HH:mm")}</div>
+            <div className="mt-1">{format(new Date(task.createdAt), "dd MMM yyyy hh:mm a")}</div>
           </div>
           <div>
             <span className="text-muted-foreground">Updated date:</span>
-            <div className="mt-1">{format(new Date(task.updatedAt), "dd MMM yyyy HH:mm")}</div>
+            <div className="mt-1">{format(new Date(task.updatedAt), "dd MMM yyyy hh:mm a")}</div>
           </div>
         </div>
       </div>

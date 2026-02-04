@@ -129,7 +129,7 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                 {readOnly ? (
                   <Input value={field.value || ""} disabled />
                 ) : (
-                  <Input placeholder="First name" {...field} disabled={isLoading} />
+                  <Input {...field} disabled={isLoading} />
                 )}
               </FormControl>
               <FormMessage />
@@ -147,7 +147,7 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                 {readOnly ? (
                   <Input value={field.value || ""} disabled />
                 ) : (
-                  <Input placeholder="Last name" {...field} disabled={isLoading} />
+                  <Input {...field} disabled={isLoading} />
                 )}
               </FormControl>
               <FormMessage />
@@ -165,7 +165,7 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                 {readOnly ? (
                   <Input value={field.value || ""} disabled />
                 ) : (
-                  <Input type="email" placeholder="Email" {...field} disabled={isLoading} />
+                  <Input type="email" {...field} disabled={isLoading} />
                 )}
               </FormControl>
               <FormMessage />
@@ -183,7 +183,7 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                 {readOnly ? (
                   <Input value={field.value || ""} disabled />
                 ) : (
-                  <Input type="tel" placeholder="Phone number" {...field} disabled={isLoading} />
+                  <Input type="tel" {...field} disabled={isLoading} />
                 )}
               </FormControl>
               <FormMessage />
@@ -205,7 +205,7 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                 <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoading}>
                   <FormControl>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Role" />
+                      <SelectValue />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -235,7 +235,7 @@ export function UserForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                   {readOnly ? (
                     <Input value={field.value || ""} disabled />
                   ) : (
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} disabled={isLoading} />
+                    <Input type="number" step="0.01" {...field} disabled={isLoading} />
                   )}
                 </FormControl>
                 <FormMessage />

@@ -215,7 +215,7 @@ export function CustomerTasks({ customerId }: CustomerTasksProps) {
                   {task.deadline && (
                     <div className="flex items-center text-xs text-muted-foreground mt-1">
                       <CalendarIcon className="h-3 w-3 mr-1" />
-                      {format(new Date(task.deadline), "PP")}
+                      {format(new Date(task.deadline), "dd MMM yyyy")}
                     </div>
                   )}
                 </div>

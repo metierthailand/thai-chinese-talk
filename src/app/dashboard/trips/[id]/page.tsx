@@ -123,7 +123,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       {
         accessorKey: "createdAt",
         header: "Booked On",
-        cell: ({ row }) => format(new Date(row.original.createdAt), "PPp"),
+        cell: ({ row }) => format(new Date(row.original.createdAt), "dd MMM yyyy hh:mm a"),
       },
     ],
     [],
@@ -252,13 +252,13 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 {trip.createdAt && (
                   <div>
                     <span className="text-muted-foreground">Created date:</span>
-                    <div className="mt-1">{format(new Date(trip.createdAt), "dd MMM yyyy HH:mm")}</div>
+                    <div className="mt-1">{format(new Date(trip.createdAt), "dd MMM yyyy hh:mm a")}</div>
                   </div>
                 )}
                 {trip.updatedAt && (
                   <div>
                     <span className="text-muted-foreground">Updated date:</span>
-                    <div className="mt-1">{format(new Date(trip.updatedAt), "dd MMM yyyy HH:mm")}</div>
+                    <div className="mt-1">{format(new Date(trip.updatedAt), "dd MMM yyyy hh:mm a")}</div>
                   </div>
                 )}
               </div>

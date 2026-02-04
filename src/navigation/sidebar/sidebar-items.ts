@@ -1,11 +1,8 @@
 import {
-  LayoutDashboard,
-  Users,
   Target,
   Calendar,
   Plane,
   Tag,
-  Bell,
   type LucideIcon,
   UserStar,
   User,
@@ -18,6 +15,7 @@ import {
 export interface NavSubItem {
   title: string;
   url: string;
+  getUrl?: () => string;
   icon?: LucideIcon;
   comingSoon?: boolean;
   newTab?: boolean;
@@ -27,6 +25,8 @@ export interface NavSubItem {
 export interface NavMainItem {
   title: string;
   url: string;
+  /** Optional dynamic URL builder (e.g. include default query params). */
+  getUrl?: () => string;
   icon?: LucideIcon;
   subItems?: NavSubItem[];
   comingSoon?: boolean;
@@ -39,6 +39,24 @@ export interface NavGroup {
   id: number;
   label?: string;
   items: NavMainItem[];
+}
+
+function startOfMonthISO(year: number, month: number) {
+  return new Date(year, month - 1, 1, 0, 0, 0, 0).toISOString();
+}
+
+function endOfMonthISO(year: number, month: number) {
+  return new Date(year, month, 0, 23, 59, 59, 999).toISOString();
+}
+
+function commissionsUrlForCurrentMonth() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const params = new URLSearchParams();
+  params.set("createdAtFrom", startOfMonthISO(year, month));
+  params.set("createdAtTo", endOfMonthISO(year, month));
+  return `/dashboard/commissions?${params.toString()}`;
 }
 
 export const sidebarItems: NavGroup[] = [
@@ -92,6 +110,7 @@ export const sidebarItems: NavGroup[] = [
       {
         title: "Commissions",
         url: "/dashboard/commissions",
+        getUrl: commissionsUrlForCurrentMonth,
         icon: CreditCard,
         roles: ["SUPER_ADMIN", "ADMIN"],
       },

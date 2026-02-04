@@ -68,11 +68,11 @@ export default function AirlineAndAirportDetailPage({ params }: { params: Promis
             </div>
             <div>
               <span className="text-muted-foreground">Created date:</span>
-              <div className="mt-1">{format(new Date(airlineAndAirport.createdAt), "dd MMM yyyy HH:mm")}</div>
+              <div className="mt-1">{format(new Date(airlineAndAirport.createdAt), "dd MMM yyyy hh:mm a")}</div>
             </div>
             <div>
               <span className="text-muted-foreground">Updated date:</span>
-              <div className="mt-1">{format(new Date(airlineAndAirport.updatedAt), "dd MMM yyyy HH:mm")}</div>
+              <div className="mt-1">{format(new Date(airlineAndAirport.updatedAt), "dd MMM yyyy hh:mm a")}</div>
             </div>
           </div>
         </div>

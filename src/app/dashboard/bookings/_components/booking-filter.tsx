@@ -103,7 +103,7 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
           }}
         >
           <SelectTrigger className="w-full lg:w-40">
-            <SelectValue placeholder="Filter payment status" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All status</SelectItem>

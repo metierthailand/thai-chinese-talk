@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { useCommissionDetails, type CommissionDetail } from "../hooks/use-commissions";
 import { Loading } from "@/components/page/loading";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
+import { CommissionFilter } from "../_components/commission-filter";
 
 export default function CommissionDetailPage({ params }: { params: Promise<{ agentId: string }> }) {
     const { agentId } = use(params);
@@ -94,20 +95,25 @@ export default function CommissionDetailPage({ params }: { params: Promise<{ age
 
     return (
         <div className="space-y-6 p-8">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4">
                 <div>
-                    <div className="text-sm text-muted-foreground">Sales</div>
-                    <h1 className="text-3xl font-bold tracking-tight">{agentName || "Commission Detail"}</h1>
-                    {(createdAtFrom || createdAtTo) && (
-                        <p className="text-muted-foreground mt-1 text-sm">
-                            Date range: {createdAtFrom ?? "..."} - {createdAtTo ?? "..."}
-                        </p>
-                    )}
+                    <Button variant="outline" onClick={() => router.back()}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back
+                    </Button>
                 </div>
-                <Button variant="outline" onClick={() => router.back()}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
-                </Button>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <div className="text-sm text-muted-foreground">Sales</div>
+                        <h1 className="text-3xl font-bold tracking-tight">{agentName || "Commission Detail"}</h1>
+                        {(createdAtFrom || createdAtTo) && (
+                            <p className="text-muted-foreground mt-1 text-sm">
+                                Date range: {createdAtFrom ?? "..."} - {createdAtTo ?? "..."}
+                            </p>
+                        )}
+                    </div>
+                    <CommissionFilter hideSearch />
+                </div>
             </div>
 
             <div className="rounded-md border">

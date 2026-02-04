@@ -335,7 +335,7 @@ export function CustomerSection({
                       <p className="text-sm">
                         {selectedPassport.passportNumber} ({selectedPassport.issuingCountry}){selectedPassport.isPrimary ? " - Primary" : ""}
                       </p>
-                      <p className="text-muted-foreground text-xs">Expired: {format(new Date(selectedPassport.expiryDate), "PP")}</p>
+                      <p className="text-muted-foreground text-xs">Expired: {format(new Date(selectedPassport.expiryDate), "dd MMM yyyy")}</p>
                     </div>
                   );
                 })()}
@@ -364,7 +364,7 @@ export function CustomerSection({
                         <p>
                           {passport.passportNumber} ({passport.issuingCountry}){passport.isPrimary ? " - Primary" : ""}
                         </p>
-                        <p className="text-muted-foreground text-xs">Expired: {format(new Date(passport.expiryDate), "PP")}</p>
+                        <p className="text-muted-foreground text-xs">Expired: {format(new Date(passport.expiryDate), "dd MMM yyyy")}</p>
                       </div>
                     </SelectItem>
                   ))}

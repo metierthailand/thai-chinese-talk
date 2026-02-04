@@ -118,7 +118,7 @@ export function PaymentForm({ bookingId, booking, onSuccess, onCancel }: Payment
             <FormItem>
               <FormLabel>Amount (THB)</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="0.00" {...field} />
+                <Input type="number" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

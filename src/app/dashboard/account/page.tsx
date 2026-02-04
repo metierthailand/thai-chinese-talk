@@ -361,7 +361,6 @@ export default function AccountPage() {
                           <div className="relative">
                             <Input
                               type={showCurrentPassword ? "text" : "password"}
-                              placeholder="Enter current password"
                               {...field}
                             />
                             <Button
@@ -393,7 +392,6 @@ export default function AccountPage() {
                           <div className="relative">
                             <Input
                               type={showNewPassword ? "text" : "password"}
-                              placeholder="Enter new password"
                               {...field}
                             />
                             <Button
@@ -425,7 +423,6 @@ export default function AccountPage() {
                           <div className="relative">
                             <Input
                               type={showConfirmPassword ? "text" : "password"}
-                              placeholder="Confirm new password"
                               {...field}
                             />
                             <Button

@@ -45,6 +45,7 @@ const NavItemExpanded = ({
   isSubmenuOpen: (subItems?: NavMainItem["subItems"]) => boolean;
 }) => {
   const { isMobile, setOpenMobile } = useSidebar();
+  const href = item.getUrl?.() ?? item.url;
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -74,7 +75,7 @@ const NavItemExpanded = ({
               isActive={isActive(item.url)}
               tooltip={item.title}
             >
-              <Link href={item.url} target={item.newTab ? "_blank" : undefined} onClick={handleLinkClick}>
+              <Link href={href} target={item.newTab ? "_blank" : undefined} onClick={handleLinkClick}>
                 {item.icon && <item.icon />}
                 <span>{item.title}</span>
                 {item.comingSoon && <IsComingSoon />}
@@ -88,7 +89,11 @@ const NavItemExpanded = ({
               {item.subItems.map((subItem) => (
                 <SidebarMenuSubItem key={subItem.title}>
                   <SidebarMenuSubButton aria-disabled={subItem.comingSoon} isActive={isActive(subItem.url)} asChild>
-                    <Link href={subItem.url} target={subItem.newTab ? "_blank" : undefined} onClick={handleLinkClick}>
+                    <Link
+                      href={subItem.getUrl?.() ?? subItem.url}
+                      target={subItem.newTab ? "_blank" : undefined}
+                      onClick={handleLinkClick}
+                    >
                       {subItem.icon && <subItem.icon />}
                       <span>{subItem.title}</span>
                       {subItem.comingSoon && <IsComingSoon />}
@@ -224,6 +229,7 @@ export function NavMain({ items }: NavMainProps) {
                 if (state === "collapsed" && !isMobile) {
                   // If no subItems, just render the button as a link
                   if (!item.subItems) {
+                    const href = item.getUrl?.() ?? item.url;
                     return (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
@@ -232,7 +238,7 @@ export function NavMain({ items }: NavMainProps) {
                           tooltip={item.title}
                           isActive={isItemActive(item.url)}
                         >
-                          <Link href={item.url} target={item.newTab ? "_blank" : undefined} onClick={handleLinkClick}>
+                          <Link href={href} target={item.newTab ? "_blank" : undefined} onClick={handleLinkClick}>
                             {item.icon && <item.icon />}
                             <span>{item.title}</span>
                           </Link>

@@ -10,7 +10,7 @@ export async function calculateCommission(bookingId: string) {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     include: {
-      trip: { select: { standardPrice: true } },
+      trip: { select: { standardPrice: true, startDate: true } },
       firstPayment: { select: { amount: true } },
       secondPayment: { select: { amount: true } },
       thirdPayment: { select: { amount: true } },
@@ -82,7 +82,8 @@ export async function calculateCommission(bookingId: string) {
   // Commission status is APPROVED when fully paid
   const status: CommissionStatus = "APPROVED";
 
-  // Create commission
+  // Create commission with createdAt = trip startDate so commission filter by "created date range" = filter by trip start date
+  const tripStartDate = new Date(booking.trip.startDate);
   const commission = await prisma.commission.create({
     data: {
       bookingId,
@@ -90,6 +91,7 @@ export async function calculateCommission(bookingId: string) {
       amount: amount.toNumber(),
       status,
       note: `Auto-generated commission for sales user (FULLY_PAID)`,
+      createdAt: tripStartDate,
     },
   });
 

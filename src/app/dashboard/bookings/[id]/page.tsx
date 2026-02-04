@@ -30,7 +30,7 @@ export default function ViewBookingPage({ params }: { params: Promise<{ id: stri
       extraPricePerBed: booking.extraPricePerBed?.toString() || "0",
       roomNote: booking.roomNote || "",
       seatType: (booking.seatType as "WINDOW" | "MIDDLE" | "AISLE") ?? "WINDOW",
-      seatClass: booking.seatClass ? (booking.seatClass as "FIRST_CLASS" | "BUSINESS_CLASS" | "LONG_LEG") : undefined,
+      seatClass: booking.seatClass ? (booking.seatClass as "FIRST_CLASS" | "BUSINESS_CLASS" | "LONG_LEG" | "OTHER") : undefined,
       extraPricePerSeat: booking.extraPricePerSeat?.toString() ?? "",
       seatNote: booking.seatNote || "",
       extraPricePerBag: booking.extraPricePerBag?.toString() || "",
@@ -106,13 +106,13 @@ export default function ViewBookingPage({ params }: { params: Promise<{ id: stri
             {booking.createdAt && (
               <div>
                 <span className="text-muted-foreground">Created date:</span>
-                <div className="mt-1">{format(new Date(booking.createdAt), "dd MMM yyyy HH:mm")}</div>
+                <div className="mt-1">{format(new Date(booking.createdAt), "dd MMM yyyy hh:mm a")}</div>
               </div>
             )}
             {booking.updatedAt && (
               <div>
                 <span className="text-muted-foreground">Updated date:</span>
-                <div className="mt-1">{format(new Date(booking.updatedAt), "dd MMM yyyy HH:mm")}</div>
+                <div className="mt-1">{format(new Date(booking.updatedAt), "dd MMM yyyy hh:mm a")}</div>
               </div>
             )}
           </div>

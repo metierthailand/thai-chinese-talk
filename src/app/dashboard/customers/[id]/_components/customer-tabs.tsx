@@ -82,7 +82,7 @@ export function CustomerTabs({
                 <div className="rounded-md border p-4">
                   <div className="font-medium">{booking.trip.name}</div>
                   <div className="text-muted-foreground text-sm">
-                    {format(new Date(booking.trip.startDate), "PP")} - {format(new Date(booking.trip.endDate), "PP")}
+                    {format(new Date(booking.trip.startDate), "dd MMM yyyy")} - {format(new Date(booking.trip.endDate), "dd MMM yyyy")}
                   </div>
                   <div className="text-muted-foreground mt-1 text-xs">
                     Status: {booking.status} | Amount: {formatDecimal(booking.totalAmount)}

@@ -117,11 +117,11 @@ export default function FamilyDetailPage({ params }: { params: Promise<{ id: str
           </div>
           <div>
             <span className="text-muted-foreground">Created date:</span>
-            <div className="mt-1">{format(new Date(family.createdAt), "dd MMM yyyy HH:mm")}</div>
+            <div className="mt-1">{format(new Date(family.createdAt), "dd MMM yyyy hh:mm a")}</div>
           </div>
           <div>
             <span className="text-muted-foreground">Updated date:</span>
-            <div className="mt-1">{format(new Date(family.updatedAt), "dd MMM yyyy HH:mm")}</div>
+            <div className="mt-1">{format(new Date(family.updatedAt), "dd MMM yyyy hh:mm a")}</div>
           </div>
         </div>
       </div>

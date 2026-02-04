@@ -19,6 +19,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { BookingFormValues } from "../booking-schema";
 
+const SEAT_CLASS_LABELS: Record<string, string> = {
+  FIRST_CLASS: "First class",
+  BUSINESS_CLASS: "Business class",
+  LONG_LEG: "Long leg",
+  OTHER: "Other",
+};
+
 interface TravelDetailsSectionProps {
   form: UseFormReturn<BookingFormValues>;
   readOnly: boolean;
@@ -46,8 +53,6 @@ export function TravelDetailsSection({
 }: TravelDetailsSectionProps) {
   return (
     <>
-      <Separator />
-
       {/* Room Information Section */}
       <div className="space-y-4 mt-6">
         <div className="grid grid-cols-1 gap-4">
@@ -216,7 +221,10 @@ export function TravelDetailsSection({
                 </div>
                 {readOnly ? (
                   <FormControl>
-                    <Input value={field.value || ""} disabled />
+                    <Input
+                      value={field.value ? SEAT_CLASS_LABELS[field.value] ?? field.value : ""}
+                      disabled
+                    />
                   </FormControl>
                 ) : (
                   <Select
@@ -234,6 +242,7 @@ export function TravelDetailsSection({
                       <SelectItem value="FIRST_CLASS">First class</SelectItem>
                       <SelectItem value="BUSINESS_CLASS">Business class</SelectItem>
                       <SelectItem value="LONG_LEG">Long leg</SelectItem>
+                      <SelectItem value="OTHER">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -416,8 +425,6 @@ export function TravelDetailsSection({
           )}
         />
       </div>
-
-      <Separator className="mt-6" />
     </>
   );
 }

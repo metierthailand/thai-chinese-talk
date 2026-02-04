@@ -69,7 +69,7 @@ export function LayoutControls(props: LayoutControlsProps) {
               <Label className="text-xs font-medium">Preset</Label>
               <Select value={themePreset} onValueChange={(value) => handleValueChange("theme_preset", value)}>
                 <SelectTrigger className="w-full text-xs">
-                  <SelectValue placeholder="Preset" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {THEME_PRESET_OPTIONS.map((preset) => (

@@ -113,7 +113,7 @@ export default function CustomerDetailPage() {
                 {customer.dateOfBirth && (
                   <div className="flex items-center gap-3">
                     <Calendar className="text-muted-foreground h-4 w-4" />
-                    <span>{format(new Date(customer.dateOfBirth), "PP")}</span>
+                    <span>{format(new Date(customer.dateOfBirth), "dd MMM yyyy")}</span>
                   </div>
                 )}
               </CardContent>

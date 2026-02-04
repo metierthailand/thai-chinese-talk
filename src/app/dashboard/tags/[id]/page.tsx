@@ -67,13 +67,13 @@ export default function TagDetailPage({ params }: { params: Promise<{ id: string
             {tag.createdAt && (
               <div>
                 <span className="text-muted-foreground">Created date:</span>
-                <div className="mt-1">{format(new Date(tag.createdAt), "dd MMM yyyy HH:mm")}</div>
+                <div className="mt-1">{format(new Date(tag.createdAt), "dd MMM yyyy hh:mm a")}</div>
               </div>
             )}
             {tag.updatedAt && (
               <div>
                 <span className="text-muted-foreground">Updated date:</span>
-                <div className="mt-1">{format(new Date(tag.updatedAt), "dd MMM yyyy HH:mm")}</div>
+                <div className="mt-1">{format(new Date(tag.updatedAt), "dd MMM yyyy hh:mm a")}</div>
               </div>
             )}
           </div>

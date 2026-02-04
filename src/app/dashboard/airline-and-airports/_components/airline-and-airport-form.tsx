@@ -78,7 +78,7 @@ export function AirlineAndAirportForm({
                 {readOnly ? (
                   <Input value={field.value || ""} disabled />
                 ) : (
-                  <Input placeholder="IATA code" {...field} disabled={isLoading} />
+                  <Input {...field} disabled={isLoading} />
                 )}
               </FormControl>
               <FormMessage />
@@ -96,7 +96,7 @@ export function AirlineAndAirportForm({
                 {readOnly ? (
                   <Input value={field.value || ""} disabled />
                 ) : (
-                  <Input placeholder="Airport name" {...field} disabled={isLoading} />
+                  <Input {...field} disabled={isLoading} />
                 )}
               </FormControl>
               <FormMessage />

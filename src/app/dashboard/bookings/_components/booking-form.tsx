@@ -231,7 +231,6 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
                 <FormLabel>Note for booking</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Note for booking"
                     className="resize-none"
                     {...field}
                     disabled={readOnly}

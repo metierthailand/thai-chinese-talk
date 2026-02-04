@@ -236,6 +236,7 @@ enum SeatClass {
   FIRST_CLASS
   BUSINESS_CLASS
   LONG_LEG
+  OTHER
 }
 
 enum TripType {

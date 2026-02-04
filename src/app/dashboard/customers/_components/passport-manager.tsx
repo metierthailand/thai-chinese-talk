@@ -201,10 +201,10 @@ export function PassportManager({ className, customerId, customerFirstName, cust
                     <div className="mt-2 space-y-1 text-xs">
                       {passport.issuingDate && (
                         <div className="text-muted-foreground">
-                          Issued: {format(new Date(passport.issuingDate), "PP")}
+                          Issued: {format(new Date(passport.issuingDate), "dd MMM yyyy")}
                         </div>
                       )}
-                      <div className="text-red-500">Expired: {format(new Date(passport.expiryDate), "PP")}</div>
+                      <div className="text-red-500">Expired: {format(new Date(passport.expiryDate), "dd MMM yyyy")}</div>
                     </div>
                   </div>
                   <div className="flex gap-2 transition-opacity md:opacity-0 md:group-hover:opacity-100">
