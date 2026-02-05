@@ -33,7 +33,6 @@ export default function BookingsPage() {
   const paymentStatus = statusQuery || "ALL";
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [hasTouchedSelection, setHasTouchedSelection] = useState(false);
 
 
   // Calculate total amount and paid amount from booking data
@@ -82,8 +81,8 @@ export default function BookingsPage() {
   }, [total, pageSize]);
 
   const effectiveSelectedIds = useMemo(
-    () => (hasTouchedSelection ? selectedIds : bookings.map((b) => b.id)),
-    [hasTouchedSelection, selectedIds, bookings],
+    () => selectedIds,
+    [selectedIds],
   );
 
   const columns: ColumnDef<Booking>[] = useMemo(
@@ -99,10 +98,8 @@ export default function BookingsPage() {
               aria-label="Select all bookings on this page"
               onCheckedChange={(checked) => {
                 if (checked) {
-                  setHasTouchedSelection(true);
                   setSelectedIds(allIds);
                 } else {
-                  setHasTouchedSelection(true);
                   setSelectedIds([]);
                 }
               }}
@@ -117,7 +114,6 @@ export default function BookingsPage() {
               checked={checked}
               aria-label="Select booking"
               onCheckedChange={(checked) => {
-                setHasTouchedSelection(true);
                 setSelectedIds((prev) =>
                   checked ? [...prev, id] : prev.filter((existingId) => existingId !== id),
                 );

@@ -67,9 +67,9 @@ export function TripSection({
               <FormControl>
                 <Input
                   value={
-                    booking?.trip
-                      ? `${booking.trip.name} (${format(new Date(booking.trip.startDate), "dd MMM")} - ${format(new Date(booking.trip.endDate), "dd MMM")})`
-                      : selectedTrip?.name || ""
+                    selectedTrip
+                      ? `${selectedTrip.code}${selectedTrip._count?.bookings >= selectedTrip.pax ? " [FULL]" : ""}`
+                      : booking?.trip?.code ?? ""
                   }
                   disabled
                 />

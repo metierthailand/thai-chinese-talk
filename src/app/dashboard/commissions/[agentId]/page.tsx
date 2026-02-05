@@ -106,11 +106,6 @@ export default function CommissionDetailPage({ params }: { params: Promise<{ age
                     <div>
                         <div className="text-sm text-muted-foreground">Sales</div>
                         <h1 className="text-3xl font-bold tracking-tight">{agentName || "Commission Detail"}</h1>
-                        {(createdAtFrom || createdAtTo) && (
-                            <p className="text-muted-foreground mt-1 text-sm">
-                                Date range: {createdAtFrom ?? "..."} - {createdAtTo ?? "..."}
-                            </p>
-                        )}
                     </div>
                     <CommissionFilter hideSearch />
                 </div>

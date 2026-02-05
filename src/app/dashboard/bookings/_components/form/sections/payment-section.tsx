@@ -100,7 +100,7 @@ export function PaymentSection({
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Remaining</p>
+                    <p className="text-muted-foreground text-sm">Balance</p>
                     <p
                       className={`text-lg font-semibold ${remainingAmount > 0 ? "text-destructive" : "text-green-600"}`}
                     >

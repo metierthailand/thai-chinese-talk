@@ -49,26 +49,34 @@ function toWinAnsi(s: string): string {
   return s.replace(/[^\x20-\x7E\xA0-\xFF]/g, "?");
 }
 
-const MARGIN = 20;
+const MARGIN = 50;
+const A4_WIDTH = 595;
 const A4_HEIGHT = 842;
 
-function drawSectionBox(page: PDFPage, x: number, topY: number, bottomY: number) {
-  const paddingX = 4;
-  const paddingY = 12;
-  const left = x - paddingX;
-  const width = page.getWidth() - 2 * MARGIN + 2 * paddingX;
-  const height = topY - bottomY + 2 * paddingY;
-
-  page.drawRectangle({
-    x: left,
-    y: bottomY - paddingY,
-    width,
-    height,
-    borderWidth: 1,
-    borderColor: rgb(0, 0, 0),
-    opacity: 0,
-    borderOpacity: 1,
+function drawHorizontalLine(page: PDFPage, y: number) {
+  const fromX = MARGIN;
+  const toX = A4_WIDTH - MARGIN;
+  page.drawLine({
+    start: { x: fromX, y },
+    end: { x: toX, y },
+    thickness: 1,
+    color: rgb(0, 0, 0),
   });
+}
+
+function drawCenteredTitle(
+  page: PDFPage,
+  font: PDFFont,
+  text: string,
+  y: number,
+  size: number,
+  sanitize?: (s: string) => string
+): number {
+  const t = sanitize ? sanitize(text) : text;
+  const textWidth = font.widthOfTextAtSize(t, size);
+  const x = (A4_WIDTH - textWidth) / 2;
+  page.drawText(t, { x, y, size, font });
+  return y - (size + 8);
 }
 
 function drawLine(
@@ -267,12 +275,15 @@ export async function GET(request: Request) {
 
     for (let i = 0; i < bookings.length; i++) {
       const b = bookings[i];
-      const page = pdfDoc.addPage([595, A4_HEIGHT]);
+      const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
       let y = A4_HEIGHT - MARGIN;
       const x = MARGIN;
 
+      // Title at top center
+      y = drawCenteredTitle(page, fontBold, "ThaiChinese Tour", y, 11, sanitize);
+      y -= 20;
+
       // Booking Information
-      const bookingBoxTop = y;
       y = drawLine(page, font, fontBold, "Booking Information", x, y, { bold: true, size: 11, sanitize });
       y -= 4;
 
@@ -304,13 +315,12 @@ export async function GET(request: Request) {
         (cc) => `${str(cc.customer?.firstNameEn)} ${str(cc.customer?.lastNameEn)}`.trim() || `${str(cc.customer?.firstNameTh)} ${str(cc.customer?.lastNameTh)}`.trim()
       ).filter(Boolean);
       y = drawLabelValue(page, font, fontBold, "Companion", companions.length ? companions.join(", ") : "-", x, y, sanitize);
-      y -= 8;
+      y -= 12;
 
-      const bookingBoxBottom = y;
-      drawSectionBox(page, x, bookingBoxTop, bookingBoxBottom);
+      drawHorizontalLine(page, y);
+      y -= 20;
 
       // Cost summary
-      const costBoxTop = y;
       y = drawLine(page, font, fontBold, "Cost summary", x, y, { bold: true, size: 11, sanitize });
       y -= 4;
 
@@ -340,13 +350,12 @@ export async function GET(request: Request) {
         : "";
       y = drawLabelValue(page, font, fontBold, "Sales", salesName || "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for booking", str(b.note) || "-", x, y, sanitize);
-      y -= 4;
+      y -= 12;
 
-      const costBoxBottom = y;
-      drawSectionBox(page, x, costBoxTop, costBoxBottom);
+      drawHorizontalLine(page, y);
+      y -= 16;
 
       // Payment summary
-      const paymentBoxTop = y;
       y = drawLine(page, font, fontBold, "Payment summary", x, y, { bold: true, size: 10, sanitize });
       y -= 4;
 
@@ -354,10 +363,7 @@ export async function GET(request: Request) {
       const remaining = totalAmount - paidAmount;
       y = drawLabelValue(page, font, fontBold, "Total amount", `${totalAmount.toFixed(2)} THB`, x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Paid amount", `${paidAmount.toFixed(2)} THB`, x, y, sanitize);
-      y = drawLabelValue(page, font, fontBold, "Remaining", `${remaining.toFixed(2)} THB`, x, y, sanitize);
-
-      const paymentBoxBottom = y;
-      drawSectionBox(page, x, paymentBoxTop, paymentBoxBottom);
+      y = drawLabelValue(page, font, fontBold, "Balance", `${remaining.toFixed(2)} THB`, x, y, sanitize);
     }
 
     const pdfBytes = await pdfDoc.save();
