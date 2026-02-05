@@ -50,15 +50,19 @@ export async function GET(
             email: true,
           },
         },
-        companionCustomers: {
+        companionGroup: {
           include: {
-            customer: {
-              select: {
-                id: true,
-                firstNameTh: true,
-                lastNameTh: true,
-                firstNameEn: true,
-                lastNameEn: true,
+            bookings: {
+              include: {
+                customer: {
+                  select: {
+                    id: true,
+                    firstNameTh: true,
+                    lastNameTh: true,
+                    firstNameEn: true,
+                    lastNameEn: true,
+                  },
+                },
               },
             },
           },
@@ -158,14 +162,16 @@ export async function PUT(
       where: { id },
       select: {
         tripId: true,
-        salesUserId: true,
-        paymentStatus: true,
         customerId: true,
-        companionCustomers: {
+        companionGroupId: true,
+        companionGroup: {
           select: {
-            customerId: true,
+            id: true,
+            bookings: { select: { customerId: true } },
           },
         },
+        salesUserId: true,
+        paymentStatus: true,
       },
     });
 
@@ -291,15 +297,19 @@ export async function PUT(
               email: true,
             },
           },
-          companionCustomers: {
+          companionGroup: {
             include: {
-              customer: {
-                select: {
-                  id: true,
-                  firstNameTh: true,
-                  lastNameTh: true,
-                  firstNameEn: true,
-                  lastNameEn: true,
+              bookings: {
+                include: {
+                  customer: {
+                    select: {
+                      id: true,
+                      firstNameTh: true,
+                      lastNameTh: true,
+                      firstNameEn: true,
+                      lastNameEn: true,
+                    },
+                  },
                 },
               },
             },
@@ -360,83 +370,65 @@ export async function PUT(
         }
       }
 
-      // Handle symmetric companion relationship when companionCustomerIds is updated
+      // Companion group: one group per trip; all bookings in group share companionGroupId
       if (companionCustomerIds !== undefined) {
         const finalTripIdForCompanion = tripId || currentBooking.tripId;
         const currentCustomerId = customerId || currentBooking.customerId;
         const newCompanionIds = companionCustomerIds || [];
-        const oldCompanionIds = currentBooking.companionCustomers.map((c) => c.customerId);
+        const fullGroupCustomerIds = Array.from(
+          new Set<string>([currentCustomerId, ...newCompanionIds])
+        );
 
-        // Delete old companion relationships (both directions)
-        const toRemove = oldCompanionIds.filter((id) => !newCompanionIds.includes(id));
-        if (toRemove.length > 0) {
-          // Delete: this booking -> old companions
-          // Using type assertion because Prisma client will have bookingCompanion after migration
-          const txWithBookingCompanion = tx as unknown as {
-            bookingCompanion: {
-              deleteMany: (args: { where: Record<string, unknown> }) => Promise<unknown>;
-              createMany: (args: { data: Array<{ bookingId: string; customerId: string }>; skipDuplicates: boolean }) => Promise<unknown>;
-            };
-          };
-          
-          await txWithBookingCompanion.bookingCompanion.deleteMany({
-            where: {
-              bookingId: id,
-              customerId: { in: toRemove },
-            },
+        const bookingsInGroup = await tx.booking.findMany({
+          where: {
+            tripId: finalTripIdForCompanion,
+            customerId: { in: fullGroupCustomerIds },
+          },
+          select: { id: true, customerId: true, companionGroupId: true },
+        });
+
+        if (fullGroupCustomerIds.length === 0 || bookingsInGroup.length === 0) {
+          const oldGroupId = currentBooking.companionGroupId;
+          if (oldGroupId) {
+            await tx.booking.updateMany({
+              where: { companionGroupId: oldGroupId },
+              data: { companionGroupId: null },
+            });
+          }
+        } else {
+          const existingGroupId =
+            currentBooking.companionGroupId ??
+            bookingsInGroup.find((b) => b.companionGroupId)?.companionGroupId;
+
+          let groupId: string;
+          if (existingGroupId) {
+            groupId = existingGroupId;
+          } else {
+            const newGroup = await tx.bookingCompanion.create({
+              data: { tripId: finalTripIdForCompanion },
+            });
+            groupId = newGroup.id;
+          }
+
+          await tx.booking.updateMany({
+            where: { id: { in: bookingsInGroup.map((b) => b.id) } },
+            data: { companionGroupId: groupId },
           });
 
-          // Delete: old companion bookings -> this customer
-          const oldCompanionBookings = await tx.booking.findMany({
-            where: {
-              tripId: finalTripIdForCompanion,
-              customerId: { in: toRemove },
-            },
-            select: { id: true },
-          });
-
-          await txWithBookingCompanion.bookingCompanion.deleteMany({
-            where: {
-              bookingId: { in: oldCompanionBookings.map((b) => b.id) },
-              customerId: currentCustomerId,
-            },
-          });
-        }
-
-        // Create new companion relationships (both directions)
-        const toAdd = newCompanionIds.filter((id: string) => !oldCompanionIds.includes(id));
-        if (toAdd.length > 0) {
-          // Create: this booking -> new companions
-          const txWithBookingCompanion = tx as unknown as {
-            bookingCompanion: {
-              createMany: (args: { data: Array<{ bookingId: string; customerId: string }>; skipDuplicates: boolean }) => Promise<unknown>;
-            };
-          };
-          
-          await txWithBookingCompanion.bookingCompanion.createMany({
-            data: toAdd.map((companionCustomerId: string) => ({
-              bookingId: id,
-              customerId: companionCustomerId,
-            })),
-            skipDuplicates: true,
-          });
-
-          // Create: new companion bookings -> this customer
-          const newCompanionBookings = await tx.booking.findMany({
-            where: {
-              tripId: finalTripIdForCompanion,
-              customerId: { in: toAdd },
-            },
-            select: { id: true },
-          });
-
-          await txWithBookingCompanion.bookingCompanion.createMany({
-            data: newCompanionBookings.map((companionBooking) => ({
-              bookingId: companionBooking.id,
-              customerId: currentCustomerId,
-            })),
-            skipDuplicates: true,
-          });
+          const leftGroupBookingIds = (
+            await tx.booking.findMany({
+              where: { companionGroupId: groupId },
+              select: { id: true, customerId: true },
+            })
+          )
+            .filter((b) => !fullGroupCustomerIds.includes(b.customerId))
+            .map((b) => b.id);
+          if (leftGroupBookingIds.length > 0) {
+            await tx.booking.updateMany({
+              where: { id: { in: leftGroupBookingIds } },
+              data: { companionGroupId: null },
+            });
+          }
         }
       }
 

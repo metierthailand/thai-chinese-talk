@@ -7,10 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Search, X } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { CalendarIcon, Search, X, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useTrips, useTrip } from "@/app/dashboard/trips/hooks/use-trips";
 
 interface BookingFilterProps {
   onFilterChange?: () => void;
@@ -23,6 +32,7 @@ type UpdateParams = {
   paymentStatus?: string;
   tripStartDateFrom?: string;
   tripStartDateTo?: string;
+  tripId?: string;
 };
 
 export function BookingFilter({ onFilterChange }: BookingFilterProps) {
@@ -34,15 +44,25 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
   const statusQuery = searchParams.get("status") || "";
   const tripStartDateFromQuery = searchParams.get("tripStartDateFrom") || "";
   const tripStartDateToQuery = searchParams.get("tripStartDateTo") || "";
+  const tripIdQuery = searchParams.get("tripId") || "";
 
   // Local state (init จาก URL แค่ตอน mount)
   const [searchInput, setSearchInput] = useState(searchQuery);
   const [paymentStatus, setPaymentStatus] = useState(statusQuery || "ALL");
   const [tripStartDateFrom, setTripStartDateFrom] = useState(tripStartDateFromQuery);
   const [tripStartDateTo, setTripStartDateTo] = useState(tripStartDateToQuery);
+  const [tripId, setTripId] = useState(tripIdQuery);
+  const [tripSearchOpen, setTripSearchOpen] = useState(false);
+  const [tripSearchQuery, setTripSearchQuery] = useState("");
 
   // Debounced search
   const debouncedSearch = useDebounce(searchInput, 500);
+  const debouncedTripSearch = useDebounce(tripSearchQuery, 300);
+
+  // Trips for combobox (search by code/name)
+  const { data: tripsResponse } = useTrips(1, 100, debouncedTripSearch || undefined);
+  const trips = tripsResponse?.data ?? [];
+  const { data: selectedTrip } = useTrip(tripId || undefined);
 
   // --- Helper: build query string from current params + updates ---
   const buildQueryString = (updates: UpdateParams) => {
@@ -65,6 +85,7 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
     setParam("status", updates.paymentStatus, "ALL");
     setParam("tripStartDateFrom", updates.tripStartDateFrom);
     setParam("tripStartDateTo", updates.tripStartDateTo);
+    setParam("tripId", updates.tripId);
 
     const qs = params.toString();
     return qs ? `?${qs}` : "";
@@ -89,7 +110,8 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
     setPaymentStatus(statusQuery || "ALL");
     setTripStartDateFrom(tripStartDateFromQuery);
     setTripStartDateTo(tripStartDateToQuery);
-  }, [searchQuery, statusQuery, tripStartDateFromQuery, tripStartDateToQuery]);
+    setTripId(tripIdQuery);
+  }, [searchQuery, statusQuery, tripStartDateFromQuery, tripStartDateToQuery, tripIdQuery]);
 
   return (
     <div className="flex flex-col items-end justify-end gap-4 lg:flex-row">
@@ -113,6 +135,97 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
             <SelectItem value="CANCELLED">Cancelled</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Filter: Trip code */}
+        <Popover open={tripSearchOpen} onOpenChange={setTripSearchOpen}>
+          <div className="relative w-full lg:w-[280px]">
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className={cn(
+                  "w-full justify-between pr-8 text-left font-normal lg:w-[280px]",
+                  !tripId && "text-muted-foreground",
+                )}
+              >
+                <span className="truncate">
+                  {selectedTrip ? selectedTrip.code : "Trip code"}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            {tripId && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-1/2 right-8 h-7 w-7 -translate-y-1/2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTripId("");
+                  setTripSearchQuery("");
+                  pushWithParams({ tripId: "", page: 1 });
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <PopoverContent className="w-[400px] p-0" align="start">
+            <Command shouldFilter={false}>
+              <CommandInput
+                value={tripSearchQuery}
+                onValueChange={setTripSearchQuery}
+                placeholder="Search by trip code or name..."
+              />
+              <CommandList>
+                {trips.length === 0 ? (
+                  <CommandEmpty>
+                    {tripSearchQuery ? "No trips found." : "Start typing to search..."}
+                  </CommandEmpty>
+                ) : (
+                  <CommandGroup>
+                    {trips.map((trip) => (
+                      <CommandItem
+                        value={trip.id}
+                        key={trip.id}
+                        onSelect={() => {
+                          setTripId(trip.id);
+                          pushWithParams({ tripId: trip.id, page: 1 });
+                          setTripSearchOpen(false);
+                          setTripSearchQuery("");
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            trip.id === tripId ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {trip.code}
+                            {trip._count?.bookings >= trip.pax ? " [FULL]" : ""}
+                          </span>
+                          <span className="text-muted-foreground text-sm">
+                            {trip.name}{" "}
+                            {(() => {
+                              const start = new Date(trip.startDate);
+                              const end = new Date(trip.endDate);
+                              const sameYear = start.getFullYear() === end.getFullYear();
+                              return sameYear
+                                ? `(${format(start, "dd MMM")} - ${format(end, "dd MMM yyyy")})`
+                                : `(${format(start, "dd MMM yyyy")} - ${format(end, "dd MMM yyyy")})`;
+                            })()}
+                          </span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
 
         {/* Filter: Trip start date range */}
         <Popover>

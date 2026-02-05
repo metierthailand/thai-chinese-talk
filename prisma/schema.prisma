@@ -82,10 +82,9 @@ model Customer {
 
   note String? @db.Text
 
-  tags              CustomerTag[]
-  leads             Lead[]
-  bookings          Booking[]          @relation("CustomerBookings")
-  companionBookings BookingCompanion[] @relation("CompanionCustomers")
+  tags     CustomerTag[]
+  leads    Lead[]
+  bookings Booking[]     @relation("CustomerBookings")
 
   addresses     Address[]
   passports     Passport[]
@@ -161,17 +160,15 @@ model CustomerTag {
   @@id([customerId, tagId])
 }
 
-// Explicit join table for companion relationship (symmetric)
 model BookingCompanion {
-  bookingId  String
-  booking    Booking  @relation("CompanionBookings", fields: [bookingId], references: [id], onDelete: Cascade)
-  customerId String
-  customer   Customer @relation("CompanionCustomers", fields: [customerId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id])
+
+  bookings Booking[]
 
   createdAt DateTime @default(now())
-
-  @@id([bookingId, customerId])
-  @@index([customerId])
+  updatedAt DateTime @updatedAt
 }
 
 // 3. Sales Pipeline & Leads
@@ -286,23 +283,25 @@ model Trip {
 
   bookings Booking[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  bookingCompanions BookingCompanion[]
 }
 
 model Booking {
-  id                 String             @id @default(uuid())
-  customerId         String
-  customer           Customer           @relation("CustomerBookings", fields: [customerId], references: [id])
-  salesUserId        String
-  salesUser          User               @relation("SalesBookings", fields: [salesUserId], references: [id])
-  tripId             String
-  trip               Trip               @relation(fields: [tripId], references: [id])
-  companionCustomers BookingCompanion[] @relation("CompanionBookings")
-  agentId            String?
-  agent              User?              @relation("AgentBookings", fields: [agentId], references: [id])
-  passportId         String
-  passport           Passport           @relation(fields: [passportId], references: [id], onDelete: Restrict)
+  id               String            @id @default(uuid())
+  customerId       String
+  customer         Customer          @relation("CustomerBookings", fields: [customerId], references: [id])
+  salesUserId      String
+  salesUser        User              @relation("SalesBookings", fields: [salesUserId], references: [id])
+  tripId           String
+  trip             Trip              @relation(fields: [tripId], references: [id])
+  companionGroupId String?
+  companionGroup   BookingCompanion? @relation(fields: [companionGroupId], references: [id])
+  agentId          String?
+  agent            User?             @relation("AgentBookings", fields: [agentId], references: [id])
+  passportId       String
+  passport         Passport          @relation(fields: [passportId], references: [id], onDelete: Restrict)
 
   note String? @db.Text
 

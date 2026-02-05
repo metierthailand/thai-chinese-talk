@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ export default function BookingsPage() {
   const statusQuery = searchParams.get("status") || "";
   const tripStartDateFromQuery = searchParams.get("tripStartDateFrom") || "";
   const tripStartDateToQuery = searchParams.get("tripStartDateTo") || "";
+  const tripIdQuery = searchParams.get("tripId") || "";
 
   const paymentStatus = statusQuery || "ALL";
 
@@ -66,6 +67,7 @@ export default function BookingsPage() {
     undefined, // visaStatus removed
     tripStartDateFromQuery || undefined,
     tripStartDateToQuery || undefined,
+    tripIdQuery || undefined,
   );
 
   const bookings = useMemo(() => bookingsResponse?.data ?? [], [bookingsResponse?.data]);
@@ -233,66 +235,66 @@ export default function BookingsPage() {
   }, [pageSize, page, table]);
 
   // Handlers for pagination changes
-  const handlePageChange = useCallback(
-    (newPageIndex: number) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPageIndex + 1 === 1) {
-        params.delete("page");
-      } else {
-        params.set("page", (newPageIndex + 1).toString());
-      }
-      const newUrl = params.toString() ? `?${params.toString()}` : "";
-      router.push(`/dashboard/bookings${newUrl}`, { scroll: false });
-    },
-    [searchParams, router],
-  );
+  const handlePageChange = (newPageIndex: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (newPageIndex + 1 === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", (newPageIndex + 1).toString());
+    }
+    const newUrl = params.toString() ? `?${params.toString()}` : "";
+    router.push(`/dashboard/bookings${newUrl}`, { scroll: false });
+  };
 
-  const handlePageSizeChange = useCallback(
-    (newPageSize: number) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPageSize === 10) {
-        params.delete("pageSize");
-      } else {
-        params.set("pageSize", newPageSize.toString());
-      }
-      params.set("page", "1"); // Reset to page 1 when changing page size
-      const newUrl = params.toString() ? `?${params.toString()}` : "";
-      router.push(`/dashboard/bookings${newUrl}`, { scroll: false });
-    },
-    [searchParams, router],
-  );
+  const handlePageSizeChange = (newPageSize: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (newPageSize === 10) {
+      params.delete("pageSize");
+    } else {
+      params.set("pageSize", newPageSize.toString());
+    }
+    params.set("page", "1"); // Reset to page 1 when changing page size
+    const newUrl = params.toString() ? `?${params.toString()}` : "";
+    router.push(`/dashboard/bookings${newUrl}`, { scroll: false });
+  };
 
   const exportBookings = useExportBookings();
-  const handleExport = useCallback(() => {
+  const handleExportCSV = () => {
     if (!bookings.length) return;
-    // ถ้าไม่ได้เลือกอะไรเลย หรือเลือกทั้งหน้าปัจจุบัน ให้ใช้ behavior เดิม (export ตาม filter ทั้งหมด)
     if (effectiveSelectedIds.length === 0 || effectiveSelectedIds.length === bookings.length) {
       exportBookings(
         searchQuery || undefined,
         paymentStatus !== "ALL" ? paymentStatus : undefined,
         tripStartDateFromQuery || undefined,
         tripStartDateToQuery || undefined,
+        tripIdQuery || undefined,
       );
       return;
     }
-
-    // ถ้าเลือกบาง row → export เฉพาะ booking ที่เลือก
     exportBookings(
       searchQuery || undefined,
       paymentStatus !== "ALL" ? paymentStatus : undefined,
       tripStartDateFromQuery || undefined,
       tripStartDateToQuery || undefined,
+      tripIdQuery || undefined,
       effectiveSelectedIds,
     );
-  }, [
-    bookings,
-    effectiveSelectedIds,
-    exportBookings,
-    searchQuery,
-    paymentStatus,
-    tripStartDateFromQuery,
-    tripStartDateToQuery,
-  ]);
+  };
+
+  const handleExportPDF = () => {
+    const params = new URLSearchParams();
+    if (effectiveSelectedIds.length > 0 && effectiveSelectedIds.length < bookings.length) {
+      params.set("bookingIds", effectiveSelectedIds.join(","));
+    } else {
+      if (searchQuery) params.set("search", searchQuery);
+      if (paymentStatus !== "ALL") params.set("status", paymentStatus);
+      if (tripStartDateFromQuery) params.set("tripStartDateFrom", tripStartDateFromQuery);
+      if (tripStartDateToQuery) params.set("tripStartDateTo", tripStartDateToQuery);
+      if (tripIdQuery) params.set("tripId", tripIdQuery);
+    }
+    const url = `/api/bookings/export-pdf?${params.toString()}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className="flex flex-col gap-8 p-8">
@@ -302,7 +304,13 @@ export default function BookingsPage() {
           <p className="text-muted-foreground">Create and update trip bookings.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" onClick={handleExportPDF}>
+            <Download className="mr-2 h-4 w-4" />{" "}
+            {effectiveSelectedIds.length > 0
+              ? `Export PDF (${effectiveSelectedIds.length})`
+              : "Export PDF"}
+          </Button>
+          <Button variant="outline" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" />{" "}
             {effectiveSelectedIds.length > 0
               ? `Export CSV (${effectiveSelectedIds.length})`

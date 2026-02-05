@@ -85,14 +85,18 @@ export async function GET(request: Request) {
                 lastNameTh: true,
               },
             },
-            companionCustomers: {
-              select: {
-                customer: {
-                  select: {
-                    firstNameEn: true,
-                    lastNameEn: true,
-                    firstNameTh: true,
-                    lastNameTh: true,
+            companionGroup: {
+              include: {
+                bookings: {
+                  include: {
+                    customer: {
+                      select: {
+                        firstNameEn: true,
+                        lastNameEn: true,
+                        firstNameTh: true,
+                        lastNameTh: true,
+                      },
+                    },
                   },
                 },
               },

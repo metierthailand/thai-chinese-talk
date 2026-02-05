@@ -60,14 +60,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ agentId:
                 lastNameTh: true,
               },
             },
-            companionCustomers: {
-              select: {
-                customer: {
-                  select: {
-                    firstNameEn: true,
-                    lastNameEn: true,
-                    firstNameTh: true,
-                    lastNameTh: true,
+            companionGroup: {
+              include: {
+                bookings: {
+                  include: {
+                    customer: {
+                      select: {
+                        firstNameEn: true,
+                        lastNameEn: true,
+                        firstNameTh: true,
+                        lastNameTh: true,
+                      },
+                    },
                   },
                 },
               },

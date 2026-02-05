@@ -23,7 +23,10 @@ export default function ViewBookingPage({ params }: { params: Promise<{ id: stri
       tripId: booking.tripId || "",
       salesUserId: booking.salesUserId || "",
       passportId: booking.passportId || "",
-      companionCustomerIds: booking.companionCustomers?.map((c) => c.customer.id) || [],
+      companionCustomerIds:
+        booking.companionGroup?.bookings
+          .filter((b) => b.customerId !== booking.customerId)
+          .map((b) => b.customer.id) ?? [],
       note: booking.note || "",
       extraPriceForSingleTraveller: booking.extraPriceForSingleTraveller?.toString() || "",
       roomType: (booking.roomType as "DOUBLE_BED" | "TWIN_BED") || "DOUBLE_BED",

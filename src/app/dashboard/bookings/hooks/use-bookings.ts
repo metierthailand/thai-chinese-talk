@@ -29,15 +29,19 @@ export interface Booking {
     lastName: string;
     email: string;
   };
-  companionCustomers?: Array<{
-    customer: {
-      id: string;
-      firstNameTh: string;
-      lastNameTh: string;
-      firstNameEn: string;
-      lastNameEn: string;
-    };
-  }>;
+  companionGroup?: {
+    id: string;
+    bookings: Array<{
+      customerId: string;
+      customer: {
+        id: string;
+        firstNameTh: string;
+        lastNameTh: string;
+        firstNameEn: string;
+        lastNameEn: string;
+      };
+    }>;
+  } | null;
   trip: {
     name: string;
     startDate: string;
@@ -448,6 +452,7 @@ export function useExportBookings() {
       status?: string,
       tripStartDateFrom?: string,
       tripStartDateTo?: string,
+      tripId?: string,
       bookingIds?: string[],
     ) => {
       const params = new URLSearchParams();
@@ -465,6 +470,9 @@ export function useExportBookings() {
       if (tripStartDateTo) {
         params.set("tripStartDateTo", tripStartDateTo);
       }
+      if (tripId) {
+        params.set("tripId", tripId);
+      }
       if (bookingIds && bookingIds.length > 0) {
         params.set("bookingIds", bookingIds.join(","));
       }
@@ -475,7 +483,7 @@ export function useExportBookings() {
       // Create a temporary link and trigger download
       const link = document.createElement("a");
       link.href = url;
-      link.download = `bookings-export-${new Date().toISOString().split("T")[0]}.csv`;
+      link.download = `bookings-export-${new Date().toISOString().split("T")[0]}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

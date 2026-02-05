@@ -134,15 +134,19 @@ export async function GET(request: Request) {
             email: true,
           },
         },
-        companionCustomers: {
+        companionGroup: {
           include: {
-            customer: {
-              select: {
-                id: true,
-                firstNameTh: true,
-                lastNameTh: true,
-                firstNameEn: true,
-                lastNameEn: true,
+            bookings: {
+              include: {
+                customer: {
+                  select: {
+                    id: true,
+                    firstNameTh: true,
+                    lastNameTh: true,
+                    firstNameEn: true,
+                    lastNameEn: true,
+                  },
+                },
               },
             },
           },
@@ -446,35 +450,34 @@ export async function POST(req: Request) {
         await updateBookingPaidAmount(newBooking.id, tx);
       }
 
-      // 4. Create symmetric companion relationships using explicit join table
-      // If A is companion of B, then B should also be companion of A
+      // 4. Companion group: one group per trip; assign all bookings (main + companions) to same group
       if (companionCustomerIds && companionCustomerIds.length > 0) {
-        // Find bookings of companion customers in the same trip
-        const companionBookings = await tx.booking.findMany({
+        const fullGroupCustomerIds = Array.from(
+          new Set<string>([customerId, ...companionCustomerIds])
+        );
+
+        const bookingsInGroup = await tx.booking.findMany({
           where: {
             tripId,
-            customerId: { in: companionCustomerIds },
+            customerId: { in: fullGroupCustomerIds },
           },
-          select: { id: true },
+          select: { id: true, customerId: true, companionGroupId: true },
         });
 
-        // Create companion relationships: this booking -> companion customers
-        const companionRelations = companionCustomerIds.map((companionCustomerId: string) => ({
-          bookingId: newBooking.id,
-          customerId: companionCustomerId,
-        }));
+        const existingGroupId = bookingsInGroup.find((b) => b.companionGroupId)?.companionGroupId;
+        let groupId: string;
+        if (existingGroupId) {
+          groupId = existingGroupId;
+        } else {
+          const newGroup = await tx.bookingCompanion.create({
+            data: { tripId },
+          });
+          groupId = newGroup.id;
+        }
 
-        // Create reverse companion relationships: companion bookings -> this customer
-        const reverseCompanionRelations = companionBookings.map((companionBooking) => ({
-          bookingId: companionBooking.id,
-          customerId: customerId,
-        }));
-
-        // Create all relationships at once
-        // Using type assertion because Prisma client will have bookingCompanion after migration
-        await (tx as unknown as { bookingCompanion: { createMany: (args: { data: Array<{ bookingId: string; customerId: string }>; skipDuplicates: boolean }) => Promise<unknown> } }).bookingCompanion.createMany({
-          data: [...companionRelations, ...reverseCompanionRelations],
-          skipDuplicates: true,
+        await tx.booking.updateMany({
+          where: { id: { in: bookingsInGroup.map((b) => b.id) } },
+          data: { companionGroupId: groupId },
         });
       }
 
@@ -507,15 +510,19 @@ export async function POST(req: Request) {
               email: true,
             },
           },
-          companionCustomers: {
+          companionGroup: {
             include: {
-              customer: {
-                select: {
-                  id: true,
-                  firstNameTh: true,
-                  lastNameTh: true,
-                  firstNameEn: true,
-                  lastNameEn: true,
+              bookings: {
+                include: {
+                  customer: {
+                    select: {
+                      id: true,
+                      firstNameTh: true,
+                      lastNameTh: true,
+                      firstNameEn: true,
+                      lastNameEn: true,
+                    },
+                  },
                 },
               },
             },
