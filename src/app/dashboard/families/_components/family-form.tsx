@@ -101,7 +101,7 @@ export function FamilyForm({
                 {readOnly ? (
                   <Input value={field.value || ""} disabled />
                 ) : (
-                  <Input placeholder="Name" {...field} disabled={isLoading} />
+                  <Input {...field} disabled={isLoading} />
                 )}
               </FormControl>
               <FormMessage />
@@ -120,7 +120,7 @@ export function FamilyForm({
                   {readOnly ? (
                     <Input value={field.value || ""} disabled />
                   ) : (
-                    <Input placeholder="Phone number" {...field} disabled={isLoading} />
+                    <Input {...field} disabled={isLoading} />
                   )}
                 </FormControl>
                 <FormMessage />
@@ -138,7 +138,7 @@ export function FamilyForm({
                   {readOnly ? (
                     <Input value={field.value || ""} disabled />
                   ) : (
-                    <Input placeholder="LINE ID" {...field} disabled={isLoading} />
+                    <Input {...field} disabled={isLoading} />
                   )}
                 </FormControl>
                 <FormMessage />
@@ -157,7 +157,7 @@ export function FamilyForm({
                 {readOnly ? (
                   <Input value={field.value || ""} disabled />
                 ) : (
-                  <Input type="email" placeholder="Email" {...field} disabled={isLoading} />
+                  <Input type="email" {...field} disabled={isLoading} />
                 )}
               </FormControl>
               <FormMessage />
@@ -235,7 +235,7 @@ export function FamilyForm({
                               <span className="text-muted-foreground">{field.value.length} selected</span>
                             )
                           ) : (
-                            <span className="text-muted-foreground">Select customers</span>
+                            <span className="text-muted-foreground"></span>
                           )}
                         </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 self-start mt-1" />
@@ -245,7 +245,6 @@ export function FamilyForm({
                   <PopoverContent className="w-[400px] p-0">
                     <Command>
                       <CommandInput
-                        placeholder="Search by customer name"
                         value={customersSearch}
                         onValueChange={setCustomersSearch}
                       />
@@ -304,7 +303,7 @@ export function FamilyForm({
                 {readOnly ? (
                   <Textarea value={field.value || ""} disabled className="resize-none" />
                 ) : (
-                  <Textarea placeholder="Note for family / group" className="resize-none" {...field} disabled={isLoading} />
+                  <Textarea className="resize-none" {...field} disabled={isLoading} />
                 )}
               </FormControl>
               <FormMessage />

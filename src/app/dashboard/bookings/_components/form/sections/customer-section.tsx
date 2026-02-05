@@ -216,7 +216,7 @@ export function CustomerSection({
                             ? "Select a trip first"
                             : selectedCustomer
                               ? `${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn}`
-                              : "Search for a customer..."}
+                              : ""}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </FormControl>
@@ -224,7 +224,6 @@ export function CustomerSection({
                     <PopoverContent className="w-[400px] p-0">
                       <Command shouldFilter={false}>
                         <CommandInput
-                          placeholder="Search by customer name"
                           value={customerSearchQuery}
                           onValueChange={setCustomerSearchQuery}
                         />

@@ -92,7 +92,6 @@ export function CostSummarySection({
                 <FormControl>
                   <Input
                     type="number"
-                    placeholder="0.00"
                     {...field}
                     disabled
                     onChange={(e) => field.onChange(e.target.value)}

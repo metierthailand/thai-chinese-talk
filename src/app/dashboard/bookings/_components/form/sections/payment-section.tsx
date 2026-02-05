@@ -358,7 +358,6 @@ export function PaymentSection({
                         <FormControl>
                           <Input
                             type="number"
-                            placeholder="0.00"
                             {...field}
                             value={field.value || ""}
                             disabled={isDisabled}

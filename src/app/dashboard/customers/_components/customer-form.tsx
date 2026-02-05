@@ -222,7 +222,7 @@ export function CustomerForm({
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] p-0">
                     <Command>
-                      <CommandInput placeholder="Search tags..." />
+                      <CommandInput />
                       <CommandList>
                         <CommandEmpty>No tags found.</CommandEmpty>
                         <CommandGroup>
@@ -265,7 +265,7 @@ export function CustomerForm({
               <Select onValueChange={field.onChange} value={field.value || ""} disabled={readOnly}>
                 <FormControl>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select title" />
+                    <SelectValue />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -289,7 +289,7 @@ export function CustomerForm({
               <FormItem>
                 <FormLabel required>First name (EN)</FormLabel>
                 <FormControl>
-                  <Input placeholder="First name (EN)" {...field} disabled={readOnly} />
+                  <Input {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -302,7 +302,7 @@ export function CustomerForm({
               <FormItem>
                 <FormLabel required>Last name (EN)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Last name (EN)" {...field} disabled={readOnly} />
+                  <Input {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -318,7 +318,7 @@ export function CustomerForm({
               <FormItem>
                 <FormLabel>First name (TH)</FormLabel>
                 <FormControl>
-                  <Input placeholder="First name (TH)" {...field} disabled={readOnly} />
+                  <Input {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -331,7 +331,7 @@ export function CustomerForm({
               <FormItem>
                 <FormLabel>Last name (TH)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Last name (TH)" {...field} disabled={readOnly} />
+                  <Input {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -418,7 +418,7 @@ export function CustomerForm({
               <FormItem>
                 <FormLabel>Phone number</FormLabel>
                 <FormControl>
-                  <Input placeholder="Phone number" {...field} disabled={readOnly} />
+                  <Input {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -432,7 +432,7 @@ export function CustomerForm({
               <FormItem>
                 <FormLabel>LINE ID</FormLabel>
                 <FormControl>
-                  <Input placeholder="LINE ID" {...field} disabled={readOnly} />
+                  <Input {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -447,7 +447,7 @@ export function CustomerForm({
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="Email" {...field} disabled={readOnly} />
+                <Input {...field} disabled={readOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -461,7 +461,7 @@ export function CustomerForm({
             <FormItem>
               <FormLabel>Note for customer</FormLabel>
               <FormControl>
-                <Textarea placeholder="Note for customer" className="resize-none" {...field} disabled={readOnly} />
+                <Textarea className="resize-none" {...field} disabled={readOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -526,7 +526,7 @@ export function CustomerForm({
                     <FormItem className="col-span-2">
                       <FormLabel>Address</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Address" disabled={readOnly} />
+                        <Input {...field} disabled={readOnly} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -556,7 +556,7 @@ export function CustomerForm({
                             </PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0">
                               <Command>
-                                <CommandInput placeholder="Search province..." />
+                                <CommandInput />
                                 <CommandList>
                                   <CommandEmpty>No province found.</CommandEmpty>
                                   <CommandGroup>
@@ -636,7 +636,7 @@ export function CustomerForm({
                             </PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0">
                               <Command>
-                                <CommandInput placeholder="Search district..." />
+                                <CommandInput />
                                 <CommandList>
                                   <CommandEmpty>No district found.</CommandEmpty>
                                   <CommandGroup>
@@ -716,7 +716,7 @@ export function CustomerForm({
                             </PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0">
                               <Command>
-                                <CommandInput placeholder="Search sub-district..." />
+                                <CommandInput />
                                 <CommandList>
                                   <CommandEmpty>No sub-district found.</CommandEmpty>
                                   <CommandGroup>
@@ -795,7 +795,7 @@ export function CustomerForm({
                           {hasMultiplePostCodes ? (
                             <Select onValueChange={field.onChange} value={field.value || ""} disabled={readOnly}>
                               <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select postal code" />
+                                <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 {uniquePostCodes.map((code) => (
@@ -949,7 +949,7 @@ export function CustomerForm({
                         <FormItem>
                           <FormLabel required>Passport no.</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Passport no." disabled={readOnly} />
+                            <Input {...field} disabled={readOnly} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -979,7 +979,7 @@ export function CustomerForm({
                             </PopoverTrigger>
                             <PopoverContent className="w-[200px] p-0 z-60">
                               <Command>
-                                <CommandInput placeholder="Search country..." />
+                                <CommandInput />
                                 <CommandList>
                                   <CommandEmpty>No country found.</CommandEmpty>
                                   <CommandGroup>
@@ -1251,7 +1251,7 @@ export function CustomerForm({
                     <FormItem>
                       <FormLabel>Note for food allergy</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="Note for food allergy" className="resize-none" disabled={readOnly} />
+                        <Textarea {...field} className="resize-none" disabled={readOnly} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

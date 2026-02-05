@@ -262,7 +262,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
               <Select onValueChange={field.onChange} value={field.value} disabled={disabled}>
                 <FormControl>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -286,7 +286,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
             <FormItem>
               <FormLabel required>Trip interest</FormLabel>
               <FormControl>
-                <Input placeholder="Trip interest" {...field} disabled={disabled} />
+                <Input {...field} disabled={disabled} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -304,7 +304,6 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                 <Input
                   type="number"
                   min="1"
-                  placeholder="Passengers (PAX)"
                   {...field}
                   value={field.value ?? ""}
                   disabled={disabled}
@@ -346,7 +345,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                   <FormItem>
                     <FormLabel required>First name</FormLabel>
                     <FormControl>
-                      <Input placeholder="First name" {...field} disabled={disabled} />
+                      <Input {...field} disabled={disabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -359,7 +358,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                   <FormItem>
                     <FormLabel required>Last name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Last name" {...field} disabled={disabled} />
+                      <Input {...field} disabled={disabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -374,7 +373,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                   <FormItem>
                     <FormLabel>Phone number</FormLabel>
                     <FormControl>
-                      <Input placeholder="Phone number" {...field} disabled={disabled} />
+                      <Input {...field} disabled={disabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -387,7 +386,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                   <FormItem>
                     <FormLabel>LINE ID</FormLabel>
                     <FormControl>
-                      <Input placeholder="LINE ID" {...field} disabled={disabled} />
+                      <Input {...field} disabled={disabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -401,7 +400,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="Email" {...field} disabled={disabled} />
+                    <Input type="email" {...field} disabled={disabled} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -437,7 +436,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                         >
                           {selectedCustomer
                             ? `${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn}`
-                            : "Search for a customer..."}
+                            : ""}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </FormControl>
@@ -445,7 +444,6 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                     <PopoverContent className="w-[400px] p-0">
                       <Command shouldFilter={false}>
                         <CommandInput
-                          placeholder="Search by customer name"
                           value={customerSearchQuery}
                           onValueChange={setCustomerSearchQuery}
                         />
@@ -506,7 +504,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                   <Select onValueChange={field.onChange} value={field.value} disabled={disabled}>
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select source" />
+                        <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -547,7 +545,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
             <FormItem>
               <FormLabel>Note for source</FormLabel>
               <FormControl>
-                <Textarea placeholder="Source notes..." className="resize-none" {...field} disabled={disabled} />
+                <Textarea className="resize-none" {...field} disabled={disabled} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -582,7 +580,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                           ? `${selectedSalesUser.firstName} ${selectedSalesUser.lastName}`
                           : isLoadingSalesUsers
                             ? "Loading..."
-                            : "Select sales name..."}
+                            : ""}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
@@ -590,7 +588,6 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
                   <PopoverContent className="w-[400px] p-0">
                     <Command shouldFilter={false}>
                       <CommandInput
-                        placeholder="Search by sales name"
                         value={salesUserSearchQuery}
                         onValueChange={setSalesUserSearchQuery}
                       />
@@ -644,7 +641,7 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
             <FormItem>
               <FormLabel>Note for lead</FormLabel>
               <FormControl>
-                <Textarea placeholder="Note for lead" className="resize-none" {...field} disabled={disabled} />
+                <Textarea className="resize-none" {...field} disabled={disabled} />
               </FormControl>
               <FormMessage />
             </FormItem>

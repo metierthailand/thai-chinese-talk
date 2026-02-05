@@ -136,7 +136,7 @@ export function CustomerTasks({ customerId }: CustomerTasksProps) {
               render={({ field }) => (
                 <FormItem className="flex-1">
                   <FormControl>
-                    <Input placeholder="Task topic..." {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

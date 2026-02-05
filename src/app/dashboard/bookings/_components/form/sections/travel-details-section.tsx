@@ -81,7 +81,7 @@ export function TravelDetailsSection({
                   <Select onValueChange={field.onChange} value={field.value} key={`roomType-${field.value}`}>
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select room type" />
+                        <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -129,7 +129,6 @@ export function TravelDetailsSection({
                 <FormControl>
                   <Input
                     type="number"
-                    placeholder="0.00"
                     {...field}
                     disabled={readOnly || !enableBedPrice}
                     onChange={(e) => field.onChange(e.target.value)}
@@ -148,7 +147,6 @@ export function TravelDetailsSection({
                 <FormLabel>Note for room</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Note for room"
                     className="resize-none"
                     {...field}
                     disabled={readOnly}
@@ -179,7 +177,7 @@ export function TravelDetailsSection({
                 <Select onValueChange={field.onChange} value={field.value} key={`seatType-${field.value}`}>
                   <FormControl>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select seat type" />
+                      <SelectValue />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -246,7 +244,7 @@ export function TravelDetailsSection({
                   >
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select seat class" />
+                        <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -271,7 +269,6 @@ export function TravelDetailsSection({
                 <FormControl>
                   <Input
                     type="number"
-                    placeholder="0.00"
                     {...field}
                     disabled={readOnly || !enableSeatPrice}
                     onChange={(e) => field.onChange(e.target.value)}
@@ -290,7 +287,6 @@ export function TravelDetailsSection({
                 <FormLabel>Note for seat</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Note for seat"
                     className="resize-none"
                     {...field}
                     disabled={readOnly}
@@ -339,7 +335,6 @@ export function TravelDetailsSection({
               <FormControl>
                 <Input
                   type="number"
-                  placeholder="0.00"
                   {...field}
                   disabled={readOnly || !enableBagPrice}
                   onChange={(e) => field.onChange(e.target.value)}
@@ -358,7 +353,6 @@ export function TravelDetailsSection({
               <FormLabel>Note for bag</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Note for bag"
                   className="resize-none"
                   {...field}
                   disabled={readOnly}
@@ -406,7 +400,6 @@ export function TravelDetailsSection({
               <FormControl>
                 <Input
                   type="number"
-                  placeholder="0.00"
                   {...field}
                   disabled={readOnly || !enableDiscount}
                   onChange={(e) => field.onChange(e.target.value)}
@@ -425,7 +418,6 @@ export function TravelDetailsSection({
               <FormLabel>Note for discount</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Note for discount"
                   className="resize-none"
                   {...field}
                   disabled={readOnly}

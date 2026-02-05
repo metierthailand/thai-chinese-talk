@@ -142,7 +142,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                   >
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -163,7 +163,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
               <FormItem>
                 <FormLabel required>Trip code</FormLabel>
                 <FormControl>
-                  <Input placeholder="Trip code" {...field} disabled={readOnly} />
+                  <Input {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -178,7 +178,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             <FormItem>
               <FormLabel required>Trip name</FormLabel>
               <FormControl>
-                <Input placeholder="Trip name" {...field} disabled={readOnly} />
+                <Input {...field} disabled={readOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -222,7 +222,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                       >
                         {selectedAirlineAndAirport
                           ? `${selectedAirlineAndAirport.code} - ${selectedAirlineAndAirport.name}`
-                          : "Select airline/airport"}
+                          : ""}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
@@ -230,7 +230,6 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                   <PopoverContent className="w-[400px] p-0" align="start">
                     <Command>
                       <CommandInput
-                        placeholder="Search by IATA code, airport name"
                         value={airlineAndAirportSearch}
                         onValueChange={setAirlineAndAirportSearch}
                       />
@@ -379,7 +378,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
               <FormItem>
                 <FormLabel required>Passengers (PAX)</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="Passengers (PAX)" {...field} disabled={readOnly} />
+                  <Input type="number" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -392,7 +391,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
               <FormItem>
                 <FormLabel required>Free of charge (FOC)</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="Free of charge (FOC)" {...field} disabled={readOnly} />
+                  <Input type="number" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -408,7 +407,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
               <FormItem>
                 <FormLabel>Tour leader (TL)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Tour leader (TL)" {...field} disabled={readOnly} />
+                  <Input {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -421,7 +420,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
               <FormItem>
                 <FormLabel>Tour guide (TG)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Tour guide (TG)" {...field} disabled={readOnly} />
+                  <Input {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -436,7 +435,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             <FormItem>
               <FormLabel>Staff</FormLabel>
               <FormControl>
-                <Input placeholder="Staff" {...field} disabled={readOnly} />
+                <Input {...field} disabled={readOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -451,7 +450,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
               <FormItem>
                 <FormLabel required>Standard price</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" placeholder="0.00" {...field} disabled={readOnly} />
+                  <Input type="number" step="0.01" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -464,7 +463,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
               <FormItem>
                 <FormLabel required>Extra price for single traveller</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" placeholder="0.00" {...field} disabled={readOnly} />
+                  <Input type="number" step="0.01" {...field} disabled={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -479,7 +478,7 @@ export function TripForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             <FormItem>
               <FormLabel>Note for trip</FormLabel>
               <FormControl>
-                <Textarea placeholder="Note for trip" className="resize-none" {...field} disabled={readOnly} />
+                <Textarea className="resize-none" {...field} disabled={readOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>

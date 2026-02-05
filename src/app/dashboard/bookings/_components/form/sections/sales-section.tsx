@@ -71,7 +71,7 @@ export function SalesSection({
                   >
                     {selectedSalesUser
                       ? `${selectedSalesUser.firstName} ${selectedSalesUser.lastName}`
-                      : "Search for a sales..."}
+                      : ""}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </FormControl>
@@ -79,7 +79,6 @@ export function SalesSection({
               <PopoverContent className="w-[400px] p-0">
                 <Command shouldFilter={false}>
                   <CommandInput
-                    placeholder="Search by sales name"
                     value={salesUserSearchQuery}
                     onValueChange={setSalesUserSearchQuery}
                   />

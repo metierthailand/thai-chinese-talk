@@ -85,7 +85,7 @@ export function TripSection({
                     >
                       {selectedTrip
                         ? `${selectedTrip.code}${selectedTrip._count?.bookings >= selectedTrip.pax ? " [FULL]" : ""}`
-                        : "Search for a trip..."}
+                        : ""}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </FormControl>
@@ -93,7 +93,6 @@ export function TripSection({
                 <PopoverContent className="w-[400px] p-0">
                   <Command shouldFilter={false}>
                     <CommandInput
-                      placeholder="Search by trip code"
                       value={tripSearchQuery}
                       onValueChange={setTripSearchQuery}
                     />

@@ -104,7 +104,7 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
               >
                 <FormControl>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -126,7 +126,7 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
             <FormItem>
               <FormLabel required>Topic</FormLabel>
               <FormControl>
-                <Input placeholder="Task topic..." {...field} disabled={readOnly || isLoading} />
+                <Input {...field} disabled={readOnly || isLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -141,7 +141,6 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
               <FormLabel>Description</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Task description..."
                   {...field}
                   value={field.value || ""}
                   disabled={readOnly || isLoading}
@@ -181,7 +180,7 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                       >
                         {selectedCustomer
                           ? `${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn}`
-                          : "Search for a customer..."}
+                          : ""}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
@@ -189,7 +188,6 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                   <PopoverContent className="w-[400px] p-0">
                     <Command shouldFilter={false}>
                       <CommandInput
-                        placeholder="Search by customer name"
                         value={customerSearchQuery}
                         onValueChange={setCustomerSearchQuery}
                       />
@@ -250,7 +248,7 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select contact" />
+                      <SelectValue />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>

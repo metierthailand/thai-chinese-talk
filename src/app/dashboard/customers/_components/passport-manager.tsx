@@ -263,7 +263,7 @@ export function PassportManager({ className, customerId, customerFirstName, cust
                         </PopoverTrigger>
                         <PopoverContent className="w-[200px] p-0">
                           <Command>
-                            <CommandInput placeholder="Search country..." />
+                            <CommandInput />
                             <CommandList>
                               <CommandEmpty>No country found.</CommandEmpty>
                               <CommandGroup>
@@ -301,7 +301,7 @@ export function PassportManager({ className, customerId, customerFirstName, cust
                     <FormItem>
                       <FormLabel required>Passport no.</FormLabel>
                       <FormControl>
-                        <Input placeholder="Passport no." {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

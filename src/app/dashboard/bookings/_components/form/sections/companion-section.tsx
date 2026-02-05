@@ -99,7 +99,6 @@ export function CompanionSection({
                 <PopoverContent className="w-[400px] p-0">
                   <Command shouldFilter={false}>
                     <CommandInput
-                      placeholder="Search by customer name"
                       value={companionSearchQuery}
                       onValueChange={setCompanionSearchQuery}
                     />
