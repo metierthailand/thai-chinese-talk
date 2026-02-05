@@ -190,7 +190,9 @@ export const customerKeys = {
     passportExpiryFrom?: string,
     passportExpiryTo?: string,
     tagIds?: string,
-  ) => [...customerKeys.lists(), page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, tagIds] as const,
+    sortBy?: string,
+    sortOrder?: string,
+  ) => [...customerKeys.lists(), page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, tagIds, sortBy, sortOrder] as const,
   details: () => [...customerKeys.all, "detail"] as const,
   detail: (id: string) => [...customerKeys.details(), id] as const,
 };
@@ -204,6 +206,8 @@ async function fetchCustomers(
   passportExpiryFrom?: string,
   passportExpiryTo?: string,
   tagIds?: string,
+  sortBy?: string,
+  sortOrder?: string,
 ): Promise<CustomersResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -223,6 +227,12 @@ async function fetchCustomers(
   }
   if (tagIds) {
     params.set("tagIds", tagIds);
+  }
+  if (sortBy) {
+    params.set("sortBy", sortBy);
+  }
+  if (sortOrder) {
+    params.set("sortOrder", sortOrder);
   }
 
   const res = await fetch(`/api/customers?${params.toString()}`);
@@ -376,6 +386,8 @@ export function useCustomers({
   passportExpiryFrom,
   passportExpiryTo,
   tagIds,
+  sortBy,
+  sortOrder,
 }: {
   page: number;
   pageSize: number;
@@ -384,10 +396,12 @@ export function useCustomers({
   passportExpiryFrom?: string;
   passportExpiryTo?: string;
   tagIds?: string;
+  sortBy?: string;
+  sortOrder?: string;
 }) {
   return useQuery({
-    queryKey: customerKeys.list(page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, tagIds),
-    queryFn: () => fetchCustomers(page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, tagIds),
+    queryKey: customerKeys.list(page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, tagIds, sortBy, sortOrder),
+    queryFn: () => fetchCustomers(page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, tagIds, sortBy, sortOrder),
     staleTime: 30 * 1000, // 30 seconds
   });
 }

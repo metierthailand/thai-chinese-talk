@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useSession } from "next-auth/react";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -97,6 +98,7 @@ interface LeadFormProps {
 }
 
 export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: LeadFormProps) {
+  const { data: session } = useSession();
   const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
   const [salesUserSearchOpen, setSalesUserSearchOpen] = useState(false);
@@ -149,6 +151,14 @@ export function LeadForm({ mode, initialData, onSubmit, onCancel, isLoading }: L
       });
     }
   }, [initialData, form]);
+
+  // Default sales to current user when they are a sales user (create mode only)
+  useEffect(() => {
+    if (mode !== "create" || initialData?.salesUserId) return;
+    if (session?.user?.role === "SALES" && session?.user?.id && form.getValues("salesUserId") === "") {
+      form.setValue("salesUserId", session.user.id, { shouldDirty: false });
+    }
+  }, [mode, initialData?.salesUserId, session?.user?.role, session?.user?.id, form]);
 
   const disabled = mode === "view" || isLoading;
   const newCustomer = form.watch("newCustomer");

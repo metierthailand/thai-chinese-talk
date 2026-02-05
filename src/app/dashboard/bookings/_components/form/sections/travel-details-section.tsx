@@ -19,6 +19,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { BookingFormValues } from "../booking-schema";
 
+const ROOM_TYPE_LABELS: Record<string, string> = {
+  DOUBLE_BED: "Double bed 大",
+  TWIN_BED: "Twin bed 双",
+};
+
+const SEAT_TYPE_LABELS: Record<string, string> = {
+  WINDOW: "Window",
+  MIDDLE: "Middle",
+  AISLE: "Aisle",
+};
+
 const SEAT_CLASS_LABELS: Record<string, string> = {
   FIRST_CLASS: "First class",
   BUSINESS_CLASS: "Business class",
@@ -64,7 +75,7 @@ export function TravelDetailsSection({
                 <FormLabel required>Room type</FormLabel>
                 {readOnly ? (
                   <FormControl>
-                    <Input value={field.value} disabled />
+                    <Input value={field.value ? ROOM_TYPE_LABELS[field.value] ?? field.value : ""} disabled />
                   </FormControl>
                 ) : (
                   <Select onValueChange={field.onChange} value={field.value} key={`roomType-${field.value}`}>
@@ -162,7 +173,7 @@ export function TravelDetailsSection({
               <FormLabel required>Seat type</FormLabel>
               {readOnly ? (
                 <FormControl>
-                  <Input value={field.value} disabled />
+                  <Input value={field.value ? SEAT_TYPE_LABELS[field.value] ?? field.value : ""} disabled />
                 </FormControl>
               ) : (
                 <Select onValueChange={field.onChange} value={field.value} key={`seatType-${field.value}`}>

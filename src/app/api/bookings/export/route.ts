@@ -42,6 +42,7 @@ export async function GET(request: Request) {
     const status = searchParams.get("status") || "";
     const tripStartDateFrom = searchParams.get("tripStartDateFrom") || "";
     const tripStartDateTo = searchParams.get("tripStartDateTo") || "";
+    const bookingIdsParam = searchParams.get("bookingIds") || "";
 
     const parseDateGte = (v: string) =>
       v.includes("T") ? new Date(v) : new Date(`${v}T00:00:00.000Z`);
@@ -103,8 +104,20 @@ export async function GET(request: Request) {
           }
         : {};
 
+    const idFilter: Prisma.BookingWhereInput =
+      bookingIdsParam && bookingIdsParam.trim().length > 0
+        ? {
+            id: {
+              in: bookingIdsParam
+                .split(",")
+                .map((id) => id.trim())
+                .filter(Boolean),
+            },
+          }
+        : {};
+
     const where: Prisma.BookingWhereInput = {
-      AND: [searchFilter, paymentStatusFilter, tripDateFilter],
+      AND: [searchFilter, paymentStatusFilter, tripDateFilter, idFilter],
     };
 
     // Fetch all bookings (no pagination for export)

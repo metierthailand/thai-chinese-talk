@@ -284,7 +284,10 @@ async function createBooking(data: {
 
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || "Failed to create booking");
+    const message =
+      (typeof error === "object" && error !== null && (error.message || error.error)) ||
+      "Failed to create booking";
+    throw new Error(message);
   }
 
   return res.json();
@@ -330,7 +333,10 @@ async function updateBooking({
 
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || "Failed to update booking");
+    const message =
+      (typeof error === "object" && error !== null && (error.message || error.error)) ||
+      "Failed to update booking";
+    throw new Error(message);
   }
 
   const responseData = await res.json();
@@ -437,7 +443,13 @@ export function useDeleteBooking() {
 // Hook to export bookings as CSV
 export function useExportBookings() {
   return useCallback(
-    (search?: string, status?: string, tripStartDateFrom?: string, tripStartDateTo?: string) => {
+    (
+      search?: string,
+      status?: string,
+      tripStartDateFrom?: string,
+      tripStartDateTo?: string,
+      bookingIds?: string[],
+    ) => {
       const params = new URLSearchParams();
 
       // Add filter params (excluding page and pageSize)
@@ -452,6 +464,9 @@ export function useExportBookings() {
       }
       if (tripStartDateTo) {
         params.set("tripStartDateTo", tripStartDateTo);
+      }
+      if (bookingIds && bookingIds.length > 0) {
+        params.set("bookingIds", bookingIds.join(","));
       }
 
       const queryString = params.toString();

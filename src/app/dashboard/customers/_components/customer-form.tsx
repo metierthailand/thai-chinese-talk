@@ -23,6 +23,7 @@ import { DragDropUpload } from "@/components/upload-image";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Tag {
   id: string;
@@ -49,6 +50,10 @@ const FOOD_ALLERGY_LABELS: Record<string, string> = {
   OTHER: "Other (อื่น ๆ)",
 };
 
+// Special sentinel value when DOB is unknown but the form still requires a value.
+const MIN_DOB = "0001-01-01";
+const MIN_DOB_DATE = new Date(`${MIN_DOB}T00:00:00.000Z`);
+
 export function CustomerForm({
   mode,
   initialData,
@@ -62,6 +67,7 @@ export function CustomerForm({
   const [isAddressesOpen, setIsAddressesOpen] = useState(true);
   const [isPassportsOpen, setIsPassportsOpen] = useState(true);
   const [isFoodAllergiesOpen, setIsFoodAllergiesOpen] = useState(true);
+  const [isDobUnknown, setIsDobUnknown] = useState(initialData?.dateOfBirth === MIN_DOB);
 
   const form = useForm<CustomerFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -117,6 +123,7 @@ export function CustomerForm({
           })) || [],
         foodAllergies: initialData.foodAllergies || [],
       });
+      setIsDobUnknown(initialData.dateOfBirth === MIN_DOB);
     }
   }, [initialData, form]); // Removed selectedTagIds from dependency
 
@@ -166,6 +173,7 @@ export function CustomerForm({
 
   // Watch dateOfBirth for real-time age calculation
   const dateOfBirth = useWatch({ control: form.control, name: "dateOfBirth" });
+  const isShowingAge = Boolean(dateOfBirth) && dateOfBirth !== MIN_DOB;
 
   return (
     <Form {...form}>
@@ -337,16 +345,43 @@ export function CustomerForm({
             name="dateOfBirth"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel required>Date of birth</FormLabel>
+                <div className="flex items-center justify-between">
+                  <FormLabel required>Date of birth</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="dob-unknown"
+                      checked={isDobUnknown}
+                      disabled={readOnly}
+                      onCheckedChange={(checked) => {
+                        const next = Boolean(checked);
+                        setIsDobUnknown(next);
+                        if (next) {
+                          form.setValue("dateOfBirth", MIN_DOB, { shouldDirty: true, shouldValidate: true });
+                        } else {
+                          form.setValue("dateOfBirth", "", { shouldDirty: true, shouldValidate: true });
+                        }
+                      }}
+                    />
+                    <Label htmlFor="dob-unknown" className="text-sm font-normal">
+                      No data
+                    </Label>
+                  </div>
+                </div>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
                         variant="outline"
-                        disabled={readOnly}
+                        disabled={readOnly || isDobUnknown}
                         className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                       >
-                        {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                        {isDobUnknown ? (
+                          <span>Unknown</span>
+                        ) : field.value ? (
+                          format(new Date(field.value), "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
@@ -359,7 +394,7 @@ export function CustomerForm({
                       onSelect={(date) => {
                         field.onChange(date ? format(date, "yyyy-MM-dd") : "");
                       }}
-                      disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                      disabled={(date) => date > new Date() || date < MIN_DOB_DATE}
                       initialFocus
                     />
                   </PopoverContent>
@@ -371,7 +406,7 @@ export function CustomerForm({
 
           <div className="space-y-2">
             <Label>Age</Label>
-            <Input disabled value={dateOfBirth ? calculateAge(dateOfBirth) : ""} />
+            <Input disabled value={isShowingAge ? calculateAge(dateOfBirth) : ""} />
           </div>
         </div>
 

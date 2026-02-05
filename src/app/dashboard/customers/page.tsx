@@ -3,7 +3,7 @@
 import { useMemo, useCallback } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
-import { Edit, Eye } from "lucide-react";
+import { Edit, Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table/data-table";
@@ -13,88 +13,64 @@ import { CustomerFilter } from "./_components/customer-filter";
 import { Loading } from "@/components/page/loading";
 
 import { CustomerWithTotalTrips, useCustomers } from "./hooks/use-customers";
-import { mapCustomerParamsToQuery, useCustomerParams } from "./hooks/use-customers-params";
+import {
+  mapCustomerParamsToQuery,
+  useCustomerParams,
+  type CustomerSortBy,
+  type CustomerSortOrder,
+} from "./hooks/use-customers-params";
 import { format } from "date-fns";
-// --------------------
-// columns
-// --------------------
-const customerColumns: ColumnDef<CustomerWithTotalTrips>[] = [
-  {
-    accessorKey: "name",
-    header: "Customer name",
-    cell: ({ row }) => {
-      const customer = row.original;
-      const hasThaiName = customer.firstNameTh && customer.lastNameTh;
-      const thaiName = hasThaiName ? `${customer.firstNameTh} ${customer.lastNameTh}` : null;
-      const englishName = `${customer.firstNameEn} ${customer.lastNameEn}`;
 
-      return (
-        <div className="flex flex-col font-medium w-[180px] truncate">
-          <p>{englishName}</p>
-          {thaiName && (
-            <p className="text-muted-foreground text-xs">
-              ({thaiName})
-            </p>
-          )}
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "phoneNumber",
-    header: "Phone number",
-    cell: ({ row }) => <div>{row.original.phoneNumber || "-"}</div>,
-  },
-  {
-    accessorKey: "email",
-    header: "Email",
-    cell: ({ row }) => <div className="w-[180px] truncate">{row.original.email || "-"}</div>,
-  },
-  {
-    accessorKey: "dateOfBirth",
-    header: "Date of birth",
-    cell: ({ row }) => <div>{format(new Date(row.original.dateOfBirth || ""), "dd MMM yyyy")}</div>,
-  },
-  {
-    accessorKey: "totalTrips",
-    header: "Total trips",
-    cell: ({ row }) => <div>{row.original.totalTrips || "-"}</div>,
-  },
-  {
-    accessorKey: "tags",
-    header: "Tags",
-    cell: ({ row }) => <div className="w-[100px] truncate">{row.original.tags.map((tag) => tag.tag.name).join(", ")}</div>,
-  },
-  {
-    accessorKey: "createdAt",
-    header: "Created date",
-    cell: ({ row }) => <div>{format(new Date(row.original.createdAt || ""), "dd MMM yyyy")}</div>,
-  },
-  {
-    id: "actions",
-    header: () => <div className="text-right">Actions</div>,
-    cell: ({ row }) => (
-      <div className="flex justify-end gap-2">
-        <Link href={`/dashboard/customers/${row.original.id}`}>
-          <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-            <Eye className="h-4 w-4" />
-          </Button>
-        </Link>
-        <Link href={`/dashboard/customers/${row.original.id}/edit`}>
-          <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-            <Edit className="h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
-    ),
-  },
-];
+function SortableHeader({
+  label,
+  sortKey,
+  currentSortBy,
+  currentSortOrder,
+  onSort,
+}: {
+  label: string;
+  sortKey: CustomerSortBy;
+  currentSortBy: string;
+  currentSortOrder: CustomerSortOrder;
+  onSort: (key: CustomerSortBy) => void;
+}) {
+  const isActive = Boolean(currentSortBy && currentSortBy === sortKey);
+  return (
+    <button
+      type="button"
+      className="inline-flex items-center gap-1.5 font-medium hover:text-foreground"
+      onClick={() => onSort(sortKey)}
+    >
+      {label}
+      {isActive ? (
+        currentSortOrder === "asc" ? (
+          <ArrowUp className="h-4 w-4" />
+        ) : (
+          <ArrowDown className="h-4 w-4" />
+        )
+      ) : (
+        <ArrowUpDown className="h-4 w-4 text-muted-foreground/60" />
+      )}
+    </button>
+  );
+}
 
 export default function CustomersPage() {
   // --------------------
   // params
   // --------------------
-  const { page, pageSize, search, type, passportExpiryFrom, passportExpiryTo, tagIds, setParams } = useCustomerParams();
+  const {
+    page,
+    pageSize,
+    search,
+    type,
+    passportExpiryFrom,
+    passportExpiryTo,
+    tagIds,
+    sortBy,
+    sortOrder,
+    setParams,
+  } = useCustomerParams();
 
   const customerQuery = mapCustomerParamsToQuery({
     page,
@@ -104,7 +80,123 @@ export default function CustomersPage() {
     passportExpiryFrom,
     passportExpiryTo,
     tagIds,
+    sortBy,
+    sortOrder,
   });
+
+  const handleSort = useCallback(
+    (key: CustomerSortBy) => {
+      if (sortBy === key && sortOrder === "desc") {
+        setParams({ sortBy: "", sortOrder: "desc", page: 1 });
+        return;
+      }
+      if (sortBy === key && sortOrder === "asc") {
+        setParams({ sortBy: key, sortOrder: "desc", page: 1 });
+        return;
+      }
+      setParams({ sortBy: key, sortOrder: "asc", page: 1 });
+    },
+    [sortBy, sortOrder, setParams],
+  );
+
+  const customerColumns: ColumnDef<CustomerWithTotalTrips>[] = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: () => (
+          <SortableHeader
+            label="Customer name"
+            sortKey="name"
+            currentSortBy={sortBy ?? ""}
+            currentSortOrder={(sortOrder as CustomerSortOrder) || "desc"}
+            onSort={handleSort}
+          />
+        ),
+        cell: ({ row }) => {
+          const customer = row.original;
+          const hasThaiName = customer.firstNameTh && customer.lastNameTh;
+          const thaiName = hasThaiName ? `${customer.firstNameTh} ${customer.lastNameTh}` : null;
+          const englishName = `${customer.firstNameEn} ${customer.lastNameEn}`;
+
+          return (
+            <div className="flex flex-col font-medium w-[180px] truncate">
+              <p>{englishName}</p>
+              {thaiName && (
+                <p className="text-muted-foreground text-xs">
+                  ({thaiName})
+                </p>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "phoneNumber",
+        header: "Phone number",
+        cell: ({ row }) => <div>{row.original.phoneNumber || "-"}</div>,
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ row }) => <div className="w-[180px] truncate">{row.original.email || "-"}</div>,
+      },
+      {
+        accessorKey: "dateOfBirth",
+        header: "Date of birth",
+        cell: ({ row }) => <div>{format(new Date(row.original.dateOfBirth || ""), "dd MMM yyyy")}</div>,
+      },
+      {
+        accessorKey: "totalTrips",
+        header: () => (
+          <SortableHeader
+            label="Total trips"
+            sortKey="totalTrips"
+            currentSortBy={sortBy ?? ""}
+            currentSortOrder={(sortOrder as CustomerSortOrder) || "desc"}
+            onSort={handleSort}
+          />
+        ),
+        cell: ({ row }) => <div>{row.original.totalTrips ?? "-"}</div>,
+      },
+      {
+        accessorKey: "tags",
+        header: "Tags",
+        cell: ({ row }) => <div className="w-[100px] truncate">{row.original.tags.map((tag) => tag.tag.name).join(", ")}</div>,
+      },
+      {
+        accessorKey: "createdAt",
+        header: () => (
+          <SortableHeader
+            label="Created date"
+            sortKey="createdAt"
+            currentSortBy={sortBy ?? ""}
+            currentSortOrder={(sortOrder as CustomerSortOrder) || "desc"}
+            onSort={handleSort}
+          />
+        ),
+        cell: ({ row }) => <div>{format(new Date(row.original.createdAt || ""), "dd MMM yyyy")}</div>,
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-2">
+            <Link href={`/dashboard/customers/${row.original.id}`}>
+              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                <Eye className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href={`/dashboard/customers/${row.original.id}/edit`}>
+              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        ),
+      },
+    ],
+    [sortBy, sortOrder, handleSort],
+  );
 
   // --------------------
   // data fetching

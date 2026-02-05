@@ -28,6 +28,8 @@ export async function GET(request: Request) {
     const passportExpiryFrom = searchParams.get("passportExpiryFrom") || "";
     const passportExpiryTo = searchParams.get("passportExpiryTo") || "";
     const tagIdsParam = searchParams.get("tagIds") || "";
+    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortOrder = (searchParams.get("sortOrder") || "desc") as "asc" | "desc";
     const skip = (page - 1) * pageSize;
 
     // Build where clause for search
@@ -110,14 +112,19 @@ export async function GET(request: Request) {
     // Get total count for pagination
     const total = await prisma.customer.count({ where });
 
+    const orderBy =
+      sortBy === "name"
+        ? [{ firstNameEn: sortOrder } as const, { lastNameEn: sortOrder } as const]
+        : sortBy === "totalTrips"
+          ? { bookings: { _count: sortOrder } }
+          : { createdAt: sortOrder };
+
     // Fetch paginated customers
     const customers = await prisma.customer.findMany({
       where,
       skip,
       take: pageSize,
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy,
       include: {
         tags: {
           include: {

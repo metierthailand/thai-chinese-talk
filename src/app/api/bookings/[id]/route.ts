@@ -173,6 +173,25 @@ export async function PUT(
       return new NextResponse("Booking not found", { status: 404 });
     }
 
+    const finalTripId = tripId ?? currentBooking.tripId;
+    const finalCustomerId = customerId ?? currentBooking.customerId;
+    if (finalTripId && finalCustomerId) {
+      const existingOther = await prisma.booking.findFirst({
+        where: {
+          tripId: finalTripId,
+          customerId: finalCustomerId,
+          id: { not: id },
+        },
+        select: { id: true },
+      });
+      if (existingOther) {
+        return new NextResponse(
+          JSON.stringify({ message: "This customer already has a booking in the selected trip." }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // Validate salesUserId if provided
     if (salesUserId) {
       const salesUser = await prisma.user.findUnique({
@@ -186,7 +205,6 @@ export async function PUT(
     }
 
     // Validate companion customers if provided
-    const finalTripId = tripId || currentBooking.tripId;
     if (companionCustomerIds && Array.isArray(companionCustomerIds) && companionCustomerIds.length > 0 && finalTripId) {
       const companionBookings = await prisma.booking.findMany({
         where: {

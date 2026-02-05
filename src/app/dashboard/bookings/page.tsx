@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { Loading } from "@/components/page/loading";
 import { BookingFilter } from "./_components/booking-filter";
 import { getPaymentStatusVariant, PAYMENT_STATUS_LABELS } from "@/lib/constants/payment";
 import { PaymentStatus } from "@prisma/client";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function BookingsPage() {
   const searchParams = useSearchParams();
@@ -29,6 +30,9 @@ export default function BookingsPage() {
   const tripStartDateToQuery = searchParams.get("tripStartDateTo") || "";
 
   const paymentStatus = statusQuery || "ALL";
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [hasTouchedSelection, setHasTouchedSelection] = useState(false);
 
 
   // Calculate total amount and paid amount from booking data
@@ -49,8 +53,79 @@ export default function BookingsPage() {
     return { totalAmount, paidAmount };
   };
 
+  // Use TanStack Query to fetch bookings
+  const {
+    data: bookingsResponse,
+    isLoading,
+    error,
+  } = useBookings(
+    page,
+    pageSize,
+    searchQuery || undefined,
+    paymentStatus !== "ALL" ? paymentStatus : undefined,
+    undefined, // visaStatus removed
+    tripStartDateFromQuery || undefined,
+    tripStartDateToQuery || undefined,
+  );
+
+  const bookings = useMemo(() => bookingsResponse?.data ?? [], [bookingsResponse?.data]);
+  const total = bookingsResponse?.total ?? 0;
+
+  // Calculate page count
+  const pageCount = useMemo(() => {
+    if (total > 0 && pageSize > 0) {
+      return Math.ceil(total / pageSize);
+    }
+    return 0;
+  }, [total, pageSize]);
+
+  const effectiveSelectedIds = useMemo(
+    () => (hasTouchedSelection ? selectedIds : bookings.map((b) => b.id)),
+    [hasTouchedSelection, selectedIds, bookings],
+  );
+
   const columns: ColumnDef<Booking>[] = useMemo(
     () => [
+      {
+        id: "select",
+        header: () => {
+          const allIds = bookings.map((b) => b.id);
+          const allSelected = effectiveSelectedIds.length > 0 && effectiveSelectedIds.length === allIds.length;
+          return (
+            <Checkbox
+              checked={allSelected}
+              aria-label="Select all bookings on this page"
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  setHasTouchedSelection(true);
+                  setSelectedIds(allIds);
+                } else {
+                  setHasTouchedSelection(true);
+                  setSelectedIds([]);
+                }
+              }}
+            />
+          );
+        },
+        cell: ({ row }) => {
+          const id = row.original.id;
+          const checked = effectiveSelectedIds.includes(id);
+          return (
+            <Checkbox
+              checked={checked}
+              aria-label="Select booking"
+              onCheckedChange={(checked) => {
+                setHasTouchedSelection(true);
+                setSelectedIds((prev) =>
+                  checked ? [...prev, id] : prev.filter((existingId) => existingId !== id),
+                );
+              }}
+            />
+          );
+        },
+        enableSorting: false,
+        enableHiding: false,
+      },
       {
         accessorKey: "trip",
         header: "Trip code",
@@ -129,34 +204,8 @@ export default function BookingsPage() {
         ),
       },
     ],
-    [],
+    [bookings, effectiveSelectedIds],
   );
-
-  // Use TanStack Query to fetch bookings
-  const {
-    data: bookingsResponse,
-    isLoading,
-    error,
-  } = useBookings(
-    page,
-    pageSize,
-    searchQuery || undefined,
-    paymentStatus !== "ALL" ? paymentStatus : undefined,
-    undefined, // visaStatus removed
-    tripStartDateFromQuery || undefined,
-    tripStartDateToQuery || undefined,
-  );
-
-  const bookings = useMemo(() => bookingsResponse?.data ?? [], [bookingsResponse?.data]);
-  const total = bookingsResponse?.total ?? 0;
-
-  // Calculate page count
-  const pageCount = useMemo(() => {
-    if (total > 0 && pageSize > 0) {
-      return Math.ceil(total / pageSize);
-    }
-    return 0;
-  }, [total, pageSize]);
 
   const table = useDataTableInstance({
     data: bookings,
@@ -176,6 +225,12 @@ export default function BookingsPage() {
       data: bookings,
     }));
   }, [pageCount, bookings, table]);
+
+  // Keep table pagination state in sync with URL page & pageSize
+  useEffect(() => {
+    table.setPageSize(pageSize);
+    table.setPageIndex(page - 1);
+  }, [pageSize, page, table]);
 
   // Handlers for pagination changes
   const handlePageChange = useCallback(
@@ -209,13 +264,35 @@ export default function BookingsPage() {
 
   const exportBookings = useExportBookings();
   const handleExport = useCallback(() => {
+    if (!bookings.length) return;
+    // ถ้าไม่ได้เลือกอะไรเลย หรือเลือกทั้งหน้าปัจจุบัน ให้ใช้ behavior เดิม (export ตาม filter ทั้งหมด)
+    if (effectiveSelectedIds.length === 0 || effectiveSelectedIds.length === bookings.length) {
+      exportBookings(
+        searchQuery || undefined,
+        paymentStatus !== "ALL" ? paymentStatus : undefined,
+        tripStartDateFromQuery || undefined,
+        tripStartDateToQuery || undefined,
+      );
+      return;
+    }
+
+    // ถ้าเลือกบาง row → export เฉพาะ booking ที่เลือก
     exportBookings(
       searchQuery || undefined,
       paymentStatus !== "ALL" ? paymentStatus : undefined,
       tripStartDateFromQuery || undefined,
       tripStartDateToQuery || undefined,
+      effectiveSelectedIds,
     );
-  }, [exportBookings, searchQuery, paymentStatus, tripStartDateFromQuery, tripStartDateToQuery]);
+  }, [
+    bookings,
+    effectiveSelectedIds,
+    exportBookings,
+    searchQuery,
+    paymentStatus,
+    tripStartDateFromQuery,
+    tripStartDateToQuery,
+  ]);
 
   return (
     <div className="flex flex-col gap-8 p-8">
@@ -226,7 +303,10 @@ export default function BookingsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" /> Export CSV
+            <Download className="mr-2 h-4 w-4" />{" "}
+            {effectiveSelectedIds.length > 0
+              ? `Export CSV (${effectiveSelectedIds.length})`
+              : "Export CSV"}
           </Button>
           <Link href="/dashboard/bookings/create">
             <Button>
@@ -254,7 +334,6 @@ export default function BookingsPage() {
               <DataTable
                 table={table}
                 columns={columns}
-              // onRowClick={(row) => router.push(`/dashboard/bookings/${row.id}`)}
               />
             </div>
             <DataTablePagination

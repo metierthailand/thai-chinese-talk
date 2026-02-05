@@ -65,6 +65,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
     handleCreateCustomer,
     customerPassports,
     customerId,
+    customerIdsAlreadyInTrip,
     salesUserSearchOpen,
     setSalesUserSearchOpen,
     salesUserSearchQuery,
@@ -160,6 +161,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
               setCreateCustomerDialogOpen={setCreateCustomerDialogOpen}
               customerPassports={customerPassports}
               customerId={customerId}
+              customerIdsAlreadyInTrip={customerIdsAlreadyInTrip}
               trips={trips}
               tripId={tripId}
             />

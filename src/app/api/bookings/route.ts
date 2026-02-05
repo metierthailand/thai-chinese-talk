@@ -233,6 +233,18 @@ export async function POST(req: Request) {
       });
     }
 
+    // Prevent duplicate: same customer cannot have more than one booking in the same trip
+    const existingBooking = await prisma.booking.findFirst({
+      where: { tripId, customerId },
+      select: { id: true },
+    });
+    if (existingBooking) {
+      return new NextResponse(
+        JSON.stringify({ message: "This customer already has a booking in the selected trip." }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     // Validate salesUserId is a user with SALES role
     const salesUser = await prisma.user.findUnique({
       where: { id: salesUserId },
@@ -411,21 +423,21 @@ export async function POST(req: Request) {
       }
 
       // 3. Update Booking with payment IDs
-      const updateData: any = {};
+      const updateData: Prisma.BookingUpdateInput = {};
       if (createdPayments.length > 0) {
-        updateData.firstPaymentId = createdPayments[0].id;
+        updateData.firstPayment = { connect: { id: createdPayments[0].id } };
       }
       if (createdPayments.length > 1) {
-        updateData.secondPaymentId = createdPayments[1].id;
+        updateData.secondPayment = { connect: { id: createdPayments[1].id } };
       }
       if (createdPayments.length > 2) {
-        updateData.thirdPaymentId = createdPayments[2].id;
+        updateData.thirdPayment = { connect: { id: createdPayments[2].id } };
       }
-      
+
       if (Object.keys(updateData).length > 0) {
         await tx.booking.update({
           where: { id: newBooking.id },
-          data: updateData as unknown as Prisma.BookingUpdateInput,
+          data: updateData,
         });
       }
 

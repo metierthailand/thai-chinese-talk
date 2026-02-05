@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
   useSearchCustomers,
@@ -34,6 +35,7 @@ interface UseBookingFormProps {
 }
 
 export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBookingFormProps) {
+  const { data: session } = useSession();
   const readOnly = mode === "view";
   const [tripSearchOpen, setTripSearchOpen] = useState(false);
   const [tripSearchQuery, setTripSearchQuery] = useState("");
@@ -444,6 +446,14 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
     );
   }, [availableCompanionCustomers, companionSearchQuery]);
 
+  // Default sales to current user when they are a sales user (create mode only)
+  useEffect(() => {
+    if (mode !== "create" || initialData?.salesUserId) return;
+    if (session?.user?.role === "SALES" && session?.user?.id && form.getValues("salesUserId") === "") {
+      form.setValue("salesUserId", session.user.id, { shouldDirty: false });
+    }
+  }, [mode, initialData?.salesUserId, session?.user?.role, session?.user?.id, form]);
+
   // Reset form when initialData changes (for edit mode)
   useEffect(() => {
     if (initialData) {
@@ -565,7 +575,27 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
     form.setValue("tripId", newTripId);
     // Clear companion customers when trip changes
     form.setValue("companionCustomerIds", []);
+    // When clearing trip, clear customer and passport so customer section stays consistent
+    if (!newTripId) {
+      form.setValue("customerId", "", { shouldDirty: false });
+      form.setValue("passportId", "", { shouldDirty: false });
+    }
   };
+
+  // Customer IDs that already have a booking in the selected trip (exclude from customer dropdown)
+  const customerIdsAlreadyInTrip = useMemo(() => {
+    const list = companionBookingsResponse || [];
+    return list.map((b: Booking) => b.customerId);
+  }, [companionBookingsResponse]);
+
+  // In create mode, if user changes trip and current customer is already in the new trip, clear selection
+  useEffect(() => {
+    if (mode !== "create" || !tripId || !customerId || customerIdsAlreadyInTrip.length === 0) return;
+    if (customerIdsAlreadyInTrip.includes(customerId)) {
+      form.setValue("customerId", "", { shouldDirty: true });
+      form.setValue("passportId", "", { shouldDirty: true });
+    }
+  }, [mode, tripId, customerId, customerIdsAlreadyInTrip, form]);
 
   const handleAddCompanion = (customerId: string) => {
     const current = form.getValues("companionCustomerIds") || [];
@@ -699,6 +729,7 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
     handleCreateCustomer,
     customerPassports,
     customerId,
+    customerIdsAlreadyInTrip,
     salesUserSearchOpen,
     setSalesUserSearchOpen,
     salesUserSearchQuery,

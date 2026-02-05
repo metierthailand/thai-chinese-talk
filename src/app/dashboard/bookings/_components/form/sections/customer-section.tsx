@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { Check, ChevronsUpDown, Plus, Eye, Pencil, CircleAlert, Cake } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Eye, Pencil, Cake } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +54,8 @@ interface CustomerSectionProps {
   setCreateCustomerDialogOpen: (open: boolean) => void;
   customerPassports: Passport[];
   customerId: string;
+  /** Customer IDs that already have a booking in the selected trip; excluded from dropdown (except current) */
+  customerIdsAlreadyInTrip?: string[];
   trips: Trip[];
   tripId: string;
 }
@@ -71,6 +73,7 @@ export function CustomerSection({
   setCreateCustomerDialogOpen,
   customerPassports,
   customerId,
+  customerIdsAlreadyInTrip = [],
   trips,
   tripId,
 }: CustomerSectionProps) {
@@ -78,6 +81,14 @@ export function CustomerSection({
   const [editCustomerDialogOpen, setEditCustomerDialogOpen] = useState(false);
 
   const [isReChecked, setIsReChecked] = useState(false);
+
+  const isCustomerSectionDisabled = !readOnly && !tripId;
+  const availableCustomers = useMemo(() => {
+    if (!customerIdsAlreadyInTrip.length) return searchResults;
+    return searchResults.filter(
+      (c) => !customerIdsAlreadyInTrip.includes(c.id) || c.id === customerId
+    );
+  }, [searchResults, customerIdsAlreadyInTrip, customerId]);
 
   const passportId = useWatch({ control: form.control, name: "passportId" });
   const customerIdValue = useWatch({ control: form.control, name: "customerId" });
@@ -192,17 +203,20 @@ export function CustomerSection({
             ) : (
               <div className="flex flex-col gap-2">
                 <div className="flex gap-2">
-                  <Popover open={customerSearchOpen} onOpenChange={setCustomerSearchOpen}>
+                  <Popover open={!isCustomerSectionDisabled && customerSearchOpen} onOpenChange={setCustomerSearchOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
                           variant="outline"
                           role="combobox"
+                          disabled={isCustomerSectionDisabled}
                           className={cn("flex-1 min-w-0 justify-between", !field.value && "text-muted-foreground")}
                         >
-                          {selectedCustomer
-                            ? `${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn}`
-                            : "Search for a customer..."}
+                          {isCustomerSectionDisabled
+                            ? "Select a trip first"
+                            : selectedCustomer
+                              ? `${selectedCustomer.firstNameEn} ${selectedCustomer.lastNameEn}`
+                              : "Search for a customer..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </FormControl>
@@ -217,13 +231,17 @@ export function CustomerSection({
                         <CommandList>
                           {isSearching ? (
                             <div className="text-muted-foreground py-6 text-center text-sm">Searching...</div>
-                          ) : searchResults.length === 0 ? (
+                          ) : availableCustomers.length === 0 ? (
                             <CommandEmpty>
-                              {customerSearchQuery ? "No customers found." : "Start typing to search..."}
+                              {customerSearchQuery
+                                ? "No customers found."
+                                : customerIdsAlreadyInTrip.length > 0
+                                  ? "All customers in this trip are already selected or no other customers found."
+                                  : "Start typing to search..."}
                             </CommandEmpty>
                           ) : (
                             <CommandGroup>
-                              {searchResults.map((customer) => (
+                              {availableCustomers.map((customer) => (
                                 <CommandItem
                                   value={customer.id}
                                   key={customer.id}
@@ -257,6 +275,7 @@ export function CustomerSection({
                             type="button"
                             variant="outline"
                             className="w-full"
+                            disabled={isCustomerSectionDisabled}
                             onClick={() => {
                               setCustomerSearchOpen(false);
                               setCreateCustomerDialogOpen(true);
@@ -344,7 +363,7 @@ export function CustomerSection({
               <Select
                 onValueChange={field.onChange}
                 value={field.value || ""}
-                disabled={!customerId || customerPassports.length === 0}
+                disabled={isCustomerSectionDisabled || !customerId || customerPassports.length === 0}
               >
                 <FormControl>
                   <SelectTrigger className="w-full">
