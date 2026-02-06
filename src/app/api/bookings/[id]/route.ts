@@ -198,6 +198,20 @@ export async function PUT(
       }
     }
 
+    // Validate passportId belongs to the customer if both provided
+    if (passportId && passportId !== "" && finalCustomerId) {
+      const passport = await prisma.passport.findUnique({
+        where: { id: passportId },
+        select: { customerId: true },
+      });
+      if (!passport || passport.customerId !== finalCustomerId) {
+        return new NextResponse(
+          JSON.stringify({ message: "The selected passport does not belong to the customer." }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // Validate salesUserId if provided
     if (salesUserId) {
       const salesUser = await prisma.user.findUnique({

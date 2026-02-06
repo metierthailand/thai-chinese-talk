@@ -249,6 +249,18 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validate passport belongs to the customer
+    const passport = await prisma.passport.findUnique({
+      where: { id: passportId },
+      select: { customerId: true },
+    });
+    if (!passport || passport.customerId !== customerId) {
+      return new NextResponse(
+        JSON.stringify({ message: "The selected passport does not belong to the customer." }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     // Validate salesUserId is a user with SALES role
     const salesUser = await prisma.user.findUnique({
       where: { id: salesUserId },

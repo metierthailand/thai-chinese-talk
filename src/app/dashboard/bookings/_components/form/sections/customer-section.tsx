@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { Check, ChevronsUpDown, Plus, Eye, Pencil, Cake } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -92,6 +92,12 @@ export function CustomerSection({
 
   const passportId = useWatch({ control: form.control, name: "passportId" });
   const customerIdValue = useWatch({ control: form.control, name: "customerId" });
+
+  useEffect(() => {
+    if (passportId && form.formState.errors.passportId) {
+      form.clearErrors("passportId");
+    }
+  }, [passportId, form]);
 
   // Fetch full customer data to get dateOfBirth
   const { data: fullCustomerData } = useCustomer(customerIdValue || undefined);
@@ -245,6 +251,9 @@ export function CustomerSection({
                                   value={customer.id}
                                   key={customer.id}
                                   onSelect={() => {
+                                    if (customer.id !== field.value) {
+                                      form.setValue("passportId", "", { shouldDirty: true });
+                                    }
                                     field.onChange(customer.id);
                                     setCustomerSearchOpen(false);
                                     setCustomerSearchQuery("");
@@ -360,7 +369,10 @@ export function CustomerSection({
               </FormControl>
             ) : (
               <Select
-                onValueChange={field.onChange}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  if (value) form.clearErrors("passportId");
+                }}
                 value={field.value || ""}
                 disabled={isCustomerSectionDisabled || !customerId || customerPassports.length === 0}
               >

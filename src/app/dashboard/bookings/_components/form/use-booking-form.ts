@@ -176,6 +176,7 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(formSchema),
+    mode: "onChange",
     defaultValues: {
       customerId: "",
       tripId: "",
@@ -616,6 +617,11 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
 
   const handleSubmit = async (values: BookingFormValues) => {
     if (!onSubmit || readOnly) return;
+
+    if (values.customerId && (!values.passportId || values.passportId.trim() === "")) {
+      toast.error("Please select a passport.");
+      return;
+    }
 
     // In create mode, ensure passportId is set if customer is selected
     if (mode === "create" && values.customerId && customerPassports.length > 0 && !values.passportId) {
