@@ -307,6 +307,7 @@ async function updateBooking({
     customerId?: string;
     tripId?: string;
     salesUserId?: string;
+    passportId?: string;
     companionCustomerIds?: string[];
     agentId?: string;
     note?: string;

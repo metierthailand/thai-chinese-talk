@@ -64,6 +64,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
         customerId: values.customerId,
         tripId: values.tripId,
         salesUserId: values.salesUserId,
+        passportId: values.passportId || undefined,
         companionCustomerIds: values.companionCustomerIds,
         note: values.note,
         extraPriceForSingleTraveller: values.extraPriceForSingleTraveller
