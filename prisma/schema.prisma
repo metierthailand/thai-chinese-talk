@@ -303,6 +303,8 @@ model Booking {
   passportId       String
   passport         Passport          @relation(fields: [passportId], references: [id], onDelete: Restrict)
 
+  isRechecked Boolean @default(false)
+
   note String? @db.Text
 
   extraPriceForSingleTraveller Decimal? @db.Decimal(10, 2)
