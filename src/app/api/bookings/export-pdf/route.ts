@@ -44,6 +44,14 @@ function str(v: unknown): string {
   return String(v);
 }
 
+/** Format number with thousand separators, e.g. 1000000 => "1,000,000.00" */
+function formatPrice(n: number, decimals = 2): string {
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
 /** Keep only WinAnsi-encodable chars (for StandardFonts fallback when Thai font fails to load) */
 function toWinAnsi(s: string): string {
   return s.replace(/[^\x20-\x7E\xA0-\xFF]/g, "?");
@@ -88,7 +96,7 @@ function drawLine(
   y: number,
   opts?: { bold?: boolean; size?: number; sanitize?: (s: string) => string }
 ) {
-  const size = opts?.size ?? 10;
+  const size = opts?.size ?? 14;
   const f = opts?.bold ? fontBold : font;
   const t = opts?.sanitize ? opts.sanitize(text) : text;
   page.drawText(t, { x, y, size, font: f });
@@ -109,10 +117,10 @@ function drawLabelValue(
   const labelText = `• ${label}: `;
   const labelSafe = sanitize ? sanitize(labelText) : labelText;
   const valueSafe = sanitize ? sanitize(value || "-") : value || "-";
-  page.drawText(labelSafe, { x, y: cy, size: 9, font });
-  const labelW = font.widthOfTextAtSize(labelSafe, 9);
-  page.drawText(valueSafe, { x: x + labelW, y: cy, size: 9, font });
-  return cy - 12;
+  page.drawText(labelSafe, { x, y: cy, size: 13, font });
+  const labelW = font.widthOfTextAtSize(labelSafe, 13);
+  page.drawText(valueSafe, { x: x + labelW, y: cy, size: 13, font });
+  return cy - 16;
 }
 
 async function loadThaiFonts(
@@ -160,17 +168,17 @@ export async function GET(request: Request) {
   const searchFilter: Prisma.BookingWhereInput =
     search.trim().length > 0
       ? {
-          customer: {
-            is: {
-              OR: [
-                { firstNameTh: { contains: search, mode: "insensitive" } },
-                { lastNameTh: { contains: search, mode: "insensitive" } },
-                { firstNameEn: { contains: search, mode: "insensitive" } },
-                { lastNameEn: { contains: search, mode: "insensitive" } },
-              ],
-            },
+        customer: {
+          is: {
+            OR: [
+              { firstNameTh: { contains: search, mode: "insensitive" } },
+              { lastNameTh: { contains: search, mode: "insensitive" } },
+              { firstNameEn: { contains: search, mode: "insensitive" } },
+              { lastNameEn: { contains: search, mode: "insensitive" } },
+            ],
           },
-        }
+        },
+      }
       : {};
   const paymentStatusFilter: Prisma.BookingWhereInput = status
     ? ({ paymentStatus: status } as unknown as Prisma.BookingWhereInput)
@@ -178,15 +186,15 @@ export async function GET(request: Request) {
   const tripDateFilter: Prisma.BookingWhereInput =
     tripStartDateFrom || tripStartDateTo
       ? {
-          trip: {
-            is: {
-              startDate: {
-                ...(tripStartDateFrom ? { gte: parseDateGte(tripStartDateFrom) } : {}),
-                ...(tripStartDateTo ? { lte: parseDateLte(tripStartDateTo) } : {}),
-              },
+        trip: {
+          is: {
+            startDate: {
+              ...(tripStartDateFrom ? { gte: parseDateGte(tripStartDateFrom) } : {}),
+              ...(tripStartDateTo ? { lte: parseDateLte(tripStartDateTo) } : {}),
             },
           },
-        }
+        },
+      }
       : {};
   const tripIdFilter: Prisma.BookingWhereInput = tripId ? { tripId } : {};
   const idFilter: Prisma.BookingWhereInput =
@@ -214,7 +222,6 @@ export async function GET(request: Request) {
             passportNumber: true,
             issuingCountry: true,
             expiryDate: true,
-            isPrimary: true,
           },
         },
         companionGroup: {
@@ -279,8 +286,8 @@ export async function GET(request: Request) {
       let y = A4_HEIGHT - MARGIN;
       const x = MARGIN;
 
-      // Title at top center
-      y = drawCenteredTitle(page, fontBold, "ThaiChinese Tour", y, 11, sanitize);
+      // Title at top center (slightly larger font)
+      y = drawCenteredTitle(page, fontBold, "ThaiChinese Tour", y, 15, sanitize);
       y -= 20;
 
       // Booking Information
@@ -302,9 +309,8 @@ export async function GET(request: Request) {
 
       const pass = b.passport;
       if (pass) {
-        const primary = pass.isPrimary ? " (Primary)" : "";
         const exp = pass.expiryDate ? format(new Date(pass.expiryDate), "dd MMM yyyy") : "";
-        y = drawLabelValue(page, font, fontBold, "Passport", `${str(pass.passportNumber)} ${str(pass.issuingCountry)}${primary}`, x, y, sanitize);
+        y = drawLabelValue(page, font, fontBold, "Passport", `${str(pass.passportNumber)} ${str(pass.issuingCountry)}`, x, y, sanitize);
         y = drawLabelValue(page, font, fontBold, "Passport Expired date", exp, x, y, sanitize);
       } else {
         y = drawLabelValue(page, font, fontBold, "Passport", "-", x, y, sanitize);
@@ -332,18 +338,18 @@ export async function GET(request: Request) {
       const discount = num(b.discountPrice);
       const totalAmount = standardPrice + extraSingle + extraBed + extraSeat + extraBag - discount;
 
-      y = drawLabelValue(page, font, fontBold, "Total amount", `${totalAmount.toFixed(2)} THB`, x, y);
-      y = drawLabelValue(page, font, fontBold, "Extra price for single traveller", extraSingle > 0 ? `${extraSingle.toFixed(2)}` : "-", x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Total amount", `${formatPrice(totalAmount)} THB`, x, y);
+      y = drawLabelValue(page, font, fontBold, "Extra price for single traveller", extraSingle > 0 ? formatPrice(extraSingle) : "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Room type", ROOM_TYPE_LABELS[b.roomType] ?? b.roomType ?? "-", x, y, sanitize);
-      y = drawLabelValue(page, font, fontBold, "Extra price for extra bed", extraBed > 0 ? `${extraBed.toFixed(2)}` : "-", x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Extra price for extra bed", extraBed > 0 ? formatPrice(extraBed) : "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for room", str(b.roomNote) || "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Seat type", SEAT_TYPE_LABELS[b.seatType] ?? b.seatType ?? "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Seat upgrade type", b.seatClass ? (SEAT_CLASS_LABELS[b.seatClass] ?? b.seatClass) : "-", x, y, sanitize);
-      y = drawLabelValue(page, font, fontBold, "Extra price for seat upgrade", extraSeat > 0 ? `${extraSeat.toFixed(2)}` : "-", x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Extra price for seat upgrade", extraSeat > 0 ? formatPrice(extraSeat) : "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for seat", str(b.seatNote) || "-", x, y, sanitize);
-      y = drawLabelValue(page, font, fontBold, "Extra price for bag upgrade", extraBag > 0 ? `${extraBag.toFixed(2)}` : "-", x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Extra price for bag upgrade", extraBag > 0 ? formatPrice(extraBag) : "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for bag", str(b.bagNote) || "-", x, y, sanitize);
-      y = drawLabelValue(page, font, fontBold, "Discount price", discount > 0 ? `${discount.toFixed(2)}` : "-", x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Discount price", discount > 0 ? formatPrice(discount) : "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for discount", str(b.discountNote) || "-", x, y, sanitize);
       const salesName = b.salesUser
         ? `${str(b.salesUser.firstName)} ${str(b.salesUser.lastName)}`.trim()
@@ -361,9 +367,9 @@ export async function GET(request: Request) {
 
       const paidAmount = num(b.paidAmount);
       const remaining = totalAmount - paidAmount;
-      y = drawLabelValue(page, font, fontBold, "Total amount", `${totalAmount.toFixed(2)} THB`, x, y, sanitize);
-      y = drawLabelValue(page, font, fontBold, "Paid amount", `${paidAmount.toFixed(2)} THB`, x, y, sanitize);
-      y = drawLabelValue(page, font, fontBold, "Balance", `${remaining.toFixed(2)} THB`, x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Total amount", `${formatPrice(totalAmount)} THB`, x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Paid amount", `${formatPrice(paidAmount)} THB`, x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Balance", `${formatPrice(remaining)} THB`, x, y, sanitize);
     }
 
     const pdfBytes = await pdfDoc.save();

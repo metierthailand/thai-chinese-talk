@@ -11,6 +11,7 @@ import type {
   CustomerLeadSummary,
   CustomerBookingSummary,
 } from "@/app/dashboard/customers/hooks/use-customers";
+import { Eye } from "lucide-react";
 
 interface CustomerTabsProps {
   customerId: string;
@@ -63,7 +64,7 @@ export function CustomerTabs({
                 </div>
                 <Link href={`/dashboard/leads/${lead.id}`}>
                   <Button variant="outline" size="sm">
-                    View
+                    <Eye className="h-4 w-4" />
                   </Button>
                 </Link>
               </div>
@@ -78,8 +79,8 @@ export function CustomerTabs({
             <p className="text-muted-foreground">No bookings found.</p>
           ) : (
             bookings.map((booking) => (
-              <Link key={booking.id} href={`/dashboard/bookings/${booking.id}`}>
-                <div className="rounded-md border p-4">
+              <div key={booking.id} className="rounded-md border p-4 flex items-center justify-between">
+                <div>
                   <div className="font-medium">{booking.trip.name}</div>
                   <div className="text-muted-foreground text-sm">
                     {format(new Date(booking.trip.startDate), "dd MMM yyyy")} - {format(new Date(booking.trip.endDate), "dd MMM yyyy")}
@@ -88,7 +89,13 @@ export function CustomerTabs({
                     Status: {booking.status} | Amount: {formatDecimal(booking.totalAmount)}
                   </div>
                 </div>
-              </Link>
+
+                <Link href={`/dashboard/bookings/${booking.id}`}>
+                  <Button variant="outline" size="sm">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
             ))
           )}
         </div>

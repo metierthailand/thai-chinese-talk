@@ -174,7 +174,7 @@ export async function GET(request: Request) {
           lte: endOfToday,
         },
         status: {
-          not: "COMPLETED",
+          notIn: ["COMPLETED", "CANCELLED"],
         },
       },
     });

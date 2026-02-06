@@ -124,11 +124,11 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
             pushWithParams({ paymentStatus: value, page: 1 });
           }}
         >
-          <SelectTrigger className="w-full lg:w-40">
+          <SelectTrigger className="w-full lg:w-52">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All status</SelectItem>
+            <SelectItem value="ALL">All payment status</SelectItem>
             <SelectItem value="DEPOSIT_PENDING">Deposit pending</SelectItem>
             <SelectItem value="DEPOSIT_PAID">Deposit paid</SelectItem>
             <SelectItem value="FULLY_PAID">Fully paid</SelectItem>

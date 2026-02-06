@@ -20,6 +20,24 @@ import { Loading } from "@/components/page/loading";
 import { getPaymentStatusVariant, PAYMENT_STATUS_LABELS } from "@/lib/constants/payment";
 import { PaymentStatus } from "@prisma/client";
 
+// Reuse the same calculation logic as bookings list
+const calculateBookingAmounts = (booking: Booking) => {
+  const basePrice = booking.trip?.standardPrice || 0;
+  const extraSingle = booking.extraPriceForSingleTraveller || 0;
+  const extraBedPrice = booking.extraPricePerBed || 0;
+  const extraSeatPrice = booking.extraPricePerSeat || 0;
+  const extraBagPrice = booking.extraPricePerBag || 0;
+  const discount = booking.discountPrice || 0;
+  const totalAmount = basePrice + extraSingle + extraBedPrice + extraSeatPrice + extraBagPrice - discount;
+
+  const firstAmount = booking.firstPayment?.amount || 0;
+  const secondAmount = booking.secondPayment?.amount || 0;
+  const thirdAmount = booking.thirdPayment?.amount || 0;
+  const paidAmount = firstAmount + secondAmount + thirdAmount;
+
+  return { totalAmount, paidAmount };
+};
+
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -92,7 +110,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         cell: ({ row }) => (
           <div>
             <div className="font-medium">
-              {`${row.original.customer.firstNameTh} ${row.original.customer.lastNameTh}`}
+              {`${row.original.customer.firstNameEn} ${row.original.customer.lastNameEn}`}
             </div>
             <div className="text-muted-foreground text-sm">{row.original.customer.email}</div>
           </div>
@@ -108,13 +126,12 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       },
       {
         id: "remaining",
-        header: "Remaining",
+        header: "Balance",
         cell: ({ row }) => {
-          const remaining =
-            Number(row.original.payments?.reduce((acc, curr) => acc + curr.amount, 0) ?? 0) -
-            Number(row.original.payments?.reduce((acc, curr) => acc + curr.amount, 0) ?? 0);
+          const { totalAmount, paidAmount } = calculateBookingAmounts(row.original);
+          const remaining = totalAmount - paidAmount;
           return remaining > 0 ? (
-            <span className="font-medium text-orange-600">{formatDecimal(remaining)}</span>
+            <span className="font-medium">{formatDecimal(remaining)}</span>
           ) : (
             <span className="text-muted-foreground">-</span>
           );
