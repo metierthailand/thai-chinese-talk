@@ -40,6 +40,7 @@ import { Passport } from "@/app/dashboard/customers/hooks/types";
 import { Trip } from "@/app/dashboard/trips/hooks/use-trips";
 import { useWatch } from "react-hook-form";
 import { differenceInMonths, format } from "date-fns";
+import { useUpdateBooking } from "@/app/dashboard/bookings/hooks/use-bookings";
 
 interface CustomerSectionProps {
   form: UseFormReturn<BookingFormValues>;
@@ -58,6 +59,8 @@ interface CustomerSectionProps {
   customerIdsAlreadyInTrip?: string[];
   trips: Trip[];
   tripId: string;
+  /** When in booking edit mode, pass booking id so recheck submit can update booking isRechecked */
+  bookingId?: string;
 }
 
 export function CustomerSection({
@@ -76,11 +79,20 @@ export function CustomerSection({
   customerIdsAlreadyInTrip = [],
   trips,
   tripId,
+  bookingId,
 }: CustomerSectionProps) {
   const [viewCustomerDialogOpen, setViewCustomerDialogOpen] = useState(false);
   const [editCustomerDialogOpen, setEditCustomerDialogOpen] = useState(false);
 
-  const [isReChecked, setIsReChecked] = useState(false);
+  const updateBookingMutation = useUpdateBooking();
+  const isRechecked = useWatch({ control: form.control, name: "isRechecked" }) ?? false;
+
+  const handleReCheckedSubmit = async (id?: string) => {
+    if (id) {
+      await updateBookingMutation.mutateAsync({ id, data: { isRechecked: true } });
+    }
+    form.setValue("isRechecked", true, { shouldDirty: true });
+  };
 
   const isCustomerSectionDisabled = !readOnly && !tripId;
   const availableCustomers = useMemo(() => {
@@ -253,6 +265,7 @@ export function CustomerSection({
                                   onSelect={() => {
                                     if (customer.id !== field.value) {
                                       form.setValue("passportId", "", { shouldDirty: true });
+                                      form.setValue("isRechecked", false, { shouldDirty: true });
                                     }
                                     field.onChange(customer.id);
                                     setCustomerSearchOpen(false);
@@ -310,8 +323,8 @@ export function CustomerSection({
                 </div>
                 {field.value && (
                   <>
-                    <FormDescription className={isReChecked ? "text-green-500" : "text-red-500"}>
-                      {isReChecked ? "The customer's information has been rechecked." : "The customer's information has not been rechecked."}
+                    <FormDescription className={isRechecked ? "text-green-500" : "text-red-500"}>
+                      {isRechecked ? "The customer's information has been rechecked." : "The customer's information has not been rechecked."}
                     </FormDescription>
                     {birthdayWarning && (
                       <div className="bg-blue-50 p-4 rounded-md border flex gap-2 border-blue-400">
@@ -336,7 +349,8 @@ export function CustomerSection({
                   open={editCustomerDialogOpen}
                   onOpenChange={setEditCustomerDialogOpen}
                   customerId={field.value}
-                  onReCheckedChange={setIsReChecked}
+                  bookingId={bookingId}
+                  onReCheckedSubmit={handleReCheckedSubmit}
                 />
               </>
             )}

@@ -164,6 +164,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
               customerIdsAlreadyInTrip={customerIdsAlreadyInTrip}
               trips={trips}
               tripId={tripId}
+              bookingId={mode === "edit" ? booking?.id : undefined}
             />
 
             <CompanionSection

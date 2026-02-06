@@ -39,6 +39,7 @@ export default function NewBookingPage() {
         discountNote: values.discountNote,
         paymentStatus: values.paymentStatus,
         firstPaymentRatio: values.firstPaymentRatio,
+        isRechecked: values.isRechecked,
         payments: values.payments,
       });
       router.push("/dashboard/bookings");

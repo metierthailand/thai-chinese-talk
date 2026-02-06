@@ -229,6 +229,7 @@ export async function POST(req: Request) {
       paymentStatus,
       firstPaymentRatio,
       payments,
+      isRechecked,
     } = body;
 
     if (!customerId || !tripId || !salesUserId || !passportId || !roomType || !seatType) {
@@ -411,6 +412,7 @@ export async function POST(req: Request) {
             | "FULLY_PAID"
             | "CANCELLED",
           firstPaymentRatio: firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30",
+          isRechecked: isRechecked === true,
         },
       });
 

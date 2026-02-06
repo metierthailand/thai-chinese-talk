@@ -47,6 +47,7 @@ export const baseFormSchema = z.object({
   discountNote: z.string().optional(),
   paymentStatus: z.enum(["DEPOSIT_PENDING", "DEPOSIT_PAID", "FULLY_PAID", "CANCELLED"]),
   firstPaymentRatio: z.enum(["FIRST_PAYMENT_100", "FIRST_PAYMENT_50", "FIRST_PAYMENT_30"]),
+  isRechecked: z.boolean().optional(),
   payments: z.array(
     z.object({
       id: z.string().optional(), // Existing payment ID (for edit mode)

@@ -55,6 +55,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
               }))
               .slice(0, 3)
           : [],
+        isRechecked: booking.isRechecked ?? false,
       }
     : undefined;
 
@@ -84,6 +85,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
         paymentStatus: values.paymentStatus,
         firstPaymentRatio: values.firstPaymentRatio,
         payments: values.payments,
+        isRechecked: values.isRechecked,
       };
 
       await updateBookingMutation.mutateAsync({

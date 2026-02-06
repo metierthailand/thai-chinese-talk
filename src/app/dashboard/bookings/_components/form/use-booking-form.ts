@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
@@ -198,6 +198,7 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
       discountNote: "",
       paymentStatus: "DEPOSIT_PENDING" as const,
       firstPaymentRatio: "FIRST_PAYMENT_50" as const,
+      isRechecked: false,
       payments: [],
     },
   });
@@ -503,6 +504,7 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
         firstPaymentRatio: initialData.firstPaymentRatio
           ? (initialData.firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30")
           : ("FIRST_PAYMENT_50" as const),
+        isRechecked: initialData.isRechecked ?? false,
         payments: initialData.payments ?? [],
       };
 
@@ -542,6 +544,20 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
       }
     }
   }, [trips, initialData?.tripId, mode, form]);
+
+  // When customer changes (user selected someone else), set isRechecked to false in form only.
+  // Create: this value is sent when user clicks Create Booking.
+  // Edit: no API call here; isRechecked is sent only when user clicks Update Booking.
+  // Skip when prev is empty/undefined so we don't overwrite after form.reset(initialData).
+  const prevCustomerIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevCustomerIdRef.current;
+    const isInitialOrReset = prev === undefined || prev === "";
+    if (!isInitialOrReset && prev !== customerId) {
+      form.setValue("isRechecked", false, { shouldDirty: true });
+    }
+    prevCustomerIdRef.current = customerId;
+  }, [customerId, form]);
 
   // Set default passport to primary when customer is selected (only in create mode)
   useEffect(() => {

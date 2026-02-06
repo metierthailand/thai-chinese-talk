@@ -155,6 +155,7 @@ export async function PUT(
       paymentStatus,
       firstPaymentRatio,
       payments,
+      isRechecked,
     } = body;
 
     // Get current booking to check existing data
@@ -279,6 +280,7 @@ export async function PUT(
       updateData.paymentStatus = paymentStatus as "DEPOSIT_PENDING" | "DEPOSIT_PAID" | "FULLY_PAID" | "CANCELLED";
     if (firstPaymentRatio !== undefined)
       updateData.firstPaymentRatio = firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30";
+    if (isRechecked !== undefined) updateData.isRechecked = isRechecked;
 
     const updatedBooking = await prisma.$transaction(async (tx) => {
       // Update booking

@@ -16,10 +16,14 @@ interface CustomerEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerId: string;
+  /** When provided and user submits with recheck checked, this is called to set booking isRechecked */
+  bookingId?: string;
   onReCheckedChange?: (checked: boolean) => void;
+  /** Called when user submits with recheck checked. With bookingId: update booking API; without: store in form for create. */
+  onReCheckedSubmit?: (bookingId?: string) => void | Promise<void>;
 }
 
-export function CustomerEditDialog({ open, onOpenChange, customerId, onReCheckedChange }: CustomerEditDialogProps) {
+export function CustomerEditDialog({ open, onOpenChange, customerId, bookingId, onReCheckedChange, onReCheckedSubmit }: CustomerEditDialogProps) {
   const { data: customer, isLoading, error } = useCustomer(customerId);
   const { data: tags = [] } = useAllTags();
   const updateCustomerMutation = useUpdateCustomer();
@@ -65,6 +69,9 @@ export function CustomerEditDialog({ open, onOpenChange, customerId, onReChecked
 
   const handleSubmit = async (values: CustomerFormValues) => {
     await updateCustomerMutation.mutateAsync({ id: customerId, data: values });
+    if (isReChecked && onReCheckedSubmit) {
+      await onReCheckedSubmit(bookingId);
+    }
     onOpenChange(false);
   };
 

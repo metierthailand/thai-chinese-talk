@@ -65,6 +65,7 @@ export interface Booking {
   discountNote?: string | null;
   paymentStatus: string;
   firstPaymentRatio?: string;
+  isRechecked?: boolean;
   firstPaymentId?: string | null;
   firstPayment?: {
     id: string;
@@ -276,6 +277,7 @@ async function createBooking(data: {
   discountNote?: string;
   paymentStatus?: string;
   firstPaymentRatio: string;
+  isRechecked?: boolean;
   payments?: Array<{ amount?: string; proofOfPayment?: string }>;
 }): Promise<Booking> {
   const res = await fetch("/api/bookings", {
@@ -326,6 +328,7 @@ async function updateBooking({
     discountNote?: string;
     paymentStatus?: string;
     firstPaymentRatio?: string;
+    isRechecked?: boolean;
   };
 }): Promise<Booking> {
   const res = await fetch(`/api/bookings/${id}`, {
