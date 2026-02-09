@@ -37,7 +37,7 @@ export const baseFormSchema = z.object({
   roomType: z.enum(["DOUBLE_BED", "TWIN_BED"], { message: "Please select the information." }),
   extraPricePerBed: z.string().optional(),
   roomNote: z.string().optional(),
-  seatType: z.enum(["WINDOW", "MIDDLE", "AISLE"], { message: "Please select the information." }),
+  seatType: z.enum(["WINDOW", "MIDDLE", "AISLE", "NOT_SPECIFIED"], { message: "Please select the information." }),
   seatClass: z.enum(["FIRST_CLASS", "BUSINESS_CLASS", "LONG_LEG", "OTHER"]).optional(),
   extraPricePerSeat: z.string().optional(),
   seatNote: z.string().optional(),

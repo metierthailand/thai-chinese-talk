@@ -484,7 +484,7 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
         roomType: (initialData.roomType as "DOUBLE_BED" | "TWIN_BED") || ("" as unknown as "DOUBLE_BED" | "TWIN_BED"),
         extraPricePerBed: initialData.extraPricePerBed ?? "",
         roomNote: initialData.roomNote ?? "",
-        seatType: (initialData.seatType as "WINDOW" | "MIDDLE" | "AISLE") || ("" as unknown as "WINDOW" | "MIDDLE" | "AISLE"),
+        seatType: (initialData.seatType as "WINDOW" | "MIDDLE" | "AISLE" | "NOT_SPECIFIED") || ("" as unknown as "WINDOW" | "MIDDLE" | "AISLE" | "NOT_SPECIFIED"),
         seatClass: initialData.seatClass
           ? (initialData.seatClass as "FIRST_CLASS" | "BUSINESS_CLASS" | "LONG_LEG" | "OTHER")
           : undefined,

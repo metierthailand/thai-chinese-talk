@@ -32,7 +32,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
         roomType: (booking.roomType as "DOUBLE_BED" | "TWIN_BED") || "DOUBLE_BED",
         extraPricePerBed: booking.extraPricePerBed?.toString() || "",
         roomNote: booking.roomNote || "",
-        seatType: (booking.seatType as "WINDOW" | "MIDDLE" | "AISLE") ?? "WINDOW",
+        seatType: (booking.seatType as "WINDOW" | "MIDDLE" | "AISLE" | "NOT_SPECIFIED") ?? "WINDOW",
         seatClass: booking.seatClass ? (booking.seatClass as "FIRST_CLASS" | "BUSINESS_CLASS" | "LONG_LEG" | "OTHER") : undefined,
         extraPricePerSeat: booking.extraPricePerSeat?.toString() ?? "",
         seatNote: booking.seatNote ?? "",

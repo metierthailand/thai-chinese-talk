@@ -398,7 +398,7 @@ export async function POST(req: Request) {
           roomType: roomType as "DOUBLE_BED" | "TWIN_BED",
           extraPricePerBed: extraPricePerBed ? Number(extraPricePerBed) : 0,
           roomNote: roomNote || null,
-          seatType: seatType as "WINDOW" | "MIDDLE" | "AISLE",
+          seatType: seatType as "WINDOW" | "MIDDLE" | "AISLE" | "NOT_SPECIFIED",
           seatClass: seatClass || null,
           extraPricePerSeat: extraPricePerSeat ? Number(extraPricePerSeat) : null,
           seatNote: seatNote || null,

@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "SeatType" ADD VALUE 'NOT_SPECIFIED';

@@ -227,6 +227,7 @@ enum SeatType {
   WINDOW
   MIDDLE
   AISLE
+  NOT_SPECIFIED
 }
 
 enum SeatClass {

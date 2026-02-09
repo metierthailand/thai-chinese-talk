@@ -22,6 +22,7 @@ const SEAT_TYPE_LABELS: Record<string, string> = {
   WINDOW: "Window",
   MIDDLE: "Middle",
   AISLE: "Aisle",
+  NOT_SPECIFIED: "Not specified",
 };
 
 const SEAT_CLASS_LABELS: Record<string, string> = {

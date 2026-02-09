@@ -28,6 +28,7 @@ const SEAT_TYPE_LABELS: Record<string, string> = {
   WINDOW: "Window",
   MIDDLE: "Middle",
   AISLE: "Aisle",
+  NOT_SPECIFIED: "Not specified",
 };
 
 const SEAT_CLASS_LABELS: Record<string, string> = {
@@ -184,6 +185,7 @@ export function TravelDetailsSection({
                     <SelectItem value="WINDOW">Window</SelectItem>
                     <SelectItem value="MIDDLE">Middle</SelectItem>
                     <SelectItem value="AISLE">Aisle</SelectItem>
+                    <SelectItem value="NOT_SPECIFIED">Not specified</SelectItem>
                   </SelectContent>
                 </Select>
               )}
