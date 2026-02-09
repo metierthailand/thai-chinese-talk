@@ -165,6 +165,21 @@ model BookingCompanion {
   tripId String
   trip   Trip   @relation(fields: [tripId], references: [id])
 
+  bookings            Booking[]
+  roommateGroups      BookingRoommateGroup[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Roommate group: bookings that share a room. Only valid within the same companion group.
+// Booking can select roommates only from the same companion; assigning roommateGroupId
+// puts them in the same "room" for export/display.
+model BookingRoommateGroup {
+  id               String           @id @default(uuid())
+  companionGroupId String
+  companionGroup   BookingCompanion @relation(fields: [companionGroupId], references: [id], onDelete: Cascade)
+
   bookings Booking[]
 
   createdAt DateTime @default(now())
@@ -298,7 +313,9 @@ model Booking {
   tripId           String
   trip             Trip              @relation(fields: [tripId], references: [id])
   companionGroupId String?
-  companionGroup   BookingCompanion? @relation(fields: [companionGroupId], references: [id])
+  companionGroup   BookingCompanion?   @relation(fields: [companionGroupId], references: [id])
+  roommateGroupId  String?
+  roommateGroup    BookingRoommateGroup? @relation(fields: [roommateGroupId], references: [id], onDelete: SetNull)
   agentId          String?
   agent            User?             @relation("AgentBookings", fields: [agentId], references: [id])
   passportId       String

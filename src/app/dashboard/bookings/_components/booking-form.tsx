@@ -84,6 +84,16 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
     deletingCompanionId,
     setDeletingCompanionId,
     handleRemoveCompanion,
+    roommateSearchOpen,
+    setRoommateSearchOpen,
+    roommateSearchQuery,
+    setRoommateSearchQuery,
+    availableRoommateBookings,
+    filteredRoommateBookings,
+    selectedRoommateBookings,
+    roommateBookingIds,
+    handleAddRoommate,
+    handleRemoveRoommate,
     calculatedAmounts,
     enableSingleTravellerPrice,
     setEnableSingleTravellerPrice,
@@ -209,6 +219,17 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
             setEnableBagPrice={setEnableBagPrice}
             enableDiscount={enableDiscount}
             setEnableDiscount={setEnableDiscount}
+            roommateSearchOpen={roommateSearchOpen}
+            setRoommateSearchOpen={setRoommateSearchOpen}
+            roommateSearchQuery={roommateSearchQuery}
+            setRoommateSearchQuery={setRoommateSearchQuery}
+            availableRoommateBookings={availableRoommateBookings}
+            filteredRoommateBookings={filteredRoommateBookings}
+            selectedRoommateBookings={selectedRoommateBookings}
+            roommateBookingIds={roommateBookingIds}
+            handleAddRoommate={handleAddRoommate}
+            handleRemoveRoommate={handleRemoveRoommate}
+            tripId={tripId}
           />
 
           <Separator />

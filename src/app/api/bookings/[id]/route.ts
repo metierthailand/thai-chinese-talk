@@ -67,6 +67,23 @@ export async function GET(
             },
           },
         },
+        roommateGroup: {
+          include: {
+            bookings: {
+              select: {
+                id: true,
+                customerId: true,
+                customer: {
+                  select: {
+                    id: true,
+                    firstNameEn: true,
+                    lastNameEn: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         trip: {
           select: {
             name: true,
@@ -138,6 +155,7 @@ export async function PUT(
       salesUserId,
       passportId,
       companionCustomerIds,
+      roommateBookingIds,
       agentId,
       note,
       extraPriceForSingleTraveller,
@@ -165,6 +183,7 @@ export async function PUT(
         tripId: true,
         customerId: true,
         companionGroupId: true,
+        roommateGroupId: true,
         companionGroup: {
           select: {
             id: true,
@@ -330,6 +349,23 @@ export async function PUT(
               },
             },
           },
+          roommateGroup: {
+            include: {
+              bookings: {
+                select: {
+                  id: true,
+                  customerId: true,
+                  customer: {
+                    select: {
+                      id: true,
+                      firstNameEn: true,
+                      lastNameEn: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
           trip: {
             select: {
               name: true,
@@ -448,6 +484,72 @@ export async function PUT(
         }
       }
 
+      // Roommate group: only within same companion; assign this booking + roommateBookingIds to same room
+      if (roommateBookingIds !== undefined) {
+        const afterCompanion = await tx.booking.findUnique({
+          where: { id },
+          select: { companionGroupId: true },
+        });
+        const cgId = afterCompanion?.companionGroupId ?? null;
+
+        if (!cgId) {
+          await tx.booking.update({
+            where: { id },
+            data: { roommateGroupId: null },
+          });
+          if (currentBooking.roommateGroupId) {
+            const othersInOldRoom = await tx.booking.findMany({
+              where: { roommateGroupId: currentBooking.roommateGroupId, id: { not: id } },
+              select: { id: true },
+            });
+            if (othersInOldRoom.length > 0) {
+              await tx.booking.updateMany({
+                where: { id: { in: othersInOldRoom.map((b) => b.id) } },
+                data: { roommateGroupId: null },
+              });
+            }
+          }
+        } else {
+          const allRoomIds = [id, ...(roommateBookingIds || [])];
+          const inSameCompanion = await tx.booking.findMany({
+            where: { id: { in: allRoomIds }, companionGroupId: cgId },
+            select: { id: true },
+          });
+          if (inSameCompanion.length !== allRoomIds.length) {
+            throw new Error("ROOMMATE_SAME_COMPANION");
+          }
+          let roommateGroup = await tx.bookingRoommateGroup.findFirst({
+            where: { companionGroupId: cgId },
+            select: { id: true },
+          });
+          if (!roommateGroup) {
+            roommateGroup = await tx.bookingRoommateGroup.create({
+              data: { companionGroupId: cgId },
+              select: { id: true },
+            });
+          }
+          await tx.booking.updateMany({
+            where: { id: { in: allRoomIds } },
+            data: { roommateGroupId: roommateGroup.id },
+          });
+          if (currentBooking.roommateGroupId && currentBooking.roommateGroupId !== roommateGroup.id) {
+            const leftInOldRoom = await tx.booking.findMany({
+              where: {
+                roommateGroupId: currentBooking.roommateGroupId,
+                id: { notIn: allRoomIds },
+              },
+              select: { id: true },
+            });
+            if (leftInOldRoom.length > 0) {
+              await tx.booking.updateMany({
+                where: { id: { in: leftInOldRoom.map((b) => b.id) } },
+                data: { roommateGroupId: null },
+              });
+            }
+          }
+        }
+      }
+
       // Handle payments update if provided
       if (payments !== undefined) {
         // Get existing payments for this booking
@@ -547,7 +649,42 @@ export async function PUT(
         await updateBookingPaidAmount(id, tx);
       }
 
-      return updatedBooking;
+      const finalBooking = await tx.booking.findUnique({
+        where: { id },
+        include: {
+          customer: { select: { firstNameTh: true, lastNameTh: true, firstNameEn: true, lastNameEn: true, email: true } },
+          salesUser: { select: { id: true, firstName: true, lastName: true, email: true } },
+          agent: { select: { id: true, firstName: true, lastName: true, email: true } },
+          companionGroup: {
+            include: {
+              bookings: {
+                include: {
+                  customer: {
+                    select: { id: true, firstNameTh: true, lastNameTh: true, firstNameEn: true, lastNameEn: true },
+                  },
+                },
+              },
+            },
+          },
+          roommateGroup: {
+            include: {
+              bookings: {
+                select: {
+                  id: true,
+                  customerId: true,
+                  customer: { select: { id: true, firstNameEn: true, lastNameEn: true } },
+                },
+              },
+            },
+          },
+          trip: { select: { name: true, startDate: true, endDate: true, standardPrice: true } },
+          firstPayment: { select: { id: true, amount: true, paidAt: true } },
+          secondPayment: { select: { id: true, amount: true, paidAt: true } },
+          thirdPayment: { select: { id: true, amount: true, paidAt: true } },
+          payments: { select: { id: true, amount: true, paidAt: true, proofOfPayment: true } },
+        },
+      });
+      return finalBooking ?? updatedBooking;
     });
 
     // Calculate or update commission if paymentStatus changed
@@ -568,6 +705,12 @@ export async function PUT(
     return NextResponse.json(updatedBooking);
   } catch (error) {
     console.error("[BOOKING_PUT]", error);
+    if (error instanceof Error && error.message === "ROOMMATE_SAME_COMPANION") {
+      return new NextResponse(
+        JSON.stringify({ message: "All roommates must be in the same companion group." }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

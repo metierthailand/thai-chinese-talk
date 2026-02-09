@@ -1,7 +1,9 @@
 import { UseFormReturn } from "react-hook-form";
+import { Plus, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -17,6 +19,19 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { BookingFormValues } from "../booking-schema";
 
 const ROOM_TYPE_LABELS: Record<string, string> = {
@@ -49,6 +64,26 @@ interface TravelDetailsSectionProps {
   setEnableBagPrice: (enable: boolean) => void;
   enableDiscount: boolean;
   setEnableDiscount: (enable: boolean) => void;
+  // Roommates (only from same companion group)
+  roommateSearchOpen: boolean;
+  setRoommateSearchOpen: (open: boolean) => void;
+  roommateSearchQuery: string;
+  setRoommateSearchQuery: (query: string) => void;
+  availableRoommateBookings: Array<{
+    id: string;
+    customerId: string;
+    customer: { firstNameEn: string; lastNameEn: string };
+  }>;
+  filteredRoommateBookings: Array<{
+    id: string;
+    customerId: string;
+    customer: { firstNameEn: string; lastNameEn: string };
+  }>;
+  selectedRoommateBookings: Array<{ id: string; customerName: string }>;
+  roommateBookingIds: string[];
+  handleAddRoommate: (bookingId: string) => void;
+  handleRemoveRoommate: (bookingId: string) => void;
+  tripId: string;
 }
 
 export function TravelDetailsSection({
@@ -62,6 +97,17 @@ export function TravelDetailsSection({
   setEnableBagPrice,
   enableDiscount,
   setEnableDiscount,
+  roommateSearchOpen,
+  setRoommateSearchOpen,
+  roommateSearchQuery,
+  setRoommateSearchQuery,
+  availableRoommateBookings,
+  filteredRoommateBookings,
+  selectedRoommateBookings,
+  roommateBookingIds,
+  handleAddRoommate,
+  handleRemoveRoommate,
+  tripId,
 }: TravelDetailsSectionProps) {
   return (
     <>
@@ -96,6 +142,98 @@ export function TravelDetailsSection({
             )}
           />
         </div>
+
+        {/* Roommate: same companion group only */}
+        <FormField
+          control={form.control}
+          name="roommateBookingIds"
+          render={() => (
+            <FormItem>
+              <FormLabel>Roommate</FormLabel>
+              {readOnly ? (
+                <div className="space-y-2 p-2 border rounded-md bg-muted">
+                  {selectedRoommateBookings.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No roommate</p>
+                  ) : (
+                    selectedRoommateBookings.map((r) => (
+                      <div key={r.id} className="flex items-center justify-between">
+                        <p className="text-sm">{r.customerName}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Popover open={roommateSearchOpen} onOpenChange={setRoommateSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-start"
+                        disabled={!tripId || availableRoommateBookings.length === 0}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        {!tripId
+                          ? "Select trip first"
+                          : availableRoommateBookings.length === 0
+                            ? "Add companions first"
+                            : "Add roommate (same companion only)"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0">
+                      <Command shouldFilter={false}>
+                        <CommandInput
+                          value={roommateSearchQuery}
+                          onValueChange={setRoommateSearchQuery}
+                          placeholder="Search by name..."
+                        />
+                        <CommandList>
+                          {filteredRoommateBookings.length === 0 ? (
+                            <CommandEmpty>No companion bookings found.</CommandEmpty>
+                          ) : (
+                            <CommandGroup>
+                              {filteredRoommateBookings
+                                .filter((b) => !roommateBookingIds.includes(b.id))
+                                .map((b) => (
+                                  <CommandItem
+                                    key={b.id}
+                                    value={b.id}
+                                    onSelect={() => handleAddRoommate(b.id)}
+                                  >
+                                    <span className="font-medium">
+                                      {b.customer.firstNameEn} {b.customer.lastNameEn}
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {selectedRoommateBookings.length > 0 && (
+                    <div className="space-y-2">
+                      {selectedRoommateBookings.map((r) => (
+                        <div key={r.id} className="flex items-center justify-between rounded-md border p-2">
+                          <span className="text-sm">{r.customerName}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveRoommate(r.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500 hover:text-red-700" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="grid grid-cols-1 gap-4">
           <FormField

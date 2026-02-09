@@ -29,14 +29,29 @@ export interface Booking {
     lastName: string;
     email: string;
   };
+  companionGroupId?: string | null;
   companionGroup?: {
     id: string;
     bookings: Array<{
+      id: string;
       customerId: string;
       customer: {
         id: string;
         firstNameTh: string;
         lastNameTh: string;
+        firstNameEn: string;
+        lastNameEn: string;
+      };
+    }>;
+  } | null;
+  roommateGroupId?: string | null;
+  roommateGroup?: {
+    id: string;
+    bookings: Array<{
+      id: string;
+      customerId: string;
+      customer: {
+        id: string;
         firstNameEn: string;
         lastNameEn: string;
       };
@@ -311,6 +326,7 @@ async function updateBooking({
     salesUserId?: string;
     passportId?: string;
     companionCustomerIds?: string[];
+    roommateBookingIds?: string[];
     agentId?: string;
     note?: string;
     extraPriceForSingleTraveller?: number;
@@ -329,6 +345,7 @@ async function updateBooking({
     paymentStatus?: string;
     firstPaymentRatio?: string;
     isRechecked?: boolean;
+    payments?: Array<{ id?: string; amount?: string; proofOfPayment?: string }>;
   };
 }): Promise<Booking> {
   const res = await fetch(`/api/bookings/${id}`, {

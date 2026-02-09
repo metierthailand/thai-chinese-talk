@@ -88,6 +88,9 @@ function drawCenteredTitle(
   return y - (size + 8);
 }
 
+const UNDERLINE_OFFSET = 2;
+const UNDERLINE_THICKNESS = 0.5;
+
 function drawLine(
   page: PDFPage,
   font: PDFFont,
@@ -101,6 +104,14 @@ function drawLine(
   const f = opts?.bold ? fontBold : font;
   const t = opts?.sanitize ? opts.sanitize(text) : text;
   page.drawText(t, { x, y, size, font: f });
+  const textWidth = f.widthOfTextAtSize(t, size);
+  const underlineY = y - UNDERLINE_OFFSET;
+  page.drawLine({
+    start: { x, y: underlineY },
+    end: { x: x + textWidth, y: underlineY },
+    thickness: UNDERLINE_THICKNESS,
+    color: rgb(0, 0, 0),
+  });
   return y - (size + 2);
 }
 
@@ -118,9 +129,9 @@ function drawLabelValue(
   const labelText = `• ${label}: `;
   const labelSafe = sanitize ? sanitize(labelText) : labelText;
   const valueSafe = sanitize ? sanitize(value || "-") : value || "-";
-  page.drawText(labelSafe, { x, y: cy, size: 13, font });
-  const labelW = font.widthOfTextAtSize(labelSafe, 13);
-  page.drawText(valueSafe, { x: x + labelW, y: cy, size: 13, font });
+  page.drawText(labelSafe, { x, y: cy, size: 11, font: fontBold });
+  const labelW = fontBold.widthOfTextAtSize(labelSafe, 11);
+  page.drawText(valueSafe, { x: x + labelW, y: cy, size: 11, font });
   return cy - 16;
 }
 
@@ -288,19 +299,19 @@ export async function GET(request: Request) {
       const x = MARGIN;
 
       // Title at top center (slightly larger font)
-      y = drawCenteredTitle(page, fontBold, "ThaiChinese Tour", y, 15, sanitize);
+      y = drawCenteredTitle(page, fontBold, "ThaiChinese Tour", y, 16, sanitize);
       y -= 20;
 
       // Booking Information
-      y = drawLine(page, font, fontBold, "Booking Information", x, y, { bold: true, size: 11, sanitize });
-      y -= 4;
+      y = drawLine(page, font, fontBold, "Booking Information", x, y, { bold: true, size: 14, sanitize });
+      y -= 12;
 
       const trip = b.trip;
       const tripCode = trip?.code ?? "";
       const tripName = trip?.name ?? "";
       const startStr = trip?.startDate ? format(new Date(trip.startDate), "dd MMM yyyy") : "";
       const endStr = trip?.endDate ? format(new Date(trip.endDate), "dd MMM yyyy") : "";
-      y = drawLabelValue(page, font, fontBold, "Trip code", `${tripCode} ${tripName} (${startStr} - ${endStr})`, x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Trip name", `${tripCode} ${tripName} (${startStr} - ${endStr})`, x, y, sanitize);
 
       const cust = b.customer;
       const customerName = cust
@@ -325,11 +336,11 @@ export async function GET(request: Request) {
       y -= 12;
 
       drawHorizontalLine(page, y);
-      y -= 20;
+      y -= 32;
 
       // Cost summary
-      y = drawLine(page, font, fontBold, "Cost summary", x, y, { bold: true, size: 11, sanitize });
-      y -= 4;
+      y = drawLine(page, font, fontBold, "Cost Summary", x, y, { bold: true, size: 14, sanitize });
+      y -= 12;
 
       const standardPrice = num(trip?.standardPrice);
       const extraSingle = num(b.extraPriceForSingleTraveller);
@@ -341,17 +352,22 @@ export async function GET(request: Request) {
 
       y = drawLabelValue(page, font, fontBold, "Total amount", `${formatPrice(totalAmount)} THB`, x, y);
       y = drawLabelValue(page, font, fontBold, "Extra price for single traveller", extraSingle > 0 ? formatPrice(extraSingle) : "-", x, y, sanitize);
+      y -= 12
       y = drawLabelValue(page, font, fontBold, "Room type", ROOM_TYPE_LABELS[b.roomType] ?? b.roomType ?? "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Extra price for extra bed", extraBed > 0 ? formatPrice(extraBed) : "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for room", str(b.roomNote) || "-", x, y, sanitize);
+      y -= 12
       y = drawLabelValue(page, font, fontBold, "Seat type", SEAT_TYPE_LABELS[b.seatType] ?? b.seatType ?? "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Seat upgrade type", b.seatClass ? (SEAT_CLASS_LABELS[b.seatClass] ?? b.seatClass) : "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Extra price for seat upgrade", extraSeat > 0 ? formatPrice(extraSeat) : "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for seat", str(b.seatNote) || "-", x, y, sanitize);
+      y -= 12
       y = drawLabelValue(page, font, fontBold, "Extra price for bag upgrade", extraBag > 0 ? formatPrice(extraBag) : "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for bag", str(b.bagNote) || "-", x, y, sanitize);
+      y -= 12
       y = drawLabelValue(page, font, fontBold, "Discount price", discount > 0 ? formatPrice(discount) : "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for discount", str(b.discountNote) || "-", x, y, sanitize);
+      y -= 12
       const salesName = b.salesUser
         ? `${str(b.salesUser.firstName)} ${str(b.salesUser.lastName)}`.trim()
         : "";
@@ -360,11 +376,11 @@ export async function GET(request: Request) {
       y -= 12;
 
       drawHorizontalLine(page, y);
-      y -= 16;
+      y -= 32;
 
       // Payment summary
-      y = drawLine(page, font, fontBold, "Payment summary", x, y, { bold: true, size: 10, sanitize });
-      y -= 4;
+      y = drawLine(page, font, fontBold, "Payment Summary", x, y, { bold: true, size: 14, sanitize });
+      y -= 12;
 
       const paidAmount = num(b.paidAmount);
       const remaining = totalAmount - paidAmount;

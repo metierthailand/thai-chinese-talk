@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 import { format } from "date-fns";
 import ExcelJS from "exceljs";
+import Decimal from "decimal.js";
 
 // Title mapping to Thai
 const TITLE_TH_MAP: Record<string, string> = {
@@ -63,37 +64,37 @@ export async function GET(request: Request) {
     const searchFilter: Prisma.BookingWhereInput =
       search.trim().length > 0
         ? {
-            customer: {
-              is: {
-                OR: [
-                  {
-                    firstNameTh: {
-                      contains: search,
-                      mode: "insensitive",
-                    },
+          customer: {
+            is: {
+              OR: [
+                {
+                  firstNameTh: {
+                    contains: search,
+                    mode: "insensitive",
                   },
-                  {
-                    lastNameTh: {
-                      contains: search,
-                      mode: "insensitive",
-                    },
+                },
+                {
+                  lastNameTh: {
+                    contains: search,
+                    mode: "insensitive",
                   },
-                  {
-                    firstNameEn: {
-                      contains: search,
-                      mode: "insensitive",
-                    },
+                },
+                {
+                  firstNameEn: {
+                    contains: search,
+                    mode: "insensitive",
                   },
-                  {
-                    lastNameEn: {
-                      contains: search,
-                      mode: "insensitive",
-                    },
+                },
+                {
+                  lastNameEn: {
+                    contains: search,
+                    mode: "insensitive",
                   },
-                ],
-              },
+                },
+              ],
             },
-          }
+          },
+        }
         : {};
 
     const paymentStatusFilter: Prisma.BookingWhereInput = status
@@ -103,15 +104,15 @@ export async function GET(request: Request) {
     const tripDateFilter: Prisma.BookingWhereInput =
       tripStartDateFrom || tripStartDateTo
         ? {
-            trip: {
-              is: {
-                startDate: {
-                  ...(tripStartDateFrom ? { gte: parseDateGte(tripStartDateFrom) } : {}),
-                  ...(tripStartDateTo ? { lte: parseDateLte(tripStartDateTo) } : {}),
-                },
+          trip: {
+            is: {
+              startDate: {
+                ...(tripStartDateFrom ? { gte: parseDateGte(tripStartDateFrom) } : {}),
+                ...(tripStartDateTo ? { lte: parseDateLte(tripStartDateTo) } : {}),
               },
             },
-          }
+          },
+        }
         : {};
 
     const tripIdFilter: Prisma.BookingWhereInput = tripId ? { tripId } : {};
@@ -120,13 +121,13 @@ export async function GET(request: Request) {
 
     const idFilter: Prisma.BookingWhereInput = hasSelectedBookingIds
       ? {
-          id: {
-            in: bookingIdsParam
-              .split(",")
-              .map((id) => id.trim())
-              .filter(Boolean),
-          },
-        }
+        id: {
+          in: bookingIdsParam
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean),
+        },
+      }
       : {};
 
     const where: Prisma.BookingWhereInput = {
@@ -217,22 +218,34 @@ export async function GET(request: Request) {
       }
     }
 
-    // Assign companion group key: same companionGroupId = same group; singles use own booking id
-    const groupKeyOf = (b: (typeof bookings)[0]) => {
-      return b.companionGroupId ?? b.id;
-    };
-    const keyToIndex = new Map<string, number>();
-    let nextGroupIndex = 0;
+    type BookingForSort = (typeof bookings)[0] & { roommateGroupId?: string | null };
+    // Companion group key: same companionGroupId = same group; singles use own booking id
+    const companionKeyOf = (b: BookingForSort) => b.companionGroupId ?? b.id;
+    // Roommate group key within same companion: same roommateGroupId = same room; else own id
+    const roommateKeyOf = (b: BookingForSort) => b.roommateGroupId ?? b.id;
+
+    const companionKeyToIndex = new Map<string, number>();
+    let nextCompanionIndex = 0;
     for (const b of bookings) {
-      const key = groupKeyOf(b);
-      if (!keyToIndex.has(key)) keyToIndex.set(key, ++nextGroupIndex);
+      const key = companionKeyOf(b as BookingForSort);
+      if (!companionKeyToIndex.has(key)) companionKeyToIndex.set(key, ++nextCompanionIndex);
     }
 
-    // Sort: same companion group together, then by customer name
+    const roommateKeyToIndex = new Map<string, number>();
+    let nextRoommateIndex = 0;
+    for (const b of bookings) {
+      const key = roommateKeyOf(b as BookingForSort);
+      if (!roommateKeyToIndex.has(key)) roommateKeyToIndex.set(key, ++nextRoommateIndex);
+    }
+
+    // Sort: companion groups together, then within companion roommate groups together, then by customer name
     const sortedBookings = [...bookings].sort((a, b) => {
-      const ga = keyToIndex.get(groupKeyOf(a)) ?? 0;
-      const gb = keyToIndex.get(groupKeyOf(b)) ?? 0;
-      if (ga !== gb) return ga - gb;
+      const ca = companionKeyToIndex.get(companionKeyOf(a as BookingForSort)) ?? 0;
+      const cb = companionKeyToIndex.get(companionKeyOf(b as BookingForSort)) ?? 0;
+      if (ca !== cb) return ca - cb;
+      const ra = roommateKeyToIndex.get(roommateKeyOf(a as BookingForSort)) ?? 0;
+      const rb = roommateKeyToIndex.get(roommateKeyOf(b as BookingForSort)) ?? 0;
+      if (ra !== rb) return ra - rb;
       const nameA = `${a.customer.firstNameEn} ${a.customer.lastNameEn}`;
       const nameB = `${b.customer.firstNameEn} ${b.customer.lastNameEn}`;
       return nameA.localeCompare(nameB);
@@ -269,7 +282,7 @@ export async function GET(request: Request) {
     for (const booking of sortedBookings) {
       const mainCustomer = booking.customer;
       const mainPassport = mainCustomer.passports[0];
-      const groupIndex = keyToIndex.get(groupKeyOf(booking)) ?? 0;
+      const groupIndex = companionKeyToIndex.get(companionKeyOf(booking as BookingForSort)) ?? 0;
 
       const rowValues = [
         rowNumber,
@@ -284,7 +297,7 @@ export async function GET(request: Request) {
         mainPassport?.issuingDate ? format(new Date(mainPassport.issuingDate), "d-MMM-yyyy") : "",
         mainPassport?.expiryDate ? format(new Date(mainPassport.expiryDate), "d-MMM-yyyy") : "",
         mainCustomer.dateOfBirth ? format(new Date(mainCustomer.dateOfBirth), "d-MMM-yyyy") : "",
-        booking.roomType ? ROOM_TYPE_MAP[booking.roomType] || booking.roomType : "",
+        booking.roomType ? `${ROOM_TYPE_MAP[booking.roomType]}${booking.extraPricePerBed && booking.extraPricePerBed > Decimal(0) ? " + Extra bed" : ""}` : "",
         "", // ROOM NO. - empty
         booking.paymentStatus ? PAYMENT_STATUS_LABELS[booking.paymentStatus] || booking.paymentStatus : "",
         booking.roomNote || booking.note || "",

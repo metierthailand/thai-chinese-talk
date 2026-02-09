@@ -27,6 +27,10 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
           booking.companionGroup?.bookings
             .filter((b) => b.customerId !== booking.customerId)
             .map((b) => b.customer.id) ?? [],
+        roommateBookingIds:
+          booking.roommateGroup?.bookings
+            .filter((b) => b.id !== booking.id)
+            .map((b) => b.id) ?? [],
         note: booking.note || "",
         extraPriceForSingleTraveller: booking.extraPriceForSingleTraveller?.toString() || "",
         roomType: (booking.roomType as "DOUBLE_BED" | "TWIN_BED") || "DOUBLE_BED",
@@ -67,6 +71,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ id: stri
         salesUserId: values.salesUserId,
         passportId: values.passportId || undefined,
         companionCustomerIds: values.companionCustomerIds,
+        roommateBookingIds: values.roommateBookingIds,
         note: values.note,
         extraPriceForSingleTraveller: values.extraPriceForSingleTraveller
           ? parseFloat(values.extraPriceForSingleTraveller)

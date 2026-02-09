@@ -32,6 +32,7 @@ export const baseFormSchema = z.object({
   salesUserId: z.string().min(1, { message: "Please select the information." }),
   passportId: z.string().min(1, { message: "Please select the information." }),
   companionCustomerIds: z.array(z.string()).optional(),
+  roommateBookingIds: z.array(z.string()).optional(),
   note: z.string().optional(),
   extraPriceForSingleTraveller: z.string().optional(),
   roomType: z.enum(["DOUBLE_BED", "TWIN_BED"], { message: "Please select the information." }),

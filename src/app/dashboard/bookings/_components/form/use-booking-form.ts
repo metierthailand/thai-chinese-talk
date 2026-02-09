@@ -45,6 +45,8 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
   const [salesUserSearchQuery, setSalesUserSearchQuery] = useState("");
   const [companionSearchOpen, setCompanionSearchOpen] = useState(false);
   const [companionSearchQuery, setCompanionSearchQuery] = useState("");
+  const [roommateSearchOpen, setRoommateSearchOpen] = useState(false);
+  const [roommateSearchQuery, setRoommateSearchQuery] = useState("");
   const [createCustomerDialogOpen, setCreateCustomerDialogOpen] = useState(false);
   const [enableSingleTravellerPrice, setEnableSingleTravellerPrice] = useState(false);
   const [enableBagPrice, setEnableBagPrice] = useState(false);
@@ -183,6 +185,7 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
       salesUserId: "",
       passportId: "",
       companionCustomerIds: [],
+      roommateBookingIds: [],
       note: "",
       extraPriceForSingleTraveller: "",
       roomType: undefined,
@@ -207,6 +210,8 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
   const tripId = form.watch("tripId");
   const companionCustomerIdsValue = form.watch("companionCustomerIds");
   const companionCustomerIds = useMemo(() => companionCustomerIdsValue || [], [companionCustomerIdsValue]);
+  const roommateBookingIdsValue = form.watch("roommateBookingIds");
+  const roommateBookingIds = useMemo(() => roommateBookingIdsValue || [], [roommateBookingIdsValue]);
 
   // Fetch passports for selected customer
   const { data: customerPassports = [] } = usePassportsByCustomer(customerId) as { data: Passport[] | undefined };
@@ -422,6 +427,53 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
     return availableCompanionCustomers.filter((c) => ids.includes(c.id));
   }, [availableCompanionCustomers, companionCustomerIds]);
 
+  // Bookings in the same companion group (for roommate selection). Only in edit mode when we have companionGroupId.
+  const availableRoommateBookings = useMemo((): Array<{ id: string; customerId: string; customer: { firstNameEn: string; lastNameEn: string } }> => {
+    const list = companionBookingsResponse || [];
+    if (!booking?.companionGroupId || !tripId) return [];
+    return list.filter(
+      (b: Booking) => b.companionGroupId === booking.companionGroupId && b.id !== booking.id
+    );
+  }, [companionBookingsResponse, booking?.id, booking?.companionGroupId, tripId]);
+
+  const filteredRoommateBookings = useMemo(() => {
+    if (!roommateSearchQuery.trim()) return availableRoommateBookings;
+    const q = roommateSearchQuery.toLowerCase();
+    return availableRoommateBookings.filter(
+      (b) =>
+        b.customer.firstNameEn.toLowerCase().includes(q) ||
+        b.customer.lastNameEn.toLowerCase().includes(q)
+    );
+  }, [availableRoommateBookings, roommateSearchQuery]);
+
+  const selectedRoommateBookings = useMemo(() => {
+    const ids = roommateBookingIds;
+    const list = companionBookingsResponse || [];
+    return ids.map((bid) => {
+      const b = list.find((x: Booking) => x.id === bid);
+      return b
+        ? { id: b.id, customerName: `${b.customer.firstNameEn} ${b.customer.lastNameEn}` }
+        : { id: bid, customerName: "—" };
+    });
+  }, [roommateBookingIds, companionBookingsResponse]);
+
+  const handleAddRoommate = (bookingId: string) => {
+    const current = form.getValues("roommateBookingIds") || [];
+    if (!current.includes(bookingId)) {
+      form.setValue("roommateBookingIds", [...current, bookingId]);
+    }
+    setRoommateSearchOpen(false);
+    setRoommateSearchQuery("");
+  };
+
+  const handleRemoveRoommate = (bookingId: string) => {
+    const current = form.getValues("roommateBookingIds") || [];
+    form.setValue(
+      "roommateBookingIds",
+      current.filter((id) => id !== bookingId),
+    );
+  };
+
   // Filter sales users by search query
   const filteredSalesUsers = useMemo(() => {
     if (!salesUserSearchQuery.trim()) return salesUsers;
@@ -479,6 +531,7 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
         salesUserId: initialData.salesUserId ?? "",
         passportId: initialData.passportId ?? "",
         companionCustomerIds: initialData.companionCustomerIds ?? [],
+        roommateBookingIds: initialData.roommateBookingIds ?? [],
         note: initialData.note ?? "",
         extraPriceForSingleTraveller: singleTravellerPrice,
         roomType: (initialData.roomType as "DOUBLE_BED" | "TWIN_BED") || ("" as unknown as "DOUBLE_BED" | "TWIN_BED"),
@@ -595,7 +648,9 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
     form.setValue("customerId", "", { shouldDirty: false });
     form.setValue("passportId", "", { shouldDirty: false });
     form.setValue("companionCustomerIds", []);
+    form.setValue("roommateBookingIds", []);
     setCustomerSearchQuery("");
+    setRoommateSearchQuery("");
   };
 
   // Customer IDs that already have a booking in the selected trip (exclude from customer dropdown)
@@ -769,6 +824,16 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
     deletingCompanionId,
     setDeletingCompanionId,
     handleRemoveCompanion,
+    roommateSearchOpen,
+    setRoommateSearchOpen,
+    roommateSearchQuery,
+    setRoommateSearchQuery,
+    availableRoommateBookings,
+    filteredRoommateBookings,
+    selectedRoommateBookings,
+    roommateBookingIds,
+    handleAddRoommate,
+    handleRemoveRoommate,
     calculatedAmounts,
     enableSingleTravellerPrice,
     setEnableSingleTravellerPrice,
