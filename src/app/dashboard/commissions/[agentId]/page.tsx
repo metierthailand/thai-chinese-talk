@@ -2,6 +2,7 @@
 
 import { use, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { DataTable } from "@/components/data-table/data-table";
@@ -11,11 +12,13 @@ import { useCommissionDetails, type CommissionDetail } from "../hooks/use-commis
 import { Loading } from "@/components/page/loading";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { CommissionFilter } from "../_components/commission-filter";
+import { AccessDenied } from "@/components/page/access-denied";
 
 export default function CommissionDetailPage({ params }: { params: Promise<{ agentId: string }> }) {
     const { agentId } = use(params);
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { data: session, status: sessionStatus } = useSession();
 
     const createdAtFrom = searchParams.get("createdAtFrom") || undefined;
     const createdAtTo = searchParams.get("createdAtTo") || undefined;
@@ -71,7 +74,10 @@ export default function CommissionDetailPage({ params }: { params: Promise<{ age
     const totalPeople = details?.reduce((sum, d) => sum + d.totalPeople, 0) ?? 0;
     const totalCommission = details?.reduce((sum, d) => sum + d.commissionAmount, 0) ?? 0;
 
-    // Always initialize table instance to keep hook order consistent
+    const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
+    const isSalesSelf = session?.user?.role === "SALES" && session.user.id === agentId;
+    const canView = isSuperAdmin || isSalesSelf;
+
     const table = useDataTableInstance({
         data: details || [],
         columns,
@@ -79,54 +85,56 @@ export default function CommissionDetailPage({ params }: { params: Promise<{ age
         manualPagination: false,
     });
 
-    if (isLoading) {
-        return <Loading />;
-    }
-
-    if (error) {
-        return (
-            <div className="space-y-8 p-8">
-                <div className="flex h-64 items-center justify-center">
-                    <p className="text-destructive">Failed to load commission details. Please try again.</p>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="space-y-6 p-8">
-            <div className="flex flex-col gap-4">
-                <div>
-                    <Button variant="outline" onClick={() => router.back()}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back
-                    </Button>
-                </div>
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <div className="text-sm text-muted-foreground">Sales</div>
-                        <h1 className="text-3xl font-bold tracking-tight">{agentName || "Commission Detail"}</h1>
+        <>
+            {sessionStatus === "loading" ? (
+                <Loading />
+            ) : !session || !canView ? (
+                <AccessDenied />
+            ) : isLoading ? (
+                <Loading />
+            ) : error ? (
+                <div className="space-y-8 p-8">
+                    <div className="flex h-64 items-center justify-center">
+                        <p className="text-destructive">Failed to load commission details. Please try again.</p>
                     </div>
-                    <CommissionFilter hideSearch />
                 </div>
-            </div>
+            ) : (
+                <div className="space-y-6 p-8">
+                    <div className="flex flex-col gap-4">
+                        <div>
+                            <Button variant="outline" onClick={() => router.back()}>
+                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                Back
+                            </Button>
+                        </div>
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <div className="text-sm text-muted-foreground">Sales</div>
+                                <h1 className="text-3xl font-bold tracking-tight">{agentName || "Commission Detail"}</h1>
+                            </div>
+                            <CommissionFilter hideSearch />
+                        </div>
+                    </div>
 
-            <div className="rounded-md border">
-                <DataTable table={table} columns={columns} />
-            </div>
+                    <div className="rounded-md border">
+                        <DataTable table={table} columns={columns} />
+                    </div>
 
-            <div className="flex justify-end gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Total people</span>
-                    <span className="font-semibold">{totalPeople}</span>
+                    <div className="flex justify-end gap-6 text-sm">
+                        <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Total people</span>
+                            <span className="font-semibold">{totalPeople}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Total commission</span>
+                            <span className="font-semibold">
+                                {totalCommission.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} THB
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Total commission</span>
-                    <span className="font-semibold">
-                        {totalCommission.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} THB
-                    </span>
-                </div>
-            </div>
-        </div>
+            )}
+        </>
     );
 }

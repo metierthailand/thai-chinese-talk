@@ -2,16 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { BookingForm, BookingFormValues } from "../_components/booking-form";
 import { useCreateBooking } from "../hooks/use-bookings";
 import { toast } from "sonner";
+import { AccessDenied } from "@/components/page/access-denied";
+import { Loading } from "@/components/page/loading";
 
 export default function NewBookingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { data: session, status: sessionStatus } = useSession();
   const createBookingMutation = useCreateBooking();
+
+  const canCreateOrEdit = !!session?.user?.role && ["SUPER_ADMIN", "SALES"].includes(session.user.role);
+  if (sessionStatus === "loading") return <Loading />;
+  if (!session || !canCreateOrEdit) return <AccessDenied />;
 
   async function handleSubmit(values: BookingFormValues) {
     setLoading(true);

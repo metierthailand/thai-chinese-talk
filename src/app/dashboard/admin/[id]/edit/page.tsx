@@ -2,20 +2,26 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { UserForm } from "../../_components/user-form";
 import { UserFormValues } from "../../hooks/use-users";
 import { useUser, useUpdateUser } from "../../hooks/use-users-query";
 import { Loading } from "@/components/page/loading";
+import { AccessDenied } from "@/components/page/access-denied";
 
 export default function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const resolvedParams = use(params);
   const userId = resolvedParams.id;
 
   const { data: user, isLoading: isLoadingUser, error: userError } = useUser(userId);
   const updateUserMutation = useUpdateUser();
+
+  if (sessionStatus === "loading") return <Loading />;
+  if (!session || session.user.role !== "SUPER_ADMIN") return <AccessDenied />;
 
   // Format initial data for the form
   const initialData: Partial<UserFormValues> | undefined = user

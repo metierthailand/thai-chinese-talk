@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
 import { Edit, Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
@@ -20,6 +21,7 @@ import {
   type CustomerSortOrder,
 } from "./hooks/use-customers-params";
 import { format } from "date-fns";
+import { AccessDenied } from "@/components/page/access-denied";
 
 function SortableHeader({
   label,
@@ -56,6 +58,11 @@ function SortableHeader({
 }
 
 export default function CustomersPage() {
+  const { data: session, status: sessionStatus } = useSession();
+  const role = session?.user?.role;
+  const canView = !!role && ["SUPER_ADMIN", "ADMIN", "SALES", "STAFF"].includes(role);
+  const canCreateOrEdit = role === "SUPER_ADMIN" || role === "SALES";
+
   // --------------------
   // params
   // --------------------
@@ -186,16 +193,18 @@ export default function CustomersPage() {
                 <Eye className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href={`/dashboard/customers/${row.original.id}/edit`}>
-              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-                <Edit className="h-4 w-4" />
-              </Button>
-            </Link>
+            {canCreateOrEdit && (
+              <Link href={`/dashboard/customers/${row.original.id}/edit`}>
+                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
           </div>
         ),
       },
     ],
-    [sortBy, sortOrder, handleSort],
+    [sortBy, sortOrder, handleSort, canCreateOrEdit],
   );
 
   // --------------------
@@ -239,6 +248,13 @@ export default function CustomersPage() {
     [setParams],
   );
 
+  if (sessionStatus === "loading") {
+    return <Loading />;
+  }
+  if (!canView) {
+    return <AccessDenied />;
+  }
+
   // --------------------
   // render
   // --------------------
@@ -247,13 +263,18 @@ export default function CustomersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
-          <p className="text-muted-foreground">Update customer information including personal information, addresses, passports, food allergies.</p>
+          <p className="text-muted-foreground">
+            Update customer information including personal information, addresses, passports, food allergies.
+          </p>
         </div>
-        {/* <Link href="/dashboard/customers/create">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Add Customer
-          </Button>
-        </Link> */}
+        {canCreateOrEdit && (
+          <Link href="/dashboard/customers/create">
+            <Button>
+              {/* Plus icon already imported earlier in file if needed */}
+              Add Customer
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Filter & Search form */}

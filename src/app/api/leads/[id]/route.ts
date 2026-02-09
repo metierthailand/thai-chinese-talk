@@ -7,7 +7,8 @@ import { Prisma, LeadSource, LeadStatus, Role } from "@prisma/client";
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
 
-  if (!session) {
+  const VIEW_ROLES = ["SUPER_ADMIN", "ADMIN", "SALES", "STAFF"] as const;
+  if (!session || !VIEW_ROLES.includes(session.user.role as (typeof VIEW_ROLES)[number])) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -64,7 +65,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
 
-  if (!session) {
+  const WRITE_ROLES = ["SUPER_ADMIN", "ADMIN", "SALES"] as const;
+  if (!session || !WRITE_ROLES.includes(session.user.role as (typeof WRITE_ROLES)[number])) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

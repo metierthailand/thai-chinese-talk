@@ -10,6 +10,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
+   const VIEW_ROLES = ["SUPER_ADMIN", "ADMIN", "SALES", "STAFF"] as const;
+   if (!VIEW_ROLES.includes(session.user.role as (typeof VIEW_ROLES)[number])) {
+     return new NextResponse("Unauthorized", { status: 401 });
+   }
+
   const { id } = await params;
 
   try {
@@ -39,6 +44,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const session = await getServerSession(authOptions);
 
   if (!session) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  const WRITE_ROLES = ["SUPER_ADMIN"] as const;
+  if (!WRITE_ROLES.includes(session.user.role as (typeof WRITE_ROLES)[number])) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -88,6 +98,11 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const session = await getServerSession(authOptions);
 
   if (!session) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  const DELETE_ROLES = ["SUPER_ADMIN"] as const;
+  if (!DELETE_ROLES.includes(session.user.role as (typeof DELETE_ROLES)[number])) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

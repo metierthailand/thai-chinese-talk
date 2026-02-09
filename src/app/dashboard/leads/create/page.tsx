@@ -1,15 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { LeadForm, type LeadFormValues } from "../_components/lead-form";
 import { useCreateLead } from "../hooks/use-leads";
 import { toast } from "sonner";
+import { AccessDenied } from "@/components/page/access-denied";
+import { Loading } from "@/components/page/loading";
 
 export default function NewLeadPage() {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const createLeadMutation = useCreateLead();
+
+  const canCreateOrEdit = !!session?.user?.role && ["SUPER_ADMIN", "ADMIN", "SALES"].includes(session.user.role);
+  if (sessionStatus === "loading") return <Loading />;
+  if (!session || !canCreateOrEdit) return <AccessDenied />;
 
   async function handleSubmit(values: LeadFormValues) {
     const payload = {

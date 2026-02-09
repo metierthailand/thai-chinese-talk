@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { AirlineAndAirportForm } from "../../_components/airline-and-airport-form";
@@ -9,15 +10,27 @@ import { AirlineAndAirportFormValues } from "../../hooks/use-airline-and-airport
 import { useAirlineAndAirport, useUpdateAirlineAndAirport } from "../../hooks/use-airline-and-airports";
 import { toast } from "sonner";
 import { Loading } from "@/components/page/loading";
+import { AccessDenied } from "@/components/page/access-denied";
 
 export default function EditAirlineAndAirportPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const resolvedParams = use(params);
   const airlineAndAirportId = resolvedParams.id;
 
   const { data: airlineAndAirport, isLoading: isLoadingAirlineAndAirport, error: airlineAndAirportError } =
     useAirlineAndAirport(airlineAndAirportId);
   const updateAirlineAndAirportMutation = useUpdateAirlineAndAirport();
+
+  const canCreateOrEdit = session?.user?.role === "SUPER_ADMIN";
+
+  if (sessionStatus === "loading") {
+    return <Loading />;
+  }
+
+  if (!session || !canCreateOrEdit) {
+    return <AccessDenied />;
+  }
 
   // Format initial data for the form
   const initialData: Partial<AirlineAndAirportFormValues> | undefined = airlineAndAirport
@@ -42,9 +55,7 @@ export default function EditAirlineAndAirportPage({ params }: { params: Promise<
   }
 
   if (isLoadingAirlineAndAirport) {
-    return (
-      <Loading />
-    );
+    return <Loading />;
   }
 
   if (airlineAndAirportError) {

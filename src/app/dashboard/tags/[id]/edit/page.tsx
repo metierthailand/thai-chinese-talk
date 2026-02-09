@@ -2,21 +2,34 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useTag, useUpdateTag, useAllTags } from "../../hooks/use-tags";
 import { TagForm, type TagFormValues } from "../../_components/tag-form";
 import { toast } from "sonner";
 import { Loading } from "@/components/page/loading";
+import { AccessDenied } from "@/components/page/access-denied";
 
 export default function EditTagPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const resolvedParams = use(params);
   const tagId = resolvedParams.id;
 
   const { data: tag, isLoading: isLoadingTag, error: tagError } = useTag(tagId);
   const updateTagMutation = useUpdateTag();
   const { data: allTags, isLoading: isLoadingTags } = useAllTags();
+
+  const canCreateOrEdit = session?.user?.role === "SUPER_ADMIN" || session?.user?.role === "SALES";
+
+  if (sessionStatus === "loading") {
+    return <Loading />;
+  }
+
+  if (!session || !canCreateOrEdit) {
+    return <AccessDenied />;
+  }
 
   async function handleSubmit(values: TagFormValues) {
     await updateTagMutation.mutateAsync({

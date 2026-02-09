@@ -8,7 +8,8 @@ import { calculateTripStatus } from "@/lib/services/trip-status";
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
 
-  if (!session) {
+  const VIEW_ROLES = ["SUPER_ADMIN", "ADMIN", "SALES", "STAFF"] as const;
+  if (!session || !VIEW_ROLES.includes(session.user.role as (typeof VIEW_ROLES)[number])) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -175,7 +176,7 @@ export async function GET(request: Request) {
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
 
-  if (!session) {
+  if (!session || session.user.role !== "SUPER_ADMIN") {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

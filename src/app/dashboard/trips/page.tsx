@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
@@ -17,8 +18,13 @@ import { TripFilter } from "./_components/trip-filter";
 import { getTripStatusLabel, getTripStatusVariant } from "@/lib/constants/trip";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { AccessDenied } from "@/components/page/access-denied";
 
 export default function TripsPage() {
+  const { data: session, status: sessionStatus } = useSession();
+  const role = session?.user?.role;
+  const canView = !!role && ["SUPER_ADMIN", "ADMIN", "SALES", "STAFF"].includes(role);
+  const canCreateOrEdit = role === "SUPER_ADMIN";
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -164,16 +170,18 @@ export default function TripsPage() {
                 <Eye className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href={`/dashboard/trips/${row.original.id}/edit`}>
-              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-                <Edit className="h-4 w-4" />
-              </Button>
-            </Link>
+            {canCreateOrEdit && (
+              <Link href={`/dashboard/trips/${row.original.id}/edit`}>
+                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
           </div>
         ),
       },
     ],
-    [selectedIds],
+    [selectedIds, canCreateOrEdit],
   );
 
   // Use TanStack Query to fetch trips
@@ -260,6 +268,13 @@ export default function TripsPage() {
     exportTripBookings(selectedIds);
   }, [exportTripBookings, selectedIds]);
 
+  if (sessionStatus === "loading") {
+    return <Loading />;
+  }
+  if (!canView) {
+    return <AccessDenied />;
+  }
+
   return (
     <div className="flex flex-col gap-8 p-8">
       <div className="flex items-center justify-between">
@@ -272,11 +287,13 @@ export default function TripsPage() {
             <Download className="mr-2 h-4 w-4" />{" "}
             {selectedIds.length > 0 ? `Export bookings (${selectedIds.length})` : "Export bookings"}
           </Button>
-          <Link href="/dashboard/trips/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Create
-            </Button>
-          </Link>
+          {canCreateOrEdit && (
+            <Link href="/dashboard/trips/create">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Create
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 

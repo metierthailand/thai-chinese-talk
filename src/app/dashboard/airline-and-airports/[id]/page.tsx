@@ -2,17 +2,30 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useAirlineAndAirport } from "@/app/dashboard/airline-and-airports/hooks/use-airline-and-airports";
 import { AirlineAndAirportForm } from "../_components/airline-and-airport-form";
 import { Loading } from "@/components/page/loading";
 import { format } from "date-fns";
+import { AccessDenied } from "@/components/page/access-denied";
 
 export default function AirlineAndAirportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const { id: airlineAndAirportId } = use(params);
   const { data: airlineAndAirport, isLoading: isLoadingAirlineAndAirport, error: airlineAndAirportError } = useAirlineAndAirport(airlineAndAirportId);
+
+  const canView = session?.user?.role === "SUPER_ADMIN" || session?.user?.role === "ADMIN" || session?.user?.role === "SALES" || session?.user?.role === "STAFF";
+
+  if (sessionStatus === "loading") {
+    return <Loading />;
+  }
+
+  if (!session || !canView) {
+    return <AccessDenied />;
+  }
 
   if (isLoadingAirlineAndAirport) {
     return <Loading />;

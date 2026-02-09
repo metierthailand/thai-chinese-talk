@@ -11,11 +11,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ agentId:
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  // Only ADMIN and SUPER_ADMIN can access
-  if (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") {
-    return new NextResponse("Forbidden", { status: 403 });
-  }
-
   try {
     const { agentId } = await params;
     const { searchParams } = new URL(req.url);
@@ -30,6 +25,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ agentId:
     const dateFilter: { gte?: Date; lte?: Date } = {};
     if (createdAtFrom) dateFilter.gte = parseDateGte(createdAtFrom);
     if (createdAtTo) dateFilter.lte = parseDateLte(createdAtTo);
+
+    // Role-based access:
+    // - SUPER_ADMIN: can view detail for any agentId
+    // - SALES: can only view their own agentId
+    // - Others: forbidden
+    if (session.user.role === "SALES" && agentId !== session.user.id) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+    if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "SALES") {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
 
     const where: Prisma.CommissionWhereInput = {
       agentId,

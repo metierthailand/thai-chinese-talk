@@ -11,6 +11,11 @@ export async function GET(req: Request) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
+  const VIEW_ROLES = ["SUPER_ADMIN", "ADMIN", "SALES", "STAFF"] as const;
+  if (!VIEW_ROLES.includes(session.user.role as (typeof VIEW_ROLES)[number])) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
@@ -75,6 +80,11 @@ export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  const WRITE_ROLES = ["SUPER_ADMIN"] as const;
+  if (!WRITE_ROLES.includes(session.user.role as (typeof WRITE_ROLES)[number])) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

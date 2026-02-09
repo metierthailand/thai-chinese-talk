@@ -198,8 +198,8 @@ export default function AdminPage() {
     return <Loading />;
   }
 
-  // Show unauthorized message if not ADMIN
-  if (!session || !["SUPER_ADMIN", "ADMIN"].includes(session.user.role)) {
+  // Only SUPER_ADMIN can manage staff (Create, View, Update)
+  if (!session || session.user.role !== "SUPER_ADMIN") {
     return <AccessDenied />;
   }
 

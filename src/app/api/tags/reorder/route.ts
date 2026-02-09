@@ -10,6 +10,11 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const UPDATE_ROLES = ["SUPER_ADMIN"] as const;
+    if (!UPDATE_ROLES.includes(session.user.role as (typeof UPDATE_ROLES)[number])) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { tags } = body;
 

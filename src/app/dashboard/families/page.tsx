@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
-import { Plus, Edit, Eye } from "lucide-react";
+import { Plus, Edit, Eye, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table/data-table";
@@ -12,13 +13,19 @@ import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { FamilyFilter } from "./_components/family-filter";
 import { Loading } from "@/components/page/loading";
 
-import { useFamilies, type Family } from "./hooks/use-families";
+import { useFamilies, useDeleteFamily, type Family } from "./hooks/use-families";
 import { mapFamilyParamsToQuery, useFamilyParams } from "./hooks/use-families-params";
+import { AccessDenied } from "@/components/page/access-denied";
+import { DeleteDialog } from "@/app/dashboard/_components/delete-dialog";
 
 // --------------------
 // columns
 // --------------------
-const familyColumns: ColumnDef<Family>[] = [
+function buildFamilyColumns(
+  canCreateOrEdit: boolean,
+  onDeleteClick?: (id: string) => void,
+): ColumnDef<Family>[] {
+  return [
   {
     accessorKey: "name",
     header: "Name",
@@ -30,7 +37,13 @@ const familyColumns: ColumnDef<Family>[] = [
   {
     accessorKey: "customerName",
     header: "Customer name",
-    cell: ({ row }) => <div>{row.original.customers.map((customer) => customer.customer.firstNameEn + " " + customer.customer.lastNameEn).join(", ")}</div>,
+    cell: ({ row }) => (
+      <div>
+        {row.original.customers
+          .map((customer) => customer.customer.firstNameEn + " " + customer.customer.lastNameEn)
+          .join(", ")}
+      </div>
+    ),
   },
   {
     accessorKey: "members",
@@ -55,17 +68,38 @@ const familyColumns: ColumnDef<Family>[] = [
             <Eye className="h-4 w-4" />
           </Button>
         </Link>
-        <Link href={`/dashboard/families/${row.original.id}/edit`}>
-          <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-            <Edit className="h-4 w-4" />
+        {canCreateOrEdit && (
+          <Link href={`/dashboard/families/${row.original.id}/edit`}>
+            <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+              <Edit className="h-4 w-4" />
+            </Button>
+          </Link>
+        )}
+        {canCreateOrEdit && onDeleteClick && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteClick(row.original.id);
+            }}
+          >
+            <Trash2 className="text-destructive h-4 w-4" />
           </Button>
-        </Link>
+        )}
       </div>
     ),
   },
 ];
+}
 
 export default function FamiliesPage() {
+  const { data: session, status: sessionStatus } = useSession();
+  const role = session?.user?.role;
+  const canView = !!role && ["SUPER_ADMIN", "ADMIN", "SALES", "STAFF"].includes(role);
+  const canCreateOrEdit = role === "SUPER_ADMIN" || role === "SALES";
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   // --------------------
   // params
   // --------------------
@@ -81,6 +115,7 @@ export default function FamiliesPage() {
   // data fetching
   // --------------------
   const { data, isLoading, error } = useFamilies(familyQuery);
+  const deleteFamilyMutation = useDeleteFamily();
 
   const families = data?.data ?? [];
   const total = data?.total ?? 0;
@@ -90,12 +125,34 @@ export default function FamiliesPage() {
     return Math.ceil(total / pageSize);
   }, [total, pageSize]);
 
+  const handleDeleteClick = useCallback((id: string) => {
+    setDeletingId(id);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deletingId) return;
+    try {
+      await deleteFamilyMutation.mutateAsync(deletingId);
+      setDeleteDialogOpen(false);
+      setDeletingId(null);
+    } catch {
+      setDeleteDialogOpen(false);
+      setDeletingId(null);
+    }
+  }, [deletingId, deleteFamilyMutation]);
+
+  const columns = useMemo(
+    () => buildFamilyColumns(canCreateOrEdit, canCreateOrEdit ? handleDeleteClick : undefined),
+    [canCreateOrEdit, handleDeleteClick],
+  );
+
   // --------------------
   // table instance
   // --------------------
   const table = useDataTableInstance({
     data: families,
-    columns: familyColumns,
+    columns,
     enableRowSelection: false,
     manualPagination: true,
     pageCount,
@@ -120,6 +177,13 @@ export default function FamiliesPage() {
 
 
 
+  if (sessionStatus === "loading") {
+    return <Loading />;
+  }
+  if (!canView) {
+    return <AccessDenied />;
+  }
+
   // --------------------
   // render
   // --------------------
@@ -130,11 +194,13 @@ export default function FamiliesPage() {
           <h2 className="text-3xl font-bold tracking-tight">Families / Groups</h2>
           <p className="text-muted-foreground">Create and update families or groups and their members.</p>
         </div>
-        <Link href="/dashboard/families/create">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Create
-          </Button>
-        </Link>
+        {canCreateOrEdit && (
+          <Link href="/dashboard/families/create">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Create
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Filter & Search form */}
@@ -152,7 +218,7 @@ export default function FamiliesPage() {
         ) : (
           <>
             <div className="overflow-hidden rounded-md border">
-              <DataTable table={table} columns={familyColumns} />
+              <DataTable table={table} columns={columns} />
             </div>
             <DataTablePagination
               table={table}
@@ -162,6 +228,14 @@ export default function FamiliesPage() {
               pageCount={pageCount}
               onPageChange={handlePageChange}
               onPageSizeChange={handlePageSizeChange}
+            />
+            <DeleteDialog
+              open={deleteDialogOpen}
+              onOpenChange={setDeleteDialogOpen}
+              onConfirm={handleDeleteConfirm}
+              isDeleting={deleteFamilyMutation.isPending}
+              title="Delete family / group"
+              description="Are you sure you want to delete this family / group? This action cannot be undone."
             />
           </>
         )}

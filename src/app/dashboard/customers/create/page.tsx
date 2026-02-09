@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { CustomerForm } from "../_components/customer-form";
@@ -8,11 +9,18 @@ import { CustomerFormValues } from "../hooks/use-customers";
 import { useCreateCustomer } from "../hooks/use-customers";
 import { useAllTags } from "@/app/dashboard/tags/hooks/use-tags";
 import { toast } from "sonner";
+import { AccessDenied } from "@/components/page/access-denied";
+import { Loading } from "@/components/page/loading";
 
 export default function NewCustomerPage() {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const createCustomerMutation = useCreateCustomer();
   const { data: allTagsResponse } = useAllTags();
+
+  const canCreateOrEdit = session?.user?.role === "SUPER_ADMIN" || session?.user?.role === "SALES";
+  if (sessionStatus === "loading") return <Loading />;
+  if (!session || !canCreateOrEdit) return <AccessDenied />;
 
   // Transform tags data for CustomerForm
   const tags = allTagsResponse?.map((tag) => ({

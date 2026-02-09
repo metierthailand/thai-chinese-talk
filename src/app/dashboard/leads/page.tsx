@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
@@ -16,9 +17,14 @@ import { LeadFilter } from "./_components/lead-filter";
 import { Loading } from "@/components/page/loading";
 import { LEAD_STATUS_LABELS, getLeadStatusVariant } from "@/lib/constants/lead";
 import { LeadStatus } from "@prisma/client";
+import { AccessDenied } from "@/components/page/access-denied";
 
 export default function LeadsPage() {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
+  const role = session?.user?.role;
+  const canView = !!role && ["SUPER_ADMIN", "ADMIN", "SALES", "STAFF"].includes(role);
+  const canCreateOrEdit = !!role && ["SUPER_ADMIN", "ADMIN", "SALES"].includes(role);
 
   // --------------------
   // params
@@ -129,16 +135,18 @@ export default function LeadsPage() {
                 <Eye className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href={`/dashboard/leads/${row.original.id}/edit`}>
-              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-                <Edit className="h-4 w-4" />
-              </Button>
-            </Link>
+            {canCreateOrEdit && (
+              <Link href={`/dashboard/leads/${row.original.id}/edit`}>
+                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
           </div>
         ),
       },
     ],
-    [],
+    [canCreateOrEdit],
   );
 
   // --------------------
@@ -195,18 +203,29 @@ export default function LeadsPage() {
     [setParams],
   );
 
+  if (sessionStatus === "loading") {
+    return <Loading />;
+  }
+  if (!canView) {
+    return <AccessDenied />;
+  }
+
   return (
     <div className="flex flex-col gap-8 p-8">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Leads</h2>
-          <p className="text-muted-foreground">Create and update potential customers interested in upcoming trips.</p>
+          <p className="text-muted-foreground">
+            Create and update potential customers interested in upcoming trips.
+          </p>
         </div>
-        <Link href="/dashboard/leads/create">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Create
-          </Button>
-        </Link>
+        {canCreateOrEdit && (
+          <Link href="/dashboard/leads/create">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Create
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Filter & Search form */}

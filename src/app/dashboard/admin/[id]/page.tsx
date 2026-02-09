@@ -2,18 +2,24 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useUser } from "../hooks/use-users-query";
 import { UserForm } from "../_components/user-form";
 import { UserFormValues } from "../hooks/use-users";
 import { Loading } from "@/components/page/loading";
+import { AccessDenied } from "@/components/page/access-denied";
 import { format } from "date-fns";
 
 export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const { id: userId } = use(params);
   const { data: user, isLoading: isLoadingUser, error: userError } = useUser(userId);
+
+  if (sessionStatus === "loading") return <Loading />;
+  if (!session || session.user.role !== "SUPER_ADMIN") return <AccessDenied />;
 
   if (isLoadingUser) {
     return <Loading />;

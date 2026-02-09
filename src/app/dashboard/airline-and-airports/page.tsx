@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
 import { Plus, Edit, Eye, Trash2 } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table/data-table";
@@ -12,6 +13,7 @@ import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { AirlineAndAirportFilter } from "./_components/airline-and-airport-filter";
 import { DeleteDialog } from "@/app/dashboard/_components/delete-dialog";
 import { Loading } from "@/components/page/loading";
+import { AccessDenied } from "@/components/page/access-denied";
 
 import {
   useAirlineAndAirports,
@@ -60,18 +62,18 @@ const airlineAndAirportColumns: ColumnDef<AirlineAndAirport>[] = [
             <Eye className="h-4 w-4" />
           </Button>
         </Link>
-        <Link href={`/dashboard/airline-and-airports/${row.original.id}/edit`}>
-          <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-            <Edit className="h-4 w-4" />
-          </Button>
-        </Link>
       </div>
     ),
   },
 ];
 
-// Create columns with delete handler
-function createColumns(onDeleteClick: (id: string) => void): ColumnDef<AirlineAndAirport>[] {
+// Create columns with delete/edit handler
+function createColumns(
+  onDeleteClick: (id: string) => void,
+  options: { canCreateOrEdit: boolean; canDelete: boolean },
+): ColumnDef<AirlineAndAirport>[] {
+  const { canCreateOrEdit, canDelete } = options;
+
   return [
     ...airlineAndAirportColumns.slice(0, -1), // All columns except actions
     {
@@ -84,21 +86,25 @@ function createColumns(onDeleteClick: (id: string) => void): ColumnDef<AirlineAn
               <Eye className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href={`/dashboard/airline-and-airports/${row.original.id}/edit`}>
-            <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-              <Edit className="h-4 w-4" />
+          {canCreateOrEdit && (
+            <Link href={`/dashboard/airline-and-airports/${row.original.id}/edit`}>
+              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            </Link>
+          )}
+          {canDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteClick(row.original.id);
+              }}
+            >
+              <Trash2 className="text-destructive h-4 w-4" />
             </Button>
-          </Link>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteClick(row.original.id);
-            }}
-          >
-            <Trash2 className="text-destructive h-4 w-4" />
-          </Button>
+          )}
         </div>
       ),
     },
@@ -112,9 +118,12 @@ export default function AirlineAndAirportsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // --------------------
-  // params
-  // --------------------
+  const { data: session, status: sessionStatus } = useSession();
+  const userRole = session?.user?.role;
+
+  const canView = userRole === "SUPER_ADMIN" || userRole === "ADMIN" || userRole === "SALES" || userRole === "STAFF";
+  const canCreateOrEdit = userRole === "SUPER_ADMIN";
+  const canDelete = userRole === "SUPER_ADMIN";
   const { page, pageSize, search, setParams } = useAirlineAndAirportParams();
 
   const airlineAndAirportQuery = mapAirlineAndAirportParamsToQuery({
@@ -123,9 +132,6 @@ export default function AirlineAndAirportsPage() {
     search,
   });
 
-  // --------------------
-  // data fetching
-  // --------------------
   const { data, isLoading, error } = useAirlineAndAirports(airlineAndAirportQuery);
   const deleteAirlineAndAirportMutation = useDeleteAirlineAndAirport();
 
@@ -140,29 +146,38 @@ export default function AirlineAndAirportsPage() {
   // --------------------
   // handlers
   // --------------------
-  const handleDeleteClick = useCallback((id: string) => {
-    setDeletingId(id);
-    setDeleteDialogOpen(true);
-  }, []);
+  const handleDeleteClick = useCallback(
+    (id: string) => {
+      setDeletingId(id);
+      setDeleteDialogOpen(true);
+    },
+    [setDeletingId, setDeleteDialogOpen],
+  );
 
-  const handleDeleteConfirm = useCallback(async () => {
-    if (!deletingId) return;
+  const handleDeleteConfirm = useCallback(
+    async () => {
+      if (!deletingId) return;
 
-    try {
-      await deleteAirlineAndAirportMutation.mutateAsync(deletingId);
-      setDeleteDialogOpen(false);
-      setDeletingId(null);
-    } catch {
-      // Error is already handled by the mutation's onError callback
-      setDeleteDialogOpen(false);
-      setDeletingId(null);
-    }
-  }, [deletingId, deleteAirlineAndAirportMutation]);
+      try {
+        await deleteAirlineAndAirportMutation.mutateAsync(deletingId);
+        setDeleteDialogOpen(false);
+        setDeletingId(null);
+      } catch {
+        // Error is already handled by the mutation's onError callback
+        setDeleteDialogOpen(false);
+        setDeletingId(null);
+      }
+    },
+    [deletingId, deleteAirlineAndAirportMutation],
+  );
 
   // --------------------
   // columns with delete handler
   // --------------------
-  const columns = useMemo(() => createColumns(handleDeleteClick), [handleDeleteClick]);
+  const columns = useMemo(
+    () => createColumns(handleDeleteClick, { canCreateOrEdit, canDelete }),
+    [handleDeleteClick, canCreateOrEdit, canDelete],
+  );
 
   // --------------------
   // table instance
@@ -196,57 +211,67 @@ export default function AirlineAndAirportsPage() {
   // render
   // --------------------
   return (
-    <div className="flex flex-col gap-8 p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">IATA Codes</h2>
-          <p className="text-muted-foreground">Create and update IATA codes for airports.</p>
-        </div>
-        <Link href="/dashboard/airline-and-airports/create">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Create
-          </Button>
-        </Link>
-      </div>
-
-      {/* Filter & Search form */}
-      <AirlineAndAirportFilter />
-
-      <div className="relative flex flex-col gap-4 overflow-auto">
-        {isLoading ? (
-          <Loading />
-        ) : error ? (
-          <div className="space-y-8 p-8">
-            <div className="flex h-64 items-center justify-center">
-              <p className="text-destructive">Failed to load airline and airports. Please try again.</p>
+    <>
+      {sessionStatus === "loading" ? (
+        <Loading />
+      ) : !session || !canView ? (
+        <AccessDenied />
+      ) : (
+        <div className="flex flex-col gap-8 p-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight">IATA Codes</h2>
+              <p className="text-muted-foreground">Create and update IATA codes for airports.</p>
             </div>
+            {canCreateOrEdit && (
+              <Link href="/dashboard/airline-and-airports/create">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> Create
+                </Button>
+              </Link>
+            )}
           </div>
-        ) : (
-          <>
-            <div className="overflow-hidden rounded-md border">
-              <DataTable table={table} columns={columns} />
-            </div>
-            <DataTablePagination
-              table={table}
-              total={total}
-              pageSize={pageSize}
-              pageIndex={page - 1}
-              pageCount={pageCount}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
-            />
-          </>
-        )}
-      </div>
 
-      <DeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDeleteConfirm}
-        isDeleting={deleteAirlineAndAirportMutation.isPending}
-        title="Are you sure?"
-        description="This action cannot be undone. This will permanently delete this item."
-      />
-    </div>
+          {/* Filter & Search form */}
+          <AirlineAndAirportFilter />
+
+          <div className="relative flex flex-col gap-4 overflow-auto">
+            {isLoading ? (
+              <Loading />
+            ) : error ? (
+              <div className="space-y-8 p-8">
+                <div className="flex h-64 items-center justify-center">
+                  <p className="text-destructive">Failed to load airline and airports. Please try again.</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-hidden rounded-md border">
+                  <DataTable table={table} columns={columns} />
+                </div>
+                <DataTablePagination
+                  table={table}
+                  total={total}
+                  pageSize={pageSize}
+                  pageIndex={page - 1}
+                  pageCount={pageCount}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                />
+              </>
+            )}
+          </div>
+
+          <DeleteDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            onConfirm={handleDeleteConfirm}
+            isDeleting={deleteAirlineAndAirportMutation.isPending}
+            title="Are you sure?"
+            description="This action cannot be undone. This will permanently delete this item."
+          />
+        </div>
+      )}
+    </>
   );
 }

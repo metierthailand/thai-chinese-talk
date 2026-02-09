@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
@@ -11,15 +12,21 @@ import { useCustomer, useUpdateCustomer } from "../../hooks/use-customers";
 import { useAllTags } from "@/app/dashboard/tags/hooks/use-tags";
 import { toast } from "sonner";
 import { Loading } from "@/components/page/loading";
+import { AccessDenied } from "@/components/page/access-denied";
 
 export default function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const resolvedParams = use(params);
   const customerId = resolvedParams.id;
 
   const { data: customer, isLoading: isLoadingCustomer, error: customerError } = useCustomer(customerId);
   const updateCustomerMutation = useUpdateCustomer();
   const { data: allTagsResponse } = useAllTags();
+
+  const canCreateOrEdit = session?.user?.role === "SUPER_ADMIN" || session?.user?.role === "SALES";
+  if (sessionStatus === "loading") return <Loading />;
+  if (!session || !canCreateOrEdit) return <AccessDenied />;
 
   // Transform tags data for CustomerForm
   const tags = allTagsResponse?.map((tag) => ({

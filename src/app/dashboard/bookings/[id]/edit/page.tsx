@@ -2,19 +2,26 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { BookingForm, BookingFormValues } from "../../_components/booking-form";
 import { useBooking, useUpdateBooking } from "../../hooks/use-bookings";
 import { Loading } from "@/components/page/loading";
+import { AccessDenied } from "@/components/page/access-denied";
 
 export default function EditBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const resolvedParams = use(params);
   const bookingId = resolvedParams.id;
 
   const { data: booking, isLoading: isLoadingBooking, error: bookingError } = useBooking(bookingId);
   const updateBookingMutation = useUpdateBooking();
+
+  const canCreateOrEdit = !!session?.user?.role && ["SUPER_ADMIN", "SALES"].includes(session.user.role);
+  if (sessionStatus === "loading") return <Loading />;
+  if (!session || !canCreateOrEdit) return <AccessDenied />;
 
   // Format initial data for the form
   const initialData: Partial<BookingFormValues> | undefined = booking

@@ -1,15 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { UserForm } from "../_components/user-form";
 import { UserFormValues } from "../hooks/use-users";
 import { useCreateUser } from "../hooks/use-users-query";
+import { AccessDenied } from "@/components/page/access-denied";
+import { Loading } from "@/components/page/loading";
 
 export default function CreateUserPage() {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const createUserMutation = useCreateUser();
+
+  if (sessionStatus === "loading") return <Loading />;
+  if (!session || session.user.role !== "SUPER_ADMIN") return <AccessDenied />;
 
   async function handleSubmit(values: UserFormValues) {
     try {

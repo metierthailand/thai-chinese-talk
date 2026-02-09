@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback, useState } from "react";
+import { useSession } from "next-auth/react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, Eye } from "lucide-react";
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 import { Loading } from "@/components/page/loading";
 import { TagSearch } from "./_components/tag-search";
 import { DeleteDialog } from "@/app/dashboard/_components/delete-dialog";
+import { AccessDenied } from "@/components/page/access-denied";
 
 interface Tag {
   id: string;
@@ -27,6 +29,21 @@ interface Tag {
 export default function TagsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const { data: session, status: sessionStatus } = useSession();
+
+  const userRole = session?.user?.role;
+  const canView = userRole === "SUPER_ADMIN" || userRole === "ADMIN" || userRole === "SALES" || userRole === "STAFF";
+  const canCreateOrEdit = userRole === "SUPER_ADMIN" || userRole === "SALES";
+  const canDelete = userRole === "SUPER_ADMIN";
+
+  if (sessionStatus === "loading") {
+    return <Loading />;
+  }
+
+  if (!session || !canView) {
+    return <AccessDenied />;
+  }
 
   // --------------------
   // params
@@ -67,27 +84,31 @@ export default function TagsPage() {
                 <Eye className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href={`/dashboard/tags/${row.original.id}/edit`}>
-              <Button variant="ghost" size="sm">
-                <Edit className="h-4 w-4" />
+            {canCreateOrEdit && (
+              <Link href={`/dashboard/tags/${row.original.id}/edit`}>
+                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeletingId(row.original.id);
+                  setDeleteDialogOpen(true);
+                }}
+              >
+                <Trash2 className="text-destructive h-4 w-4" />
               </Button>
-            </Link>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setDeletingId(row.original.id);
-                setDeleteDialogOpen(true);
-              }}
-            >
-              <Trash2 className="text-destructive h-4 w-4" />
-            </Button>
+            )}
           </div>
         ),
       },
     ],
-    [],
+    [canCreateOrEdit, canDelete],
   );
 
   // --------------------
@@ -162,11 +183,13 @@ export default function TagsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Tags</h2>
           <p className="text-muted-foreground">Create and update customer tags for groupings and segmentations.</p>
         </div>
-        <Link href="/dashboard/tags/create">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Create
-          </Button>
-        </Link>
+        {canCreateOrEdit && (
+          <Link href="/dashboard/tags/create">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Create
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Search form */}

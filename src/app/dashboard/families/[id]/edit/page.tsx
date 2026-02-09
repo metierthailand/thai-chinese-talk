@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { FamilyForm } from "../../_components/family-form";
@@ -9,14 +10,20 @@ import { FamilyFormValues } from "../../hooks/use-families";
 import { useFamily, useUpdateFamily } from "../../hooks/use-families";
 import { toast } from "sonner";
 import { Loading } from "@/components/page/loading";
+import { AccessDenied } from "@/components/page/access-denied";
 
 export default function EditFamilyPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const resolvedParams = use(params);
   const familyId = resolvedParams.id;
 
   const { data: family, isLoading: isLoadingFamily, error: familyError } = useFamily(familyId);
   const updateFamilyMutation = useUpdateFamily();
+
+  const canCreateOrEdit = session?.user?.role === "SUPER_ADMIN" || session?.user?.role === "SALES";
+  if (sessionStatus === "loading") return <Loading />;
+  if (!session || !canCreateOrEdit) return <AccessDenied />;
 
   // Format initial data for the form
   const initialData: Partial<FamilyFormValues> | undefined = family

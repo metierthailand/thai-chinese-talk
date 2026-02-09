@@ -10,7 +10,7 @@ import { sendEmailChangeNotificationEmail } from "@/lib/email";
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
 
-  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+  if (!session || session.user.role !== "SUPER_ADMIN") {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -52,7 +52,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
 
-  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+  if (!session || session.user.role !== "SUPER_ADMIN") {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

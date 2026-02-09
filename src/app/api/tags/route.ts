@@ -10,6 +10,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const VIEW_ROLES = ["SUPER_ADMIN", "ADMIN", "SALES", "STAFF"] as const;
+    if (!VIEW_ROLES.includes(session.user.role as (typeof VIEW_ROLES)[number])) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const all = searchParams.get("all") === "true";
     const search = searchParams.get("search") || "";
@@ -76,6 +81,11 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const WRITE_ROLES = ["SUPER_ADMIN", "SALES"] as const;
+    if (!WRITE_ROLES.includes(session.user.role as (typeof WRITE_ROLES)[number])) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

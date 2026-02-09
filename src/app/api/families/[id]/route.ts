@@ -6,7 +6,8 @@ import { authOptions } from "@/lib/auth";
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
 
-  if (!session) {
+  const VIEW_ROLES = ["SUPER_ADMIN", "ADMIN", "SALES", "STAFF"] as const;
+  if (!session || !VIEW_ROLES.includes(session.user.role as (typeof VIEW_ROLES)[number])) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -48,7 +49,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
 
-  if (!session) {
+  const WRITE_ROLES = ["SUPER_ADMIN", "SALES"] as const;
+  if (!session || !WRITE_ROLES.includes(session.user.role as (typeof WRITE_ROLES)[number])) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -125,7 +127,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
 
-  if (!session) {
+  const DELETE_ROLES = ["SUPER_ADMIN", "SALES"] as const;
+  if (!session || !DELETE_ROLES.includes(session.user.role as (typeof DELETE_ROLES)[number])) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

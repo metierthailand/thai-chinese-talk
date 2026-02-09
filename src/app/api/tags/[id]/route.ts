@@ -10,6 +10,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const VIEW_ROLES = ["SUPER_ADMIN", "ADMIN", "SALES", "STAFF"] as const;
+    if (!VIEW_ROLES.includes(session.user.role as (typeof VIEW_ROLES)[number])) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     const tag = await prisma.tag.findUnique({
@@ -36,6 +41,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const WRITE_ROLES = ["SUPER_ADMIN", "SALES"] as const;
+    if (!WRITE_ROLES.includes(session.user.role as (typeof WRITE_ROLES)[number])) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -139,6 +149,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const DELETE_ROLES = ["SUPER_ADMIN"] as const;
+    if (!DELETE_ROLES.includes(session.user.role as (typeof DELETE_ROLES)[number])) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

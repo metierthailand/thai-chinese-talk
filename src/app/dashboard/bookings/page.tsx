@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,10 +17,15 @@ import { BookingFilter } from "./_components/booking-filter";
 import { getPaymentStatusVariant, PAYMENT_STATUS_LABELS } from "@/lib/constants/payment";
 import { PaymentStatus } from "@prisma/client";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AccessDenied } from "@/components/page/access-denied";
 
 export default function BookingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
+  const role = session?.user?.role;
+  const canView = !!role && ["SUPER_ADMIN", "ADMIN", "SALES"].includes(role);
+  const canCreateOrEdit = !!role && ["SUPER_ADMIN", "SALES"].includes(role);
 
   // Get pagination and search from URL params
   const page = parseInt(searchParams.get("page") || "1", 10);
@@ -230,6 +236,13 @@ export default function BookingsPage() {
     table.setPageIndex(page - 1);
   }, [pageSize, page, table]);
 
+  if (sessionStatus === "loading") {
+    return <Loading />;
+  }
+  if (!canView) {
+    return <AccessDenied />;
+  }
+
   // Handlers for pagination changes
   const handlePageChange = (newPageIndex: number) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -283,11 +296,13 @@ export default function BookingsPage() {
               ? `Export PDF (${effectiveSelectedIds.length})`
               : "Export PDF"}
           </Button>
-          <Link href="/dashboard/bookings/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Create
-            </Button>
-          </Link>
+          {canCreateOrEdit && (
+            <Link href="/dashboard/bookings/create">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Create
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 

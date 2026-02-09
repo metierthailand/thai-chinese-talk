@@ -1,14 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useCreateTrip, type TripFormValues } from "../hooks/use-trips";
 import { TripForm } from "../_components/trip-form";
+import { AccessDenied } from "@/components/page/access-denied";
+import { Loading } from "@/components/page/loading";
 
 export default function NewTripPage() {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const createTripMutation = useCreateTrip();
+
+  const canCreateOrEdit = session?.user?.role === "SUPER_ADMIN";
+  if (sessionStatus === "loading") return <Loading />;
+  if (!session || !canCreateOrEdit) return <AccessDenied />;
 
   async function handleSubmit(values: TripFormValues) {
     try {

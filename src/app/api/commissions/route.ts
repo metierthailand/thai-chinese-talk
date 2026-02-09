@@ -11,11 +11,6 @@ export async function GET(req: Request) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  // Only ADMIN and SUPER_ADMIN can access
-  if (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") {
-    return new NextResponse("Forbidden", { status: 403 });
-  }
-
   try {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
@@ -35,13 +30,20 @@ export async function GET(req: Request) {
     if (createdAtFrom) dateFilter.gte = parseDateGte(createdAtFrom);
     if (createdAtTo) dateFilter.lte = parseDateLte(createdAtTo);
 
-    // Build where clause
-    const where: Prisma.CommissionWhereInput = {
-      ...(Object.keys(dateFilter).length > 0 && {
-        createdAt: dateFilter,
-      }),
-      ...(search.trim().length > 0 && {
-        agent: {
+    // Base where clause
+    const where: Prisma.CommissionWhereInput = {};
+
+    if (Object.keys(dateFilter).length > 0) {
+      where.createdAt = dateFilter;
+    }
+
+    // Role-based filtering:
+    // - SUPER_ADMIN: can see all agents, with optional search by agent name
+    // - SALES: can see only their own commissions (ignore search by other agents)
+    // - Others: forbidden
+    if (session.user.role === "SUPER_ADMIN") {
+      if (search.trim().length > 0) {
+        where.agent = {
           OR: [
             {
               firstName: {
@@ -56,9 +58,13 @@ export async function GET(req: Request) {
               },
             },
           ],
-        },
-      }),
-    };
+        };
+      }
+    } else if (session.user.role === "SALES") {
+      where.agentId = session.user.id;
+    } else {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
 
     // Get all commissions with necessary data in one query
     const commissions = await prisma.commission.findMany({

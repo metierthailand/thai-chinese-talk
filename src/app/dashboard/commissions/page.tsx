@@ -134,9 +134,11 @@ export default function CommissionsPage() {
     return <Loading />;
   }
 
-  // Show unauthorized message if not ADMIN or SUPER_ADMIN
-  if (!session || !["SUPER_ADMIN", "ADMIN"].includes(session.user.role)) {
-    return <AccessDenied message="You do not have permission to access this page. Only Administrators can view commissions." />;
+  // SUPER_ADMIN and SALES can view this page
+  if (!session || !["SUPER_ADMIN", "SALES"].includes(session.user.role)) {
+    return (
+      <AccessDenied message="You do not have permission to access this page." />
+    );
   }
 
   return (
@@ -145,7 +147,9 @@ export default function CommissionsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Commissions</h1>
           <p className="text-muted-foreground">
-            View commission summaries grouped by sales user.
+            {session.user.role === "SUPER_ADMIN"
+              ? "View commission summaries grouped by sales user."
+              : "View your own commission summary."}
           </p>
         </div>
       </div>
