@@ -41,6 +41,13 @@ export async function GET(
       return new NextResponse("Trip not found", { status: 404 });
     }
 
+    const paidBookingsCount = await prisma.booking.count({
+      where: {
+        tripId: id,
+        paymentStatus: { in: ["DEPOSIT_PAID", "FULLY_PAID"] },
+      },
+    });
+
     // Calculate trip status using shared utility function
     const now = new Date();
     const status = calculateTripStatus(
@@ -54,6 +61,7 @@ export async function GET(
     return NextResponse.json({
       ...trip,
       status,
+      paidBookingsCount,
     });
   } catch (error) {
     console.error("[TRIP_GET]", error);

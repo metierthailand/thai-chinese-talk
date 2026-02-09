@@ -204,7 +204,7 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
                         <div className="flex flex-col">
                           <span className="font-medium">
                             {trip.code}
-                            {trip._count?.bookings >= trip.pax ? " [FULL]" : ""}
+                            {(trip.paidBookingsCount ?? 0) >= trip.pax ? " [FULL]" : ""}
                           </span>
                           <span className="text-muted-foreground text-sm">
                             {trip.name}{" "}

@@ -49,6 +49,7 @@ export interface Trip {
   _count: {
     bookings: number;
   };
+  paidBookingsCount: number;
   createdAt: string;
   updatedAt: string;
 }

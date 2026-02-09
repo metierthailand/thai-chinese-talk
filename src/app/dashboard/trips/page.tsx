@@ -49,7 +49,11 @@ export default function TripsPage() {
       {
         accessorKey: "pax",
         header: "PAX",
-        cell: ({ row }) => <div>{row.original.pax}</div>,
+        cell: ({ row }) => (
+          <div>
+            {row.original.paidBookingsCount ?? 0}/{row.original.pax}
+          </div>
+        ),
       },
       {
         accessorKey: "fox",

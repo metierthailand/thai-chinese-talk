@@ -114,6 +114,23 @@ export async function GET(request: Request) {
       },
     });
 
+    const tripIds = trips.map((t) => t.id);
+    // Count bookings with DEPOSIT_PAID or FULLY_PAID per trip
+    const paidCounts =
+      tripIds.length > 0
+        ? await prisma.booking.groupBy({
+            by: ["tripId"],
+            where: {
+              tripId: { in: tripIds },
+              paymentStatus: { in: ["DEPOSIT_PAID", "FULLY_PAID"] },
+            },
+            _count: { id: true },
+          })
+        : [];
+    const paidCountByTripId = Object.fromEntries(
+      paidCounts.map((p) => [p.tripId, p._count.id])
+    );
+
     // Calculate trip status for each trip
     const now = new Date();
     let tripsWithStatus = trips.map((trip) => {
@@ -124,10 +141,12 @@ export async function GET(request: Request) {
         trip.pax,
         now
       );
+      const paidBookingsCount = paidCountByTripId[trip.id] ?? 0;
 
       return {
         ...trip,
         status,
+        paidBookingsCount,
       };
     });
 

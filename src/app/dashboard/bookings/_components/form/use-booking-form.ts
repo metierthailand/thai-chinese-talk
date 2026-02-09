@@ -590,13 +590,12 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
 
   const handleTripChange = (newTripId: string) => {
     form.setValue("tripId", newTripId);
-    // Clear companion customers when trip changes
+    // Clear CustomerSection on every trip change to avoid keeping a customer
+    // who may already be booked in the newly selected trip
+    form.setValue("customerId", "", { shouldDirty: false });
+    form.setValue("passportId", "", { shouldDirty: false });
     form.setValue("companionCustomerIds", []);
-    // When clearing trip, clear customer and passport so customer section stays consistent
-    if (!newTripId) {
-      form.setValue("customerId", "", { shouldDirty: false });
-      form.setValue("passportId", "", { shouldDirty: false });
-    }
+    setCustomerSearchQuery("");
   };
 
   // Customer IDs that already have a booking in the selected trip (exclude from customer dropdown)

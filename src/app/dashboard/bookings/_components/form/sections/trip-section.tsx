@@ -68,7 +68,7 @@ export function TripSection({
                 <Input
                   value={
                     selectedTrip
-                      ? `${selectedTrip.code}${selectedTrip._count?.bookings >= selectedTrip.pax ? " [FULL]" : ""}`
+                      ? `${selectedTrip.code}${(selectedTrip.paidBookingsCount ?? 0) >= selectedTrip.pax ? " [FULL]" : ""}`
                       : booking?.trip?.code ?? ""
                   }
                   disabled
@@ -84,7 +84,7 @@ export function TripSection({
                       className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
                     >
                       {selectedTrip
-                        ? `${selectedTrip.code}${selectedTrip._count?.bookings >= selectedTrip.pax ? " [FULL]" : ""}`
+                        ? `${selectedTrip.code}${(selectedTrip.paidBookingsCount ?? 0) >= selectedTrip.pax ? " [FULL]" : ""}`
                         : ""}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -107,7 +107,7 @@ export function TripSection({
                             <CommandItem
                               value={trip.id}
                               key={trip.id}
-                              disabled={trip._count?.bookings >= trip.pax}
+                              disabled={(trip.paidBookingsCount ?? 0) >= trip.pax}
                               onSelect={() => {
                                 handleTripChange(trip.id);
                                 setTripSearchOpen(false);
@@ -123,7 +123,7 @@ export function TripSection({
                               <div className="flex flex-col">
                                 <span className="font-medium">
                                   {trip.code}
-                                  {trip._count?.bookings >= trip.pax ? " [FULL]" : ""}
+                                  {(trip.paidBookingsCount ?? 0) >= trip.pax ? " [FULL]" : ""}
                                 </span>
                                 <span className="text-muted-foreground text-sm">
                                   {trip.name} ({(() => {
