@@ -304,7 +304,7 @@ export function BookingFilter({ onFilterChange }: BookingFilterProps) {
       </div>
 
       {/* Search */}
-      <div className="relative w-full lg:w-96">
+      <div className="relative w-full lg:w-full">
         <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           type="text"

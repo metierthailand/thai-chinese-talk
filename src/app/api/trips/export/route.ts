@@ -2,261 +2,558 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { calculateTripStatus } from "@/lib/services/trip-status";
-import { Prisma } from "@prisma/client";
-import { differenceInDays } from "date-fns";
+import { format, differenceInDays } from "date-fns";
+import ExcelJS from "exceljs";
+
+const TITLE_TH_DISPLAY: Record<string, string> = {
+  MR: "คุณ",
+  MRS: "คุณ",
+  MISS: "คุณ",
+  MASTER: "คุณ",
+  OTHER: "คุณ",
+};
+
+const TITLE_EN_MAP: Record<string, string> = {
+  MR: "MR",
+  MRS: "MRS",
+  MISS: "MISS",
+  MASTER: "MASTER",
+  OTHER: "",
+};
+
+const ROOM_TYPE_MAP: Record<string, string> = {
+  DOUBLE_BED: "DOUBLE BED 大",
+  TWIN_BED: "TWINS BED 双",
+};
+
+const FOOD_ALLERGY_LABELS: Record<string, string> = {
+  DIARY: "DIARY",
+  EGGS: "EGGS",
+  FISH: "FISH",
+  CRUSTACEAN: "CRUSTACEAN",
+  GLUTEN: "GLUTEN",
+  PEANUT_AND_NUTS: "PEANUT AND NUTS",
+  OTHER: "OTHER",
+};
+
+const HEADER_ROW_VALUES = [
+  "NO",
+  "Group",
+  "คุณ",
+  "ชื่อ",
+  "นามสกุล",
+  "TITLE",
+  "FIRST NAME",
+  "LAST NAME",
+  "PASSPORT",
+  "ISSUING COUNTRY",
+  "DATE OF ISSUE",
+  "DATE OF EXPIRY",
+  "DATE OF BIRTH",
+  "AGE",
+  "FOOD ALLERGIES",
+  "NOTE FOR FOOD ALLERGIES",
+  "NOTE FOR CUSTOMER",
+  "ROOM TYPE",
+  "ROOM NO.",
+  "ROOMMATES",
+  "NOTE FOR ROOM",
+  "",
+  "LINE ID",
+  "PHONE",
+  "EMAIL",
+  "ADDRESS",
+  "",
+  "STANDARD",
+  "SG.",
+  "EXTRA BED",
+  "SEAT TYPE",
+  "SEAT UPGRADE TYPE",
+  "SEAT UPGRADE",
+  "NOTE FOR SEAT",
+  "EXTRA BAG",
+  "NOTE FOR BAG",
+  "DISCOUNT",
+  "NOTE FOR DISCOUNT",
+  "NOTE FOR BOOKING",
+  "TOTAL",
+  "1ST PAYMENT",
+  "2ND PAYMENT",
+  "3RD PAYMENT",
+  "BALANCE",
+  "PAYMENT STATUS",
+];
+
+const SEPARATOR_COLUMN = 22;
+const SEPARATOR_COLUMN_2 = 27;
+const SEPARATOR_COLOR = "FF525252";
+const NAME_COLUMNS = new Set([3, 4, 5, 7, 8, 20, 26]);
+const MONEY_COLUMNS = new Set([28, 29, 30, 33, 35, 37, 40, 41, 42, 43, 44]);
+
+function calculateAge(dateOfBirth: Date | string | null): number | "" {
+  if (!dateOfBirth) return "";
+  const birth = typeof dateOfBirth === "string" ? new Date(dateOfBirth) : dateOfBirth;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+function formatTripDuration(startDate: Date, endDate: Date): string {
+  const days = differenceInDays(endDate, startDate) + 1;
+  const nights = days - 1;
+  return `${days}D${nights}N`;
+}
+
+function formatPriceForExport(value: unknown): string {
+  const n = Number(value);
+  if (value == null || Number.isNaN(n) || n === 0) return "-";
+  return n.toLocaleString("en-US", { maximumFractionDigits: 0, minimumFractionDigits: 0 });
+}
+
+function formatSeatClass(value: string | null | undefined): string {
+  if (!value) return "-";
+  return value.replace(/_/g, " ");
+}
+
+/** Build sheet name like 2025111620_TRIP_TRIPNAME_5D4N_30FOC3 (max 31 chars for Excel) */
+function buildSheetName(trip: {
+  startDate: Date;
+  endDate: Date;
+  code: string;
+  name: string;
+  pax: number;
+  foc: number;
+}): string {
+  const start = new Date(trip.startDate);
+  const end = new Date(trip.endDate);
+  const datePart = format(start, "yyyyMMdd");
+  const hourPart = format(start, "HH");
+  const tripName = (trip.code || trip.name || "trip").replace(/[/\\*?:[\]\s]+/g, "_").trim() || "trip";
+  const duration = formatTripDuration(start, end);
+  const paxFoc = `${trip.pax}FOC${trip.foc}`;
+  const full = `${datePart}${hourPart}_TRIP_${tripName}_${duration}_${paxFoc}`;
+  return full.slice(0, 31);
+}
+
+const BOOKING_INCLUDE = {
+  customer: {
+    select: {
+      id: true,
+      title: true,
+      firstNameTh: true,
+      lastNameTh: true,
+      firstNameEn: true,
+      lastNameEn: true,
+      dateOfBirth: true,
+      lineId: true,
+      phoneNumber: true,
+      email: true,
+      addresses: {
+        take: 1,
+        select: { address: true, subDistrict: true, district: true, province: true, postalCode: true },
+      },
+      passports: { where: { isPrimary: true }, take: 1 },
+      foodAllergies: { select: { note: true, types: true } },
+    },
+  },
+  passport: { select: { issuingCountry: true } },
+  trip: { select: { standardPrice: true } },
+  firstPayment: { select: { amount: true } },
+  secondPayment: { select: { amount: true } },
+  thirdPayment: { select: { amount: true } },
+  roommateGroup: {
+    include: {
+      bookings: {
+        select: {
+          id: true,
+          customerId: true,
+          customer: { select: { firstNameEn: true, lastNameEn: true } },
+        },
+      },
+    },
+  },
+} as const;
+
+type BookingWithInclude = Awaited<
+  ReturnType<typeof prisma.booking.findMany<{ include: typeof BOOKING_INCLUDE }>>
+>[number];
+
+type TripForSheet = {
+  code: string;
+  name: string;
+  startDate: Date;
+  endDate: Date;
+  pax: number;
+  foc: number;
+  standardPrice: unknown;
+  extraPricePerPerson: unknown;
+  tl: string | null;
+  tg: string | null;
+  staff: string | null;
+  note: string | null;
+};
+
+function addBookingsSheet(
+  worksheet: ExcelJS.Worksheet,
+  trip: TripForSheet,
+  sortedBookings: BookingWithInclude[],
+  companionKeyToIndex: Map<string, number>,
+  companionKeyOf: (b: BookingWithInclude & { roommateGroupId?: string | null }) => string,
+) {
+  const startDate = new Date(trip.startDate);
+  const endDate = new Date(trip.endDate);
+  const duration = formatTripDuration(startDate, endDate);
+  const tripNameDisplay = trip.code || trip.name || "";
+  const tripDateStr = `${format(startDate, "dd MMM")} - ${format(endDate, "dd MMM yyyy")}`.toUpperCase();
+  const standardPriceStr = String(Number(trip.standardPrice) ?? "");
+  const singlePriceStr = String(Number(trip.extraPricePerPerson) ?? "");
+
+  const tripSummaryRows: (string | number)[][] = [
+    ["TRIP NAME", tripNameDisplay],
+    ["TRIP DATE", tripDateStr],
+    ["TRIP DURATION", duration, "PAX", trip.pax],
+    ["STANDARD PRICE", standardPriceStr, "SINGLE PRICE", singlePriceStr],
+    ["FOC", trip.foc],
+    ["TOUR LEADER", trip.tl || "-"],
+    ["TOUR GUIDE", trip.tg || "-"],
+    ["STAFF", trip.staff || "-"],
+    ["NOTE FOR TRIP", trip.note || "-"],
+  ];
+  for (const cells of tripSummaryRows) {
+    const row = worksheet.addRow(cells);
+    row.height = 28; // padding
+    row.eachCell((cell, colNumber) => {
+      const isLabel = colNumber === 1 || colNumber === 3;
+      if (isLabel) cell.font = { bold: true, color: { argb: "FF000000" } };
+      cell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+  }
+  worksheet.addRow([]);
+
+  const statusCounts = { DEPOSIT_PENDING: 0, DEPOSIT_PAID: 0, FULLY_PAID: 0, CANCELLED: 0 };
+  for (const b of sortedBookings) {
+    const s = b.paymentStatus as keyof typeof statusCounts;
+    if (s in statusCounts) statusCounts[s]++;
+  }
+  const paxSummary = `${sortedBookings.length}/${trip.pax}`;
+  const remaining = Math.max(0, trip.pax - sortedBookings.length);
+  const paxHeaderRow = worksheet.addRow(["PAX", "DEPOSIT PENDING", "DEPOSIT PAID", "FULLY PAID", "CANCELLED", "REMAINING"]);
+  paxHeaderRow.font = { bold: true, color: { argb: "FF000000" } };
+  paxHeaderRow.height = 28;
+  paxHeaderRow.eachCell((cell) => {
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFC0C0C0" },
+    };
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+  const paxDataRow = worksheet.addRow([
+    paxSummary,
+    statusCounts.DEPOSIT_PENDING,
+    statusCounts.DEPOSIT_PAID,
+    statusCounts.FULLY_PAID,
+    statusCounts.CANCELLED,
+    remaining,
+  ]);
+  paxDataRow.height = 30;
+  paxDataRow.eachCell((cell) => {
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFFFFFFF" },
+    };
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+  worksheet.addRow([]);
+
+  const headerRow = worksheet.addRow(HEADER_ROW_VALUES);
+  headerRow.font = { bold: true, color: { argb: "FF000000" } };
+  headerRow.height = 28;
+  headerRow.eachCell((cell) => {
+    const col = Number(cell.col);
+    const isSeparator = col === SEPARATOR_COLUMN || col === SEPARATOR_COLUMN_2;
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: isSeparator ? SEPARATOR_COLOR : "FFC0C0C0" },
+    };
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+
+  const thinBorder = {
+    top: { style: "thin" as const },
+    left: { style: "thin" as const },
+    bottom: { style: "thin" as const },
+    right: { style: "thin" as const },
+  };
+
+  let rowNumber = 1;
+  for (const booking of sortedBookings) {
+    const mainCustomer = booking.customer as typeof booking.customer & {
+      lineId?: string | null;
+      phoneNumber?: string | null;
+      email?: string | null;
+      foodAllergies?: Array<{ note: string | null; types: string[] }>;
+    };
+    const mainPassport = mainCustomer.passports?.[0];
+    const hasData =
+      [mainCustomer?.firstNameTh, mainCustomer?.lastNameTh, mainCustomer?.firstNameEn, mainCustomer?.lastNameEn].some(
+        (s) => s != null && String(s).trim() !== "",
+      ) || (mainPassport?.passportNumber != null && String(mainPassport.passportNumber).trim() !== "");
+    if (!hasData) continue;
+
+    const issuingCountry = (booking as { passport?: { issuingCountry: string } }).passport?.issuingCountry ?? "";
+    const groupIndex = companionKeyToIndex.get(companionKeyOf(booking as BookingWithInclude & { roommateGroupId?: string | null })) ?? 0;
+
+    const foodAllergies = mainCustomer.foodAllergies ?? [];
+    const allergyTypes = foodAllergies.flatMap((a) => (a.types || []).map((t) => FOOD_ALLERGY_LABELS[t] ?? t));
+    const foodAllergiesStr = allergyTypes.length ? allergyTypes.join(", ") : "";
+    const foodAllergyNote = foodAllergies.map((a) => a.note).filter(Boolean).join("; ") || "";
+
+    const rg = (booking as { roommateGroup?: { bookings: Array<{ id: string; customer: { firstNameEn: string; lastNameEn: string } }> } }).roommateGroup;
+    const roommateNames =
+      rg?.bookings
+        ?.filter((rb) => rb.id !== booking.id)
+        ?.map((rb) => `${rb.customer.firstNameEn} ${rb.customer.lastNameEn}`.trim())
+        .filter(Boolean) ?? [];
+    const roommatesStr = roommateNames.length ? roommateNames.join(", ") : "-";
+
+    const roomTypeDisplay = booking.roomType
+      ? `${ROOM_TYPE_MAP[booking.roomType] ?? booking.roomType}${booking.extraPricePerBed && Number(booking.extraPricePerBed) > 0 ? " + EXTRA BED" : ""}`
+      : "";
+
+    const addrs = (mainCustomer as { addresses?: Array<{ address: string; subDistrict: string; district: string; province: string; postalCode: string }> }).addresses;
+    const addressStr = !addrs?.length ? "" : [addrs[0].address, addrs[0].subDistrict, addrs[0].district, addrs[0].province, addrs[0].postalCode].filter(Boolean).join(" ");
+
+    const standard = Number((booking as { trip?: { standardPrice: unknown } }).trip?.standardPrice) || 0;
+    const single = Number(booking.extraPriceForSingleTraveller) || 0;
+    const bed = Number(booking.extraPricePerBed) || 0;
+    const seat = Number(booking.extraPricePerSeat) || 0;
+    const bag = Number(booking.extraPricePerBag) || 0;
+    const discount = Number(booking.discountPrice) || 0;
+    const total = standard + single + bed + seat + bag - discount;
+    const first = Number((booking as { firstPayment?: { amount: unknown } }).firstPayment?.amount) || 0;
+    const second = Number((booking as { secondPayment?: { amount: unknown } }).secondPayment?.amount) || 0;
+    const third = Number((booking as { thirdPayment?: { amount: unknown } }).thirdPayment?.amount) || 0;
+    const balance = total - (first + second + third);
+
+    const rowValues = [
+      rowNumber,
+      groupIndex,
+      mainCustomer.title ? TITLE_TH_DISPLAY[mainCustomer.title] || "คุณ" : "คุณ",
+      mainCustomer.firstNameTh || "",
+      mainCustomer.lastNameTh || "",
+      mainCustomer.title ? TITLE_EN_MAP[mainCustomer.title] || "" : "",
+      mainCustomer.firstNameEn || "",
+      mainCustomer.lastNameEn || "",
+      mainPassport?.passportNumber || "",
+      issuingCountry,
+      mainPassport?.issuingDate ? format(new Date(mainPassport.issuingDate), "d MMM yyyy").toUpperCase() : "",
+      mainPassport?.expiryDate ? format(new Date(mainPassport.expiryDate), "d MMM yyyy").toUpperCase() : "",
+      mainCustomer.dateOfBirth ? format(new Date(mainCustomer.dateOfBirth), "d MMM yyyy").toUpperCase() : "",
+      mainCustomer.dateOfBirth ? String(calculateAge(mainCustomer.dateOfBirth)) : "",
+      foodAllergiesStr,
+      foodAllergyNote,
+      booking.note || "-",
+      roomTypeDisplay,
+      "",
+      roommatesStr,
+      booking.roomNote || "-",
+      "",
+      mainCustomer.lineId || "",
+      mainCustomer.phoneNumber || "",
+      mainCustomer.email || "",
+      addressStr,
+      "",
+      formatPriceForExport((booking as { trip?: { standardPrice: unknown } }).trip?.standardPrice),
+      formatPriceForExport(booking.extraPriceForSingleTraveller),
+      formatPriceForExport(booking.extraPricePerBed),
+      booking.seatType ? String(booking.seatType) : "-",
+      formatSeatClass(booking.seatClass ?? undefined),
+      formatPriceForExport(booking.extraPricePerSeat),
+      booking.seatNote || "-",
+      formatPriceForExport(booking.extraPricePerBag),
+      booking.bagNote || "-",
+      formatPriceForExport(booking.discountPrice),
+      booking.discountNote || "-",
+      booking.note || "-",
+      total.toLocaleString("en-US", { maximumFractionDigits: 0, minimumFractionDigits: 0 }),
+      formatPriceForExport((booking as { firstPayment?: { amount: unknown } }).firstPayment?.amount),
+      formatPriceForExport((booking as { secondPayment?: { amount: unknown } }).secondPayment?.amount),
+      formatPriceForExport((booking as { thirdPayment?: { amount: unknown } }).thirdPayment?.amount),
+      balance > 0 ? formatPriceForExport(balance) : "-",
+      booking.paymentStatus ? String(booking.paymentStatus).replace(/_/g, " ") : "-",
+    ];
+
+    const row = worksheet.addRow(rowValues);
+    row.height = 28;
+    const isBlue = groupIndex > 0 ? groupIndex % 2 === 1 : false;
+    row.eachCell((cell) => {
+      const col = Number(cell.col);
+      const isSeparator = col === SEPARATOR_COLUMN || col === SEPARATOR_COLUMN_2;
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: isSeparator ? SEPARATOR_COLOR : isBlue ? "FFDBF6FF" : "FFFFE6F0" },
+      };
+      const horizontalAlign = NAME_COLUMNS.has(col) ? "left" : MONEY_COLUMNS.has(col) ? "right" : "center";
+      cell.alignment = { horizontal: horizontalAlign, vertical: "middle", wrapText: true };
+      cell.border = thinBorder;
+    });
+    [41, 42, 43, 44].forEach((col) => {
+      const cell = row.getCell(col);
+      const v = cell.value;
+      if (v != null && String(v).trim() !== "" && String(v) !== "-") {
+        cell.font = { ...(cell.font as object), bold: true };
+      }
+    });
+    rowNumber++;
+  }
+
+  worksheet.columns.forEach((column) => {
+    if (!column?.eachCell) return;
+    let maxLength = 10;
+    column.eachCell((cell) => {
+      const cellValue = cell.value ? cell.value.toString() : "";
+      maxLength = Math.max(maxLength, cellValue.length + 2);
+    });
+    column.width = maxLength;
+  });
+}
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
-
   if (!session) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
   try {
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search") || "";
-    const tripDateFrom = searchParams.get("tripDateFrom") || "";
-    const tripDateTo = searchParams.get("tripDateTo") || "";
-    const type = searchParams.get("type") || "";
-    const status = searchParams.get("status") || "";
+    const tripIdsParam = searchParams.get("tripIds") || "";
+    const tripIds = tripIdsParam
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
 
-    const searchFilter: Prisma.TripWhereInput =
-      search.trim().length > 0
-        ? {
-            OR: [
-              {
-                name: {
-                  contains: search,
-                  mode: "insensitive" as const,
-                },
-              },
-              {
-                code: {
-                  contains: search,
-                  mode: "insensitive" as const,
-                },
-              },
-              {
-                airlineAndAirport: {
-                  code: {
-                    contains: search,
-                    mode: "insensitive" as const,
-                  },
-                },
-              },
-            ],
-          }
-        : {};
-
-    // Date range filter: trip overlaps with selected date range
-    // A trip overlaps if: trip.startDate <= tripDateTo AND trip.endDate >= tripDateFrom
-    const parseDateGte = (v: string) =>
-      v.includes("T") ? new Date(v) : new Date(`${v}T00:00:00.000Z`);
-    const parseDateLte = (v: string) =>
-      v.includes("T") ? new Date(v) : new Date(`${v}T23:59:59.999Z`);
-
-    const dateFilter: Prisma.TripWhereInput =
-      tripDateFrom || tripDateTo
-        ? {
-            AND: [
-              // Trip must start before or on the end of selected range
-              ...(tripDateTo
-                ? [{ startDate: { lte: parseDateLte(tripDateTo) } }]
-                : []),
-              // Trip must end after or on the start of selected range
-              ...(tripDateFrom
-                ? [{ endDate: { gte: parseDateGte(tripDateFrom) } }]
-                : []),
-            ],
-          }
-        : {};
-
-    const typeFilter: Prisma.TripWhereInput =
-      type && type !== "ALL"
-        ? {
-            type: type as "GROUP_TOUR" | "PRIVATE_TOUR",
-          }
-        : {};
-
-    const where: Prisma.TripWhereInput = {
-      AND: [searchFilter, dateFilter, typeFilter],
-    };
-
-    // Fetch all trips (no pagination for export)
-    const tripsRaw = await prisma.trip.findMany({
-      where,
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        airlineAndAirport: true,
-        _count: {
-          select: {
-            bookings: {
-              where: {
-                paymentStatus: {
-                  not: "CANCELLED",
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    // Calculate trip status for each trip
-    const now = new Date();
-    let trips = tripsRaw.map((trip) => {
-      const tripStatus = calculateTripStatus(
-        trip.startDate,
-        trip.endDate,
-        trip._count.bookings,
-        trip.pax,
-        now
-      );
-
-      return {
-        ...trip,
-        status: tripStatus,
-      };
-    });
-
-    // Filter by status if provided
-    if (status && status !== "ALL") {
-      trips = trips.filter((trip) => trip.status === status);
+    if (tripIds.length === 0) {
+      return new NextResponse("tripIds is required (comma-separated)", { status: 400 });
     }
 
-    // Helper function to split names by comma and trim
-    const splitNames = (names: string | null | undefined): string[] => {
-      if (!names || !names.trim()) return [];
-      return names.split(",").map((name) => name.trim()).filter(Boolean);
-    };
+    const workbook = new ExcelJS.Workbook();
 
-    // Find maximum number of names in tl, tg, staff across all trips
-    let maxTlCount = 0;
-    let maxTgCount = 0;
-    let maxStaffCount = 0;
+    for (const tid of tripIds) {
+      const trip = await prisma.trip.findUnique({
+        where: { id: tid },
+        select: {
+          code: true,
+          name: true,
+          startDate: true,
+          endDate: true,
+          pax: true,
+          foc: true,
+          standardPrice: true,
+          extraPricePerPerson: true,
+          tl: true,
+          tg: true,
+          staff: true,
+          note: true,
+        },
+      });
+      if (!trip) continue;
 
-    trips.forEach((trip) => {
-      const tlNames = splitNames(trip.tl);
-      const tgNames = splitNames(trip.tg);
-      const staffNames = splitNames(trip.staff);
-      
-      maxTlCount = Math.max(maxTlCount, tlNames.length);
-      maxTgCount = Math.max(maxTgCount, tgNames.length);
-      maxStaffCount = Math.max(maxStaffCount, staffNames.length);
-    });
+      let bookings = await prisma.booking.findMany({
+        where: { tripId: tid },
+        orderBy: { createdAt: "desc" },
+        include: BOOKING_INCLUDE,
+      });
 
-    // Format trips for CSV
-    const csvRows = trips.map((trip, index) => {
-      const startDate = new Date(trip.startDate);
-      const endDate = new Date(trip.endDate);
-      
-      // Calculate days and nights
-      const days = differenceInDays(endDate, startDate) + 1; // Include both start and end date
-      const nights = differenceInDays(endDate, startDate);
-      const dayNight = `${days}D${nights}N`;
+      const initialIds = bookings.map((b) => b.id);
+      const groupIdsToExpand = Array.from(
+        new Set(bookings.map((b) => b.companionGroupId).filter((id): id is string => !!id)),
+      );
+      if (groupIdsToExpand.length > 0) {
+        const extraBookings = await prisma.booking.findMany({
+          where: { companionGroupId: { in: groupIdsToExpand }, id: { notIn: initialIds } },
+          orderBy: { createdAt: "desc" },
+          include: BOOKING_INCLUDE,
+        });
+        if (extraBookings.length > 0) bookings = [...bookings, ...extraBookings];
+      }
 
-      // Format dates
-      const startDay = String(startDate.getDate()).padStart(2, "0");
-      const startMonth = String(startDate.getMonth() + 1).padStart(2, "0");
-      const startYear = startDate.getFullYear();
-      const endDay = String(endDate.getDate()).padStart(2, "0");
-      const endMonth = String(endDate.getMonth() + 1).padStart(2, "0");
+      type BookingForSort = (typeof bookings)[0] & { roommateGroupId?: string | null };
+      const companionKeyOf = (b: BookingForSort) => b.companionGroupId ?? b.id;
+      const roommateKeyOf = (b: BookingForSort) => b.roommateGroupId ?? b.id;
+      const companionKeyToIndex = new Map<string, number>();
+      let nextCompanionIndex = 0;
+      for (const b of bookings) {
+        const key = companionKeyOf(b as BookingForSort);
+        if (!companionKeyToIndex.has(key)) companionKeyToIndex.set(key, ++nextCompanionIndex);
+      }
+      const roommateKeyToIndex = new Map<string, number>();
+      let nextRoommateIndex = 0;
+      for (const b of bookings) {
+        const key = roommateKeyOf(b as BookingForSort);
+        if (!roommateKeyToIndex.has(key)) roommateKeyToIndex.set(key, ++nextRoommateIndex);
+      }
 
-      // Format START-END DATE (e.g., 2026010711)
-      const startEndDate = `${startYear}${startMonth}${startDay}${endMonth}${endDay}`;
+      const sortedBookings = [...bookings].sort((a, b) => {
+        const ca = companionKeyToIndex.get(companionKeyOf(a as BookingForSort)) ?? 0;
+        const cb = companionKeyToIndex.get(companionKeyOf(b as BookingForSort)) ?? 0;
+        if (ca !== cb) return ca - cb;
+        const ra = roommateKeyToIndex.get(roommateKeyOf(a as BookingForSort)) ?? 0;
+        const rb = roommateKeyToIndex.get(roommateKeyOf(b as BookingForSort)) ?? 0;
+        if (ra !== rb) return ra - rb;
+        const nameA = `${a.customer.firstNameEn} ${a.customer.lastNameEn}`;
+        const nameB = `${b.customer.firstNameEn} ${b.customer.lastNameEn}`;
+        return nameA.localeCompare(nameB);
+      });
 
-      // Format TYPE (GROUP or PRIVATE)
-      const type = trip.type === "GROUP_TOUR" ? "GROUP" : "PRIVATE";
+      const sheetName = buildSheetName(trip);
+      const worksheet = workbook.addWorksheet(sheetName);
+      addBookingsSheet(
+        worksheet,
+        trip as TripForSheet,
+        sortedBookings,
+        companionKeyToIndex,
+        companionKeyOf as (b: BookingWithInclude & { roommateGroupId?: string | null }) => string,
+      );
+    }
 
-      // Format prices with Thai number format (comma separator)
-      const standardPrice = trip.standardPrice
-        ? Number(trip.standardPrice).toLocaleString("th-TH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })
-        : "";
-      const singlePrice = trip.extraPricePerPerson
-        ? Number(trip.extraPricePerPerson).toLocaleString("th-TH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })
-        : "";
+    const buffer = await workbook.xlsx.writeBuffer();
+    const filename = `trip-bookings-export-${new Date().toISOString().split("T")[0]}.xlsx`;
 
-      // Split names by comma
-      const tlNames = splitNames(trip.tl);
-      const tgNames = splitNames(trip.tg);
-      const staffNames = splitNames(trip.staff);
-
-      // Pad arrays to max length with empty strings
-      const paddedTlNames = [...tlNames, ...Array(maxTlCount - tlNames.length).fill("")];
-      const paddedTgNames = [...tgNames, ...Array(maxTgCount - tgNames.length).fill("")];
-      const paddedStaffNames = [...staffNames, ...Array(maxStaffCount - staffNames.length).fill("")];
-
-      return [
-        index + 1, // NO.
-        trip.name || "", // TRIP NAME
-        type, // TYPE
-        trip.airlineAndAirport.code || "", // IATA CODE
-        startDay, // START
-        endDay, // END
-        startMonth, // MONTH
-        startYear, // YEAR
-        startEndDate, // START-END DATE
-        days, // DAY
-        nights, // NIGHT
-        dayNight, // D/N
-        trip.pax || "", // PAX
-        trip.foc || "", // FOC
-        ...paddedTlNames, // TL columns (dynamic)
-        ...paddedTgNames, // TG columns (dynamic)
-        ...paddedStaffNames, // STAFF columns (dynamic)
-        standardPrice ? `"${standardPrice}"` : "", // STANDARD PRICE (with quotes for comma)
-        singlePrice ? `"${singlePrice}"` : "", // SINGLE PRICE (with quotes for comma)
-        trip.note || "", // NOTE
-      ];
-    });
-
-    // CSV Header - dynamically create TL, TG, STAFF headers (repeated)
-    const tlHeaders = Array.from({ length: maxTlCount }, () => "TL");
-    const tgHeaders = Array.from({ length: maxTgCount }, () => "TG");
-    const staffHeaders = Array.from({ length: maxStaffCount }, () => "STAFF");
-
-    const header = [
-      "NO.",
-      "TRIP NAME",
-      "TYPE",
-      "IATA CODE",
-      "START",
-      "END",
-      "MONTH",
-      "YEAR",
-      "START-END DATE",
-      "DAY",
-      "NIGHT",
-      "D/N",
-      "PAX",
-      "FOC",
-      ...tlHeaders, // TL columns (dynamic)
-      ...tgHeaders, // TG columns (dynamic)
-      ...staffHeaders, // STAFF columns (dynamic)
-      "STANDARD PRICE",
-      "SINGLE PRICE",
-      "NOTE",
-    ];
-
-    // Combine header and rows
-    const csvContent = [header, ...csvRows]
-      .map((row) => row.map((cell) => String(cell)).join(","))
-      .join("\n");
-
-    // Return CSV file
-    return new NextResponse(csvContent, {
+    return new NextResponse(buffer, {
       headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="trips-export-${new Date().toISOString().split("T")[0]}.csv"`,
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });
   } catch (error) {

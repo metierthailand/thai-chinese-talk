@@ -228,42 +228,20 @@ export function useUpdateTrip() {
   });
 }
 
-// Hook to export trips as CSV
-export function useExportTrips() {
-  return useCallback(
-    (search?: string, tripDateFrom?: string, tripDateTo?: string, type?: string, status?: string) => {
-      const params = new URLSearchParams();
-
-      // Add filter params (excluding page and pageSize)
-      if (search) {
-        params.set("search", search);
-      }
-      if (tripDateFrom) {
-        params.set("tripDateFrom", tripDateFrom);
-      }
-      if (tripDateTo) {
-        params.set("tripDateTo", tripDateTo);
-      }
-      if (type && type !== "ALL") {
-        params.set("type", type);
-      }
-      if (status && status !== "ALL") {
-        params.set("status", status);
-      }
-
-      const queryString = params.toString();
-      const url = `/api/trips/export${queryString ? `?${queryString}` : ""}`;
-
-      // Create a temporary link and trigger download
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `trips-export-${new Date().toISOString().split("T")[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    },
-    [],
-  );
+// Hook to export trip bookings as Excel (one sheet per trip). Requires at least one tripId.
+export function useExportTripBookings() {
+  return useCallback((tripIds: string[]) => {
+    if (tripIds.length === 0) return;
+    const params = new URLSearchParams();
+    params.set("tripIds", tripIds.join(","));
+    const url = `/api/trips/export?${params.toString()}`;
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `trip-bookings-export-${new Date().toISOString().split("T")[0]}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
 }
 
 // Export types

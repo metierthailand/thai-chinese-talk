@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,12 @@ import { format } from "date-fns";
 import { DataTable } from "@/components/data-table/data-table";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { useTrips, useExportTrips, type Trip } from "./hooks/use-trips";
+import { useTrips, useExportTripBookings, type Trip } from "./hooks/use-trips";
 import { Loading } from "@/components/page/loading";
 import { TripFilter } from "./_components/trip-filter";
 import { getTripStatusLabel, getTripStatusVariant } from "@/lib/constants/trip";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
 export default function TripsPage() {
   const searchParams = useSearchParams();
@@ -29,8 +31,45 @@ export default function TripsPage() {
   const typeQuery = searchParams.get("type") || "ALL";
   const statusQuery = searchParams.get("status") || "ALL";
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   const columns: ColumnDef<Trip>[] = useMemo(
     () => [
+      {
+        id: "select",
+        header: ({ table }) => {
+          const allIds = table.getRowModel().rows.map((r) => r.original.id);
+          const allSelected = allIds.length > 0 && selectedIds.length === allIds.length;
+          return (
+            <Checkbox
+              checked={allSelected}
+              aria-label="Select all trips on this page"
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  setSelectedIds(allIds);
+                } else {
+                  setSelectedIds([]);
+                }
+              }}
+            />
+          );
+        },
+        cell: ({ row }) => {
+          const id = row.original.id;
+          const checked = selectedIds.includes(id);
+          return (
+            <Checkbox
+              checked={checked}
+              aria-label="Select trip"
+              onCheckedChange={(checked) => {
+                setSelectedIds((prev) =>
+                  checked ? [...prev, id] : prev.filter((existingId) => existingId !== id),
+                );
+              }}
+            />
+          );
+        },
+      },
       {
         accessorKey: "code",
         header: "Trip code",
@@ -134,7 +173,7 @@ export default function TripsPage() {
         ),
       },
     ],
-    [],
+    [selectedIds],
   );
 
   // Use TanStack Query to fetch trips
@@ -212,16 +251,14 @@ export default function TripsPage() {
     [searchParams, router],
   );
 
-  const exportTrips = useExportTrips();
+  const exportTripBookings = useExportTripBookings();
   const handleExport = useCallback(() => {
-    exportTrips(
-      searchQuery || undefined,
-      tripDateFromQuery || undefined,
-      tripDateToQuery || undefined,
-      typeQuery !== "ALL" ? typeQuery : undefined,
-      statusQuery !== "ALL" ? statusQuery : undefined,
-    );
-  }, [exportTrips, searchQuery, tripDateFromQuery, tripDateToQuery, typeQuery, statusQuery]);
+    if (selectedIds.length === 0) {
+      toast.error("Select at least one trip to export bookings.");
+      return;
+    }
+    exportTripBookings(selectedIds);
+  }, [exportTripBookings, selectedIds]);
 
   return (
     <div className="flex flex-col gap-8 p-8">
@@ -232,7 +269,8 @@ export default function TripsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" /> Export CSV
+            <Download className="mr-2 h-4 w-4" />{" "}
+            {selectedIds.length > 0 ? `Export bookings (${selectedIds.length})` : "Export bookings"}
           </Button>
           <Link href="/dashboard/trips/create">
             <Button>

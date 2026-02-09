@@ -10,7 +10,7 @@ import Link from "next/link";
 import { DataTable } from "@/components/data-table/data-table";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { useBookings, useExportBookings, type Booking } from "./hooks/use-bookings";
+import { useBookings, type Booking } from "./hooks/use-bookings";
 import { Loading } from "@/components/page/loading";
 import { BookingFilter } from "./_components/booking-filter";
 import { getPaymentStatusVariant, PAYMENT_STATUS_LABELS } from "@/lib/constants/payment";
@@ -254,29 +254,6 @@ export default function BookingsPage() {
     router.push(`/dashboard/bookings${newUrl}`, { scroll: false });
   };
 
-  const exportBookings = useExportBookings();
-  const handleExportCSV = () => {
-    if (!bookings.length) return;
-    if (effectiveSelectedIds.length === 0 || effectiveSelectedIds.length === bookings.length) {
-      exportBookings(
-        searchQuery || undefined,
-        paymentStatus !== "ALL" ? paymentStatus : undefined,
-        tripStartDateFromQuery || undefined,
-        tripStartDateToQuery || undefined,
-        tripIdQuery || undefined,
-      );
-      return;
-    }
-    exportBookings(
-      searchQuery || undefined,
-      paymentStatus !== "ALL" ? paymentStatus : undefined,
-      tripStartDateFromQuery || undefined,
-      tripStartDateToQuery || undefined,
-      tripIdQuery || undefined,
-      effectiveSelectedIds,
-    );
-  };
-
   const handleExportPDF = () => {
     const params = new URLSearchParams();
     if (effectiveSelectedIds.length > 0 && effectiveSelectedIds.length < bookings.length) {
@@ -305,12 +282,6 @@ export default function BookingsPage() {
             {effectiveSelectedIds.length > 0
               ? `Export PDF (${effectiveSelectedIds.length})`
               : "Export PDF"}
-          </Button>
-          <Button variant="outline" onClick={handleExportCSV}>
-            <Download className="mr-2 h-4 w-4" />{" "}
-            {effectiveSelectedIds.length > 0
-              ? `Export CSV (${effectiveSelectedIds.length})`
-              : "Export CSV"}
           </Button>
           <Link href="/dashboard/bookings/create">
             <Button>
