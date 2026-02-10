@@ -33,6 +33,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         role: true,
         isActive: true,
         commissionPerHead: true,
+        password: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -42,7 +43,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return new NextResponse("User not found", { status: 404 });
     }
 
-    return NextResponse.json(user);
+    const { password, ...rest } = user;
+    return NextResponse.json({
+      ...rest,
+      hasPassword: !!password,
+    });
   } catch (error) {
     console.error("[USER_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });
@@ -65,18 +70,27 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = await req.json();
     const { firstName, lastName, email, phoneNumber, role, isActive, commissionRate, commissionPerHead, password } = body;
 
-    // Get current user data to check if email is changing
+    // Get current user data to check if email is changing / to verify password existence
     const currentUser = await prisma.user.findUnique({
       where: { id: id },
       select: {
+        id: true,
         email: true,
         firstName: true,
         lastName: true,
+        password: true,
       },
     });
 
     if (!currentUser) {
       return new NextResponse("User not found", { status: 404 });
+    }
+
+    // Disallow editing users who haven't set a password yet
+    if (!currentUser.password) {
+      return new NextResponse("This user has not set a password yet and cannot be edited.", {
+        status: 400,
+      });
     }
 
     // Check for duplicate email and phone number
@@ -176,6 +190,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     return NextResponse.json({
       ...userWithoutPassword,
+      hasPassword: true,
       emailNotificationSent,
       emailNotificationError,
     });

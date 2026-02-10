@@ -23,6 +23,11 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
   if (sessionStatus === "loading") return <Loading />;
   if (!session || session.user.role !== "SUPER_ADMIN") return <AccessDenied />;
 
+  // Disallow editing users who haven't set a password yet
+  if (user && !user.hasPassword) {
+    return <AccessDenied />;
+  }
+
   // Format initial data for the form
   const initialData: Partial<UserFormValues> | undefined = user
     ? {

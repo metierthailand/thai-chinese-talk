@@ -512,7 +512,7 @@ export async function PUT(
         });
         const cgId = afterCompanion?.companionGroupId ?? null;
 
-        if (!cgId) {
+          if (!cgId) {
           await tx.booking.update({
             where: { id },
             data: { roommateGroupId: null },
@@ -552,20 +552,18 @@ export async function PUT(
             where: { id: { in: allRoomIds } },
             data: { roommateGroupId: roommateGroup.id },
           });
-          if (currentBooking.roommateGroupId && currentBooking.roommateGroupId !== roommateGroup.id) {
-            const leftInOldRoom = await tx.booking.findMany({
-              where: {
-                roommateGroupId: currentBooking.roommateGroupId,
-                id: { notIn: allRoomIds },
-              },
-              select: { id: true },
+          const leftInRoom = await tx.booking.findMany({
+            where: {
+              roommateGroupId: roommateGroup.id,
+              id: { notIn: allRoomIds },
+            },
+            select: { id: true },
+          });
+          if (leftInRoom.length > 0) {
+            await tx.booking.updateMany({
+              where: { id: { in: leftInRoom.map((b) => b.id) } },
+              data: { roommateGroupId: null },
             });
-            if (leftInOldRoom.length > 0) {
-              await tx.booking.updateMany({
-                where: { id: { in: leftInOldRoom.map((b) => b.id) } },
-                data: { roommateGroupId: null },
-              });
-            }
           }
         }
       }

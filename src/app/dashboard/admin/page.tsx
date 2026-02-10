@@ -150,11 +150,13 @@ export default function AdminPage() {
               <Eye className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href={`/dashboard/admin/${row.original.id}/edit`}>
-            <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-              <Edit className="h-4 w-4" />
-            </Button>
-          </Link>
+          {row.original.hasPassword && (
+            <Link href={`/dashboard/admin/${row.original.id}/edit`}>
+              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            </Link>
+          )}
         </div>
       ),
     },

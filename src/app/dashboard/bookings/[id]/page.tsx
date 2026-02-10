@@ -19,41 +19,46 @@ export default function ViewBookingPage({ params }: { params: Promise<{ id: stri
   // Format initial data for the form
   const initialData: Partial<BookingFormValues> | undefined = booking
     ? {
-      customerId: booking.customerId || "",
-      tripId: booking.tripId || "",
-      salesUserId: booking.salesUserId || "",
-      passportId: booking.passportId || "",
-      companionCustomerIds:
-        booking.companionGroup?.bookings
-          .filter((b) => b.customerId !== booking.customerId)
-          .map((b) => b.customer.id) ?? [],
-      note: booking.note || "",
-      extraPriceForSingleTraveller: booking.extraPriceForSingleTraveller?.toString() || "",
-      roomType: (booking.roomType as "DOUBLE_BED" | "TWIN_BED") || "DOUBLE_BED",
-      extraPricePerBed: booking.extraPricePerBed?.toString() || "0",
-      roomNote: booking.roomNote || "",
-      seatType: (booking.seatType as "WINDOW" | "MIDDLE" | "AISLE" | "NOT_SPECIFIED") ?? "WINDOW",
-      seatClass: booking.seatClass ? (booking.seatClass as "FIRST_CLASS" | "BUSINESS_CLASS" | "LONG_LEG" | "OTHER") : undefined,
-      extraPricePerSeat: booking.extraPricePerSeat?.toString() ?? "",
-      seatNote: booking.seatNote || "",
-      extraPricePerBag: booking.extraPricePerBag?.toString() || "",
-      bagNote: booking.bagNote || "",
-      discountPrice: booking.discountPrice?.toString() || "",
-      discountNote: booking.discountNote || "",
-      paymentStatus:
-        (booking.paymentStatus as "DEPOSIT_PENDING" | "DEPOSIT_PAID" | "FULLY_PAID" | "CANCELLED") ??
-        "DEPOSIT_PENDING",
-      firstPaymentRatio:
-        (booking.firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30") ??
-        "FIRST_PAYMENT_50",
-      payments: booking.payments
-        ? booking.payments
-            .map((p) => ({
-              amount: p.amount?.toString() || "",
-              proofOfPayment: p.proofOfPayment!,
-            }))
-        : [],
-    }
+        customerId: booking.customerId || "",
+        tripId: booking.tripId || "",
+        salesUserId: booking.salesUserId || "",
+        passportId: booking.passportId || "",
+        companionCustomerIds:
+          booking.companionGroup?.bookings
+            .filter((b) => b.customerId !== booking.customerId)
+            .map((b) => b.customer.id) ?? [],
+        // Include roommateBookingIds so view mode can display roommates from DB
+        roommateBookingIds:
+          booking.roommateGroup?.bookings
+            .filter((b) => b.id !== booking.id)
+            .map((b) => b.id) ?? [],
+        note: booking.note || "",
+        extraPriceForSingleTraveller: booking.extraPriceForSingleTraveller?.toString() || "",
+        roomType: (booking.roomType as "DOUBLE_BED" | "TWIN_BED") || "DOUBLE_BED",
+        extraPricePerBed: booking.extraPricePerBed?.toString() || "0",
+        roomNote: booking.roomNote || "",
+        seatType: (booking.seatType as "WINDOW" | "MIDDLE" | "AISLE" | "NOT_SPECIFIED") ?? "WINDOW",
+        seatClass: booking.seatClass ? (booking.seatClass as "FIRST_CLASS" | "BUSINESS_CLASS" | "LONG_LEG" | "OTHER") : undefined,
+        extraPricePerSeat: booking.extraPricePerSeat?.toString() ?? "",
+        seatNote: booking.seatNote || "",
+        extraPricePerBag: booking.extraPricePerBag?.toString() || "",
+        bagNote: booking.bagNote || "",
+        discountPrice: booking.discountPrice?.toString() || "",
+        discountNote: booking.discountNote || "",
+        paymentStatus:
+          (booking.paymentStatus as "DEPOSIT_PENDING" | "DEPOSIT_PAID" | "FULLY_PAID" | "CANCELLED") ??
+          "DEPOSIT_PENDING",
+        firstPaymentRatio:
+          (booking.firstPaymentRatio as "FIRST_PAYMENT_100" | "FIRST_PAYMENT_50" | "FIRST_PAYMENT_30") ??
+          "FIRST_PAYMENT_50",
+        payments: booking.payments
+          ? booking.payments
+              .map((p) => ({
+                amount: p.amount?.toString() || "",
+                proofOfPayment: p.proofOfPayment!,
+              }))
+          : [],
+      }
     : undefined;
 
   if (isLoadingBooking) {

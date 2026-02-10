@@ -87,6 +87,7 @@ export async function GET(req: Request) {
         role: true,
         isActive: true,
         commissionPerHead: true,
+        password: true,
         createdAt: true,
       },
       orderBy: {
@@ -94,8 +95,13 @@ export async function GET(req: Request) {
       },
     });
 
+    const data = users.map(({ password, ...rest }) => ({
+      ...rest,
+      hasPassword: !!password,
+    }));
+
     return NextResponse.json({
-      data: users,
+      data,
       total,
       page,
       pageSize,
@@ -183,12 +189,16 @@ export async function POST(req: Request) {
       // Don't fail user creation if email fails
     }
 
-    // Remove password from response
+    // Remove password from response and add hasPassword flag
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userWithoutPassword } = user;
+    const baseResponse = {
+      ...userWithoutPassword,
+      hasPassword: false,
+    };
 
     // In development mode, include reset URL in response for testing
-    const response = { ...userWithoutPassword } as typeof userWithoutPassword & { resetPasswordUrl?: string };
+    const response = { ...baseResponse } as typeof baseResponse & { resetPasswordUrl?: string };
     if (process.env.NODE_ENV === "development" && resetUrl) {
       response.resetPasswordUrl = resetUrl;
     }

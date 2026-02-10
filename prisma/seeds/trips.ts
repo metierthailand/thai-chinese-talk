@@ -31,13 +31,17 @@ export async function seedTrips(prisma: PrismaClient) {
   nextMonth.setMonth(nextMonth.getMonth() + 1);
   nextMonth.setDate(1); // First day of next month
 
+  // Helper to create a date at midnight UTC (avoid local timezone offsets)
+  const makeUtcDate = (year: number, month: number, day: number) =>
+    new Date(Date.UTC(year, month, day));
+
   const trips = [
     {
       type: TripType.GROUP_TOUR,
       code: "TG2025-001",
       name: "Bangkok to Singapore 5 Days 4 Nights",
-      startDate: new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 5),
-      endDate: new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 9),
+      startDate: makeUtcDate(nextMonth.getFullYear(), nextMonth.getMonth(), 5),
+      endDate: makeUtcDate(nextMonth.getFullYear(), nextMonth.getMonth(), 9),
       pax: 20,
       foc: 1,
       tl: "John Doe",
@@ -52,8 +56,8 @@ export async function seedTrips(prisma: PrismaClient) {
       type: TripType.GROUP_TOUR,
       code: "TG2025-002",
       name: "Bangkok to Hong Kong 4 Days 3 Nights",
-      startDate: new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 15),
-      endDate: new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 18),
+      startDate: makeUtcDate(nextMonth.getFullYear(), nextMonth.getMonth(), 15),
+      endDate: makeUtcDate(nextMonth.getFullYear(), nextMonth.getMonth(), 18),
       pax: 15,
       foc: 1,
       tl: "Alice Johnson",
@@ -67,8 +71,8 @@ export async function seedTrips(prisma: PrismaClient) {
       type: TripType.PRIVATE_TOUR,
       code: "PVT2025-001",
       name: "Private Tour to Tokyo 7 Days 6 Nights",
-      startDate: new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 1),
-      endDate: new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 7),
+      startDate: makeUtcDate(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 1),
+      endDate: makeUtcDate(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 7),
       pax: 4,
       foc: 0,
       tl: "Mike Chen",
@@ -81,8 +85,8 @@ export async function seedTrips(prisma: PrismaClient) {
       type: TripType.GROUP_TOUR,
       code: "TG2025-003",
       name: "Bangkok to Seoul 6 Days 5 Nights",
-      startDate: new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 2, 10),
-      endDate: new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 2, 15),
+      startDate: makeUtcDate(nextMonth.getFullYear(), nextMonth.getMonth() + 2, 10),
+      endDate: makeUtcDate(nextMonth.getFullYear(), nextMonth.getMonth() + 2, 15),
       pax: 25,
       foc: 2,
       tl: "Sarah Lee",
@@ -97,8 +101,8 @@ export async function seedTrips(prisma: PrismaClient) {
       type: TripType.PRIVATE_TOUR,
       code: "PVT2025-002",
       name: "Private Tour to Singapore 3 Days 2 Nights",
-      startDate: new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 20),
-      endDate: new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 22),
+      startDate: makeUtcDate(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 20),
+      endDate: makeUtcDate(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 22),
       pax: 2,
       foc: 0,
       standardPrice: new Decimal(40000),
@@ -110,8 +114,8 @@ export async function seedTrips(prisma: PrismaClient) {
       type: TripType.GROUP_TOUR,
       code: "TG2025-004",
       name: "Bangkok to Taipei 5 Days 4 Nights",
-      startDate: new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 3, 5),
-      endDate: new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 3, 9),
+      startDate: makeUtcDate(nextMonth.getFullYear(), nextMonth.getMonth() + 3, 5),
+      endDate: makeUtcDate(nextMonth.getFullYear(), nextMonth.getMonth() + 3, 9),
       pax: 18,
       foc: 1,
       tl: "David Kim",

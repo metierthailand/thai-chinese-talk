@@ -9,6 +9,7 @@ export interface User {
   role: Role;
   isActive: boolean;
   commissionPerHead: number | null;
+  hasPassword: boolean;
   totalCommission?: number;
   createdAt?: string;
   updatedAt?: string;

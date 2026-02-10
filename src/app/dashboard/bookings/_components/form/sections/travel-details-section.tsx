@@ -245,66 +245,66 @@ export function TravelDetailsSection({
           <FormField
             control={form.control}
             name="extraPricePerBed"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel required={enableBedPrice}>Extra price for extra bed</FormLabel>
-                    <div className="flex items-center space-x-2">
-                      <FormLabel htmlFor="bed-price-toggle" className="cursor-pointer text-sm font-normal">
-                        Add-on
-                      </FormLabel>
-                      <Switch
-                        id="bed-price-toggle"
-                        checked={enableBedPrice}
-                        onCheckedChange={(checked) => {
-                          setEnableBedPrice(checked);
-                          if (!checked) {
-                            // field.onChange("");
-                            form.setValue("extraPricePerBed", "", { shouldValidate: false })
-                            form.clearErrors("extraPricePerBed");
-                          } else {
-                            // Trigger validation when enabled
-                            // setTimeout(() => form.trigger("extraPricePerBed"), 0);
-                          }
-                        }}
-                        disabled={detailsDisabled || maskPriceOnly}
-                      />
-                    </div>
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center justify-between">
+                  <FormLabel required={enableBedPrice}>Extra price for extra bed</FormLabel>
+                  <div className="flex items-center space-x-2">
+                    <FormLabel htmlFor="bed-price-toggle" className="cursor-pointer text-sm font-normal">
+                      Add-on
+                    </FormLabel>
+                    <Switch
+                      id="bed-price-toggle"
+                      checked={enableBedPrice}
+                      onCheckedChange={(checked) => {
+                        setEnableBedPrice(checked);
+                        if (!checked) {
+                          // field.onChange("");
+                          form.setValue("extraPricePerBed", "", { shouldValidate: false })
+                          form.clearErrors("extraPricePerBed");
+                        } else {
+                          // Trigger validation when enabled
+                          // setTimeout(() => form.trigger("extraPricePerBed"), 0);
+                        }
+                      }}
+                      disabled={detailsDisabled || maskPriceOnly}
+                    />
                   </div>
-                  <FormControl>
-                    {maskPriceOnly ? (
-                      <Input value="*****" disabled className="bg-muted" />
-                    ) : (
-                      <Input
-                        type="number"
-                        {...field}
-                        disabled={detailsDisabled || !enableBedPrice}
-                        onChange={(e) => field.onChange(e.target.value)}
-                      />
-                    )}
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                </div>
+                <FormControl>
+                  {maskPriceOnly ? (
+                    <Input value="*****" disabled className="bg-muted" />
+                  ) : (
+                    <Input
+                      type="number"
+                      {...field}
+                      disabled={detailsDisabled || !enableBedPrice}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  )}
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={form.control}
             name="roomNote"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Note for room</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      className="resize-none"
-                      {...field}
-                      disabled={detailsDisabled}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Note for room</FormLabel>
+                <FormControl>
+                  <Textarea
+                    className="resize-none"
+                    {...field}
+                    disabled={detailsDisabled}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       </div>
 
