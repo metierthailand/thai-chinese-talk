@@ -116,6 +116,8 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
     pendingSubmitValues,
   } = useBookingForm({ mode, initialData, booking, onSubmit });
 
+  const lockFullyPaid = mode === "edit" && booking?.paymentStatus === "FULLY_PAID";
+
   // Calculate predicted payment status after third payment
   const predictedPaymentStatus = useMemo(() => {
     if (!pendingSubmitValues || !pendingSubmitValues.payments) return "Deposit Paid";
@@ -148,6 +150,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
             <TripSection
               form={form}
               readOnly={readOnly}
+              lockFullyPaid={lockFullyPaid}
               trips={trips}
               tripSearchOpen={tripSearchOpen}
               setTripSearchOpen={setTripSearchOpen}
@@ -161,6 +164,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
             <CustomerSection
               form={form}
               readOnly={readOnly}
+              lockFullyPaid={lockFullyPaid}
               customerSearchOpen={customerSearchOpen}
               setCustomerSearchOpen={setCustomerSearchOpen}
               customerSearchQuery={customerSearchQuery}
@@ -198,6 +202,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
           <CostSummarySection
             form={form}
             readOnly={readOnly}
+            lockFullyPaid={lockFullyPaid}
             calculatedAmounts={calculatedAmounts}
             trips={trips}
             tripId={tripId}
@@ -211,6 +216,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
           <TravelDetailsSection
             form={form}
             readOnly={readOnly}
+            lockFullyPaid={lockFullyPaid}
             enableBedPrice={enableBedPrice}
             setEnableBedPrice={setEnableBedPrice}
             enableSeatPrice={enableSeatPrice}
@@ -271,6 +277,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
           <PaymentSection
             form={form}
             readOnly={readOnly}
+            lockFullyPaid={lockFullyPaid}
             mode={mode}
             booking={booking}
             calculatedAmounts={calculatedAmounts}

@@ -45,6 +45,7 @@ import { useUpdateBooking } from "@/app/dashboard/bookings/hooks/use-bookings";
 interface CustomerSectionProps {
   form: UseFormReturn<BookingFormValues>;
   readOnly: boolean;
+  lockFullyPaid?: boolean;
   customerSearchOpen: boolean;
   setCustomerSearchOpen: (open: boolean) => void;
   customerSearchQuery: string;
@@ -66,6 +67,7 @@ interface CustomerSectionProps {
 export function CustomerSection({
   form,
   readOnly,
+  lockFullyPaid = false,
   customerSearchOpen,
   setCustomerSearchOpen,
   customerSearchQuery,
@@ -84,6 +86,8 @@ export function CustomerSection({
   const [viewCustomerDialogOpen, setViewCustomerDialogOpen] = useState(false);
   const [editCustomerDialogOpen, setEditCustomerDialogOpen] = useState(false);
 
+  const customerDisabled = readOnly || lockFullyPaid;
+
   const updateBookingMutation = useUpdateBooking();
   const isRechecked = useWatch({ control: form.control, name: "isRechecked" }) ?? false;
 
@@ -94,7 +98,7 @@ export function CustomerSection({
     form.setValue("isRechecked", true, { shouldDirty: true });
   };
 
-  const isCustomerSectionDisabled = !readOnly && !tripId;
+  const isCustomerSectionDisabled = !customerDisabled && !tripId;
   const availableCustomers = useMemo(() => {
     if (!customerIdsAlreadyInTrip.length) return searchResults;
     return searchResults.filter(
@@ -193,8 +197,8 @@ export function CustomerSection({
         name="customerId"
         render={({ field }) => (
           <FormItem className="flex flex-col">
-            <FormLabel required={!readOnly}>Customer</FormLabel>
-            {readOnly ? (
+            <FormLabel required={!customerDisabled}>Customer</FormLabel>
+            {customerDisabled ? (
               <div className="flex gap-2">
                 <FormControl>
                   <Input
@@ -309,7 +313,7 @@ export function CustomerSection({
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  {field.value && (
+                  {field.value && !lockFullyPaid && (
                     <Button
                       type="button"
                       variant="outline"

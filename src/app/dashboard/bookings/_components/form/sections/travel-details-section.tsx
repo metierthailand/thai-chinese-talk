@@ -56,6 +56,7 @@ const SEAT_CLASS_LABELS: Record<string, string> = {
 interface TravelDetailsSectionProps {
   form: UseFormReturn<BookingFormValues>;
   readOnly: boolean;
+  lockFullyPaid?: boolean;
   enableBedPrice: boolean;
   setEnableBedPrice: (enable: boolean) => void;
   enableSeatPrice: boolean;
@@ -89,6 +90,7 @@ interface TravelDetailsSectionProps {
 export function TravelDetailsSection({
   form,
   readOnly,
+  lockFullyPaid = false,
   enableBedPrice,
   setEnableBedPrice,
   enableSeatPrice,
@@ -109,6 +111,7 @@ export function TravelDetailsSection({
   handleRemoveRoommate,
   tripId,
 }: TravelDetailsSectionProps) {
+  const detailsDisabled = readOnly || lockFullyPaid;
   return (
     <>
       {/* Room Information Section */}
@@ -119,12 +122,12 @@ export function TravelDetailsSection({
             name="roomType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>Room type</FormLabel>
-                {readOnly ? (
-                  <FormControl>
-                    <Input value={field.value ? ROOM_TYPE_LABELS[field.value] ?? field.value : ""} disabled />
-                  </FormControl>
-                ) : (
+<FormLabel required>Room type</FormLabel>
+              {detailsDisabled ? (
+                <FormControl>
+                  <Input value={field.value ? ROOM_TYPE_LABELS[field.value] ?? field.value : ""} disabled />
+                </FormControl>
+              ) : (
                   <Select onValueChange={field.onChange} value={field.value} key={`roomType-${field.value}`}>
                     <FormControl>
                       <SelectTrigger className="w-full">
@@ -150,7 +153,7 @@ export function TravelDetailsSection({
           render={() => (
             <FormItem>
               <FormLabel>Roommate</FormLabel>
-              {readOnly ? (
+              {detailsDisabled ? (
                 <div className="space-y-2 p-2 border rounded-md bg-muted">
                   {selectedRoommateBookings.length === 0 ? (
                     <p className="text-muted-foreground text-sm">No roommate</p>
@@ -261,7 +264,7 @@ export function TravelDetailsSection({
                           // setTimeout(() => form.trigger("extraPricePerBed"), 0);
                         }
                       }}
-                      disabled={readOnly}
+                      disabled={detailsDisabled}
                     />
                   </div>
                 </div>
@@ -269,7 +272,7 @@ export function TravelDetailsSection({
                   <Input
                     type="number"
                     {...field}
-                    disabled={readOnly || !enableBedPrice}
+                    disabled={detailsDisabled || !enableBedPrice}
                     onChange={(e) => field.onChange(e.target.value)}
                   />
                 </FormControl>
@@ -288,7 +291,7 @@ export function TravelDetailsSection({
                   <Textarea
                     className="resize-none"
                     {...field}
-                    disabled={readOnly}
+                    disabled={detailsDisabled}
                   />
                 </FormControl>
                 <FormMessage />
@@ -308,7 +311,7 @@ export function TravelDetailsSection({
           render={({ field }) => (
             <FormItem>
               <FormLabel required>Seat type</FormLabel>
-              {readOnly ? (
+              {detailsDisabled ? (
                 <FormControl>
                   <Input value={field.value ? SEAT_TYPE_LABELS[field.value] ?? field.value : ""} disabled />
                 </FormControl>
@@ -364,11 +367,11 @@ export function TravelDetailsSection({
                           // }, 0);
                         }
                       }}
-                      disabled={readOnly}
+                      disabled={detailsDisabled}
                     />
                   </div>
                 </div>
-                {readOnly ? (
+                {detailsDisabled ? (
                   <FormControl>
                     <Input
                       value={field.value ? SEAT_CLASS_LABELS[field.value] ?? field.value : ""}
@@ -410,7 +413,7 @@ export function TravelDetailsSection({
                   <Input
                     type="number"
                     {...field}
-                    disabled={readOnly || !enableSeatPrice}
+                    disabled={detailsDisabled || !enableSeatPrice}
                     onChange={(e) => field.onChange(e.target.value)}
                   />
                 </FormControl>
@@ -429,7 +432,7 @@ export function TravelDetailsSection({
                   <Textarea
                     className="resize-none"
                     {...field}
-                    disabled={readOnly}
+                    disabled={detailsDisabled}
                   />
                 </FormControl>
                 <FormMessage />
@@ -468,7 +471,7 @@ export function TravelDetailsSection({
                         // setTimeout(() => form.trigger("extraPricePerBag"), 0);
                       }
                     }}
-                    disabled={readOnly}
+                    disabled={detailsDisabled}
                   />
                 </div>
               </div>
@@ -476,7 +479,7 @@ export function TravelDetailsSection({
                 <Input
                   type="number"
                   {...field}
-                  disabled={readOnly || !enableBagPrice}
+                  disabled={detailsDisabled || !enableBagPrice}
                   onChange={(e) => field.onChange(e.target.value)}
                 />
               </FormControl>
@@ -495,7 +498,7 @@ export function TravelDetailsSection({
                 <Textarea
                   className="resize-none"
                   {...field}
-                  disabled={readOnly}
+                  disabled={detailsDisabled}
                 />
               </FormControl>
               <FormMessage />
@@ -533,7 +536,7 @@ export function TravelDetailsSection({
                         // setTimeout(() => form.trigger("discountPrice"), 0);
                       }
                     }}
-                    disabled={readOnly}
+                    disabled={detailsDisabled}
                   />
                 </div>
               </div>
@@ -541,7 +544,7 @@ export function TravelDetailsSection({
                 <Input
                   type="number"
                   {...field}
-                  disabled={readOnly || !enableDiscount}
+                  disabled={detailsDisabled || !enableDiscount}
                   onChange={(e) => field.onChange(e.target.value)}
                 />
               </FormControl>
@@ -560,7 +563,7 @@ export function TravelDetailsSection({
                 <Textarea
                   className="resize-none"
                   {...field}
-                  disabled={readOnly}
+                  disabled={detailsDisabled}
                 />
               </FormControl>
               <FormMessage />

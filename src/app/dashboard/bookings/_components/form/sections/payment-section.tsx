@@ -33,6 +33,7 @@ import { format } from "date-fns";
 interface PaymentSectionProps {
   form: UseFormReturn<BookingFormValues>;
   readOnly: boolean;
+  lockFullyPaid?: boolean;
   mode: "create" | "edit" | "view";
   booking?: Booking;
   calculatedAmounts: {
@@ -50,6 +51,7 @@ interface PaymentSectionProps {
 export function PaymentSection({
   form,
   readOnly,
+  lockFullyPaid = false,
   mode,
   booking,
   calculatedAmounts,
@@ -60,6 +62,7 @@ export function PaymentSection({
   tripId,
   selectedCustomer,
 }: PaymentSectionProps) {
+  const paymentDisabled = readOnly || lockFullyPaid;
   return (
     <>
       <h3 className="text-lg font-semibold">Payment summary</h3>
@@ -159,7 +162,7 @@ export function PaymentSection({
               return (
                 <FormItem>
                   <FormLabel required>Payment status</FormLabel>
-                  {readOnly || currentStatus === "CANCELLED" ? (
+                  {paymentDisabled || currentStatus === "CANCELLED" ? (
                     <FormControl>
                       <Input value={currentStatus === "CANCELLED" ? "Cancelled" : (
                         currentStatus === "FULLY_PAID" ? "Fully paid" :
@@ -273,7 +276,7 @@ export function PaymentSection({
               Payment
             </Button>
           </CollapsibleTrigger>
-          {!readOnly && (() => {
+          {!paymentDisabled && (() => {
             const currentPayments = form.getValues("payments") || [];
             return currentPayments.length < 3;
           })() && (

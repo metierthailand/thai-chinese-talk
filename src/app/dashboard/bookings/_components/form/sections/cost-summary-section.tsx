@@ -15,6 +15,7 @@ import { Trip } from "@/app/dashboard/trips/hooks/use-trips";
 interface CostSummarySectionProps {
   form: UseFormReturn<BookingFormValues>;
   readOnly: boolean;
+  lockFullyPaid?: boolean;
   calculatedAmounts: {
     totalAmount: number;
     firstPaymentAmount: number;
@@ -28,12 +29,14 @@ interface CostSummarySectionProps {
 export function CostSummarySection({
   form,
   readOnly,
+  lockFullyPaid = false,
   calculatedAmounts,
   trips,
   tripId,
   enableSingleTravellerPrice,
   setEnableSingleTravellerPrice,
 }: CostSummarySectionProps) {
+  const extraPriceDisabled = readOnly || lockFullyPaid;
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Cost summary</h3>
@@ -85,7 +88,7 @@ export function CostSummarySection({
                           field.onChange("");
                         }
                       }}
-                      disabled={readOnly}
+                      disabled={extraPriceDisabled}
                     />
                   </div>
                 </div>

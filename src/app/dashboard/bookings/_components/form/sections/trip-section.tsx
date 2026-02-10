@@ -31,6 +31,7 @@ import { Trip } from "@/app/dashboard/trips/hooks/use-trips";
 interface TripSectionProps {
   form: UseFormReturn<BookingFormValues>;
   readOnly: boolean;
+  lockFullyPaid?: boolean;
   trips: Trip[];
   tripSearchOpen: boolean;
   setTripSearchOpen: (open: boolean) => void;
@@ -44,6 +45,7 @@ interface TripSectionProps {
 export function TripSection({
   form,
   readOnly,
+  lockFullyPaid = false,
   trips,
   tripSearchOpen,
   setTripSearchOpen,
@@ -53,7 +55,8 @@ export function TripSection({
   handleTripChange,
   booking,
 }: TripSectionProps) {
-  
+  const tripDisabled = readOnly || lockFullyPaid;
+
   return (
     <FormField
       control={form.control}
@@ -63,7 +66,7 @@ export function TripSection({
         return (
           <FormItem>
             <FormLabel required={!readOnly}>Trip code</FormLabel>
-            {readOnly ? (
+            {tripDisabled ? (
               <FormControl>
                 <Input
                   value={

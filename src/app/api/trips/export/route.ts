@@ -205,11 +205,12 @@ function addBookingsSheet(
   const startDate = new Date(trip.startDate);
   const endDate = new Date(trip.endDate);
   const duration = formatTripDuration(startDate, endDate);
-  const tripNameDisplay = trip.code || trip.name || "";
+  const tripNameDisplay = trip.name || "";
   const tripDateStr = `${format(startDate, "dd MMM")} - ${format(endDate, "dd MMM yyyy")}`.toUpperCase();
   const standardPriceStr = String(Number(trip.standardPrice) ?? "");
   const singlePriceStr = String(Number(trip.extraPricePerPerson) ?? "");
 
+  const VALUE_SPAN = 5;
   const tripSummaryRows: (string | number)[][] = [
     ["TRIP NAME", tripNameDisplay],
     ["TRIP DATE", tripDateStr],
@@ -221,21 +222,54 @@ function addBookingsSheet(
     ["STAFF", trip.staff || "-"],
     ["NOTE FOR TRIP", trip.note || "-"],
   ];
-  for (const cells of tripSummaryRows) {
-    const row = worksheet.addRow(cells);
-    row.height = 28; // padding
-    row.eachCell((cell, colNumber) => {
-      const isLabel = colNumber === 1 || colNumber === 3;
-      if (isLabel) cell.font = { bold: true, color: { argb: "FF000000" } };
-      cell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
-      cell.border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        bottom: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
+
+  for (let r = 0; r < tripSummaryRows.length; r++) {
+    const cells = tripSummaryRows[r];
+    const rowNum = r + 1;
+
+    if (cells.length === 2) {
+      const [label, value] = cells;
+      const row = worksheet.addRow([label, value]);
+      row.height = 28;
+      row.eachCell((cell, colNumber) => {
+        const isLabel = colNumber === 1;
+        if (isLabel) cell.font = { bold: true, color: { argb: "FF000000" } };
+        cell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+      worksheet.mergeCells(rowNum, 2, rowNum, 2 + VALUE_SPAN - 1);
+    } else {
+      const [label1, value1, label2, value2] = cells;
+      // First value spans 5 columns; second value (PAX / SINGLE PRICE) stays 1 column
+      const rowData: (string | number)[] = [
+        label1,
+        value1,
+        ...Array(VALUE_SPAN - 1).fill(""),
+        label2,
+        value2,
+      ];
+      const row = worksheet.addRow(rowData);
+      row.height = 28;
+      row.eachCell((cell, colNumber) => {
+        const isLabel = colNumber === 1 || colNumber === 2 + VALUE_SPAN;
+        if (isLabel) cell.font = { bold: true, color: { argb: "FF000000" } };
+        cell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+      worksheet.mergeCells(rowNum, 2, rowNum, 2 + VALUE_SPAN - 1);
+    }
   }
   worksheet.addRow([]);
 
@@ -438,10 +472,38 @@ function addBookingsSheet(
     rowNumber++;
   }
 
-  worksheet.columns.forEach((column) => {
+  const summaryEndRow = 13;
+  const summaryColCount = 12; // summary uses cols 1–12 (merged value spans 5 cols each)
+
+  const summaryColWidths: Record<number, number> = {
+    1: 18,
+    2: 14,
+    3: 14,
+    4: 14,
+    5: 14,
+    6: 14,
+    7: 14,
+    8: 14,
+    9: 14,
+    10: 14,
+    11: 14,
+    12: 14,
+  };
+  for (let col = 1; col <= summaryColCount; col++) {
+    const w = summaryColWidths[col];
+    if (w != null) {
+      const c = worksheet.getColumn(col);
+      if (c) c.width = w;
+    }
+  }
+
+  worksheet.columns.forEach((column, index) => {
     if (!column?.eachCell) return;
+    const colNumber = index + 1;
+    if (colNumber <= summaryColCount) return;
     let maxLength = 10;
-    column.eachCell((cell) => {
+    column.eachCell((cell, cellRow) => {
+      if (cellRow <= summaryEndRow) return;
       const cellValue = cell.value ? cell.value.toString() : "";
       maxLength = Math.max(maxLength, cellValue.length + 2);
     });

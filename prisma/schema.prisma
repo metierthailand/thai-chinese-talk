@@ -172,9 +172,6 @@ model BookingCompanion {
   updatedAt DateTime @updatedAt
 }
 
-// Roommate group: bookings that share a room. Only valid within the same companion group.
-// Booking can select roommates only from the same companion; assigning roommateGroupId
-// puts them in the same "room" for export/display.
 model BookingRoommateGroup {
   id               String           @id @default(uuid())
   companionGroupId String
