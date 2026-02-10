@@ -16,6 +16,7 @@ interface CostSummarySectionProps {
   form: UseFormReturn<BookingFormValues>;
   readOnly: boolean;
   lockFullyPaid?: boolean;
+  hideAmountsForAdmin?: boolean;
   calculatedAmounts: {
     totalAmount: number;
     firstPaymentAmount: number;
@@ -30,6 +31,7 @@ export function CostSummarySection({
   form,
   readOnly,
   lockFullyPaid = false,
+  hideAmountsForAdmin = false,
   calculatedAmounts,
   trips,
   tripId,
@@ -49,10 +51,12 @@ export function CostSummarySection({
           </div>
           <div className="text-right">
             <div className="text-primary text-2xl font-bold">
-              {calculatedAmounts.totalAmount.toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              {hideAmountsForAdmin
+                ? "*****"
+                : calculatedAmounts.totalAmount.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
             </div>
             <div className="text-muted-foreground text-xs">THB</div>
           </div>
@@ -81,24 +85,26 @@ export function CostSummarySection({
                       onCheckedChange={(checked) => {
                         setEnableSingleTravellerPrice(checked);
                         if (checked) {
-                          // When enabled, set value from trip's extraPricePerPerson
                           field.onChange(tripExtraPrice);
                         } else {
-                          // When disabled, clear the value
                           field.onChange("");
                         }
                       }}
-                      disabled={extraPriceDisabled}
+                      disabled={extraPriceDisabled || hideAmountsForAdmin}
                     />
                   </div>
                 </div>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    disabled
-                    onChange={(e) => field.onChange(e.target.value)}
-                  />
+                  {hideAmountsForAdmin ? (
+                    <Input value="*****" disabled className="bg-muted" />
+                  ) : (
+                    <Input
+                      type="number"
+                      {...field}
+                      disabled
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  )}
                 </FormControl>
                 <FormMessage />
               </FormItem>

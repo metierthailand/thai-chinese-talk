@@ -185,8 +185,24 @@ export async function GET(request: Request) {
       },
     });
 
+    const isAdmin = session.user.role === "ADMIN";
+    const data = isAdmin
+      ? bookings.map((b) => ({
+          ...b,
+          trip: b.trip ? { ...b.trip, standardPrice: null } : b.trip,
+          extraPriceForSingleTraveller: null,
+          extraPricePerBed: null,
+          extraPricePerSeat: null,
+          extraPricePerBag: null,
+          discountPrice: null,
+          firstPayment: b.firstPayment ? { ...b.firstPayment, amount: null } : b.firstPayment,
+          secondPayment: b.secondPayment ? { ...b.secondPayment, amount: null } : b.secondPayment,
+          thirdPayment: b.thirdPayment ? { ...b.thirdPayment, amount: null } : b.thirdPayment,
+        }))
+      : bookings;
+
     return NextResponse.json({
-      data: bookings,
+      data,
       total,
       page,
       pageSize,

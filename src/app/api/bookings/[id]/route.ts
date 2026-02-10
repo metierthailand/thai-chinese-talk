@@ -129,6 +129,24 @@ export async function GET(
       return new NextResponse("Booking not found", { status: 404 });
     }
 
+    const isAdmin = session.user.role === "ADMIN";
+    if (isAdmin) {
+      const masked = {
+        ...booking,
+        trip: booking.trip ? { ...booking.trip, standardPrice: null } : booking.trip,
+        extraPriceForSingleTraveller: null,
+        extraPricePerBed: null,
+        extraPricePerSeat: null,
+        extraPricePerBag: null,
+        discountPrice: null,
+        firstPayment: booking.firstPayment ? { ...booking.firstPayment, amount: null } : booking.firstPayment,
+        secondPayment: booking.secondPayment ? { ...booking.secondPayment, amount: null } : booking.secondPayment,
+        thirdPayment: booking.thirdPayment ? { ...booking.thirdPayment, amount: null } : booking.thirdPayment,
+        payments: booking.payments?.map((p) => ({ ...p, amount: null, proofOfPayment: null })),
+      };
+      return NextResponse.json(masked);
+    }
+
     return NextResponse.json(booking);
   } catch (error) {
     console.error("[BOOKING_GET]", error);

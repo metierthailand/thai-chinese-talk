@@ -17,6 +17,7 @@ import { BookingFilter } from "./_components/booking-filter";
 import { getPaymentStatusVariant, PAYMENT_STATUS_LABELS } from "@/lib/constants/payment";
 import { PaymentStatus } from "@prisma/client";
 import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 import { AccessDenied } from "@/components/page/access-denied";
 
 export default function BookingsPage() {
@@ -26,6 +27,7 @@ export default function BookingsPage() {
   const role = session?.user?.role;
   const canView = !!role && ["SUPER_ADMIN", "ADMIN", "SALES"].includes(role);
   const canCreateOrEdit = !!role && ["SUPER_ADMIN", "SALES"].includes(role);
+  const canExportPDF = !!role && ["SUPER_ADMIN", "ADMIN", "SALES"].includes(role);
 
   // Get pagination and search from URL params
   const page = parseInt(searchParams.get("page") || "1", 10);
@@ -149,10 +151,12 @@ export default function BookingsPage() {
         header: "Total amount",
         cell: ({ row }) => (
           <div className="font-medium">
-            {new Intl.NumberFormat("th-TH", {
-              style: "currency",
-              currency: "THB",
-            }).format(calculateBookingAmounts(row.original)?.totalAmount ?? 0)}
+            {role === "ADMIN"
+              ? "*****"
+              : new Intl.NumberFormat("th-TH", {
+                  style: "currency",
+                  currency: "THB",
+                }).format(calculateBookingAmounts(row.original)?.totalAmount ?? 0)}
           </div>
         ),
       },
@@ -160,6 +164,9 @@ export default function BookingsPage() {
         accessorKey: "balance",
         header: "Balance",
         cell: ({ row }) => {
+          if (role === "ADMIN") {
+            return <div className="font-medium">*****</div>;
+          }
           const { totalAmount, paidAmount } = calculateBookingAmounts(row.original);
           return (
             <div className="font-medium">
@@ -199,16 +206,18 @@ export default function BookingsPage() {
                 <Eye className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href={`/dashboard/bookings/${row.original.id}/edit`}>
-              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-                <Edit className="h-4 w-4" />
-              </Button>
-            </Link>
+            {role !== "ADMIN" && (
+              <Link href={`/dashboard/bookings/${row.original.id}/edit`}>
+                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
           </div>
         ),
       },
     ],
-    [bookings, effectiveSelectedIds],
+    [bookings, effectiveSelectedIds, role],
   );
 
   const table = useDataTableInstance({
@@ -268,16 +277,12 @@ export default function BookingsPage() {
   };
 
   const handleExportPDF = () => {
-    const params = new URLSearchParams();
-    if (effectiveSelectedIds.length > 0 && effectiveSelectedIds.length < bookings.length) {
-      params.set("bookingIds", effectiveSelectedIds.join(","));
-    } else {
-      if (searchQuery) params.set("search", searchQuery);
-      if (paymentStatus !== "ALL") params.set("status", paymentStatus);
-      if (tripStartDateFromQuery) params.set("tripStartDateFrom", tripStartDateFromQuery);
-      if (tripStartDateToQuery) params.set("tripStartDateTo", tripStartDateToQuery);
-      if (tripIdQuery) params.set("tripId", tripIdQuery);
+    if (effectiveSelectedIds.length === 0) {
+      toast.error("Select at least one booking to export PDF.");
+      return;
     }
+    const params = new URLSearchParams();
+    params.set("bookingIds", effectiveSelectedIds.join(","));
     const url = `/api/bookings/export-pdf?${params.toString()}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
@@ -290,12 +295,14 @@ export default function BookingsPage() {
           <p className="text-muted-foreground">Create and update trip bookings.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleExportPDF}>
-            <Download className="mr-2 h-4 w-4" />{" "}
-            {effectiveSelectedIds.length > 0
-              ? `Export PDF (${effectiveSelectedIds.length})`
-              : "Export PDF"}
-          </Button>
+          {canExportPDF && (
+            <Button variant="outline" onClick={handleExportPDF}>
+              <Download className="mr-2 h-4 w-4" />{" "}
+              {effectiveSelectedIds.length > 0
+                ? `Export PDF (${effectiveSelectedIds.length})`
+                : "Export PDF"}
+            </Button>
+          )}
           {canCreateOrEdit && (
             <Link href="/dashboard/bookings/create">
               <Button>

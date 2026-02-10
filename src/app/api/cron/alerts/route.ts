@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { addDays, subDays } from "date-fns";
+import { addDays, subDays, subMonths } from "date-fns";
 
 export async function GET(request: Request) {
   try {
@@ -209,11 +209,53 @@ export async function GET(request: Request) {
       }
     }
 
+    // 4. ลบ notification เก่าตามกฎ:
+    // - TRIP_UPCOMING: ลบเมื่อ trip เกิน endDate ไปแล้ว 3 เดือน
+    // - TASK_DUE: ลบเมื่อ task เกิน deadline ไปแล้ว 3 เดือน
+    const threeMonthsAgo = subMonths(now, 3);
+
+    const tripsEndedOver3MonthsAgo = await prisma.trip.findMany({
+      where: { endDate: { lt: threeMonthsAgo } },
+      select: { id: true },
+    });
+    const tripIdsToClean = tripsEndedOver3MonthsAgo.map((t) => t.id);
+
+    const tasksDeadlineOver3MonthsAgo = await prisma.task.findMany({
+      where: { deadline: { lt: threeMonthsAgo } },
+      select: { id: true },
+    });
+    const taskIdsToClean = tasksDeadlineOver3MonthsAgo.map((t) => t.id);
+
+    const deletedTripNotifications =
+      tripIdsToClean.length > 0
+        ? await prisma.notification.deleteMany({
+            where: {
+              type: "TRIP_UPCOMING",
+              entityId: { in: tripIdsToClean },
+            },
+          })
+        : { count: 0 };
+    const deletedTaskNotifications =
+      taskIdsToClean.length > 0
+        ? await prisma.notification.deleteMany({
+            where: {
+              type: "TASK_DUE",
+              entityId: { in: taskIdsToClean },
+            },
+          })
+        : { count: 0 };
+
+    const totalDeleted = deletedTripNotifications.count + deletedTaskNotifications.count;
+
     return NextResponse.json({
       success: true,
-      // passportAlertsGenerated: passportAlertsCount,
       tripAlertsGenerated: tripAlertsCount,
       taskAlertsGenerated: taskAlertsCount,
+      notificationsDeleted: totalDeleted,
+      notificationsDeletedByType: {
+        TRIP_UPCOMING: deletedTripNotifications.count,
+        TASK_DUE: deletedTaskNotifications.count,
+      },
     });
   } catch (error) {
     console.error("[CRON_ALERTS]", error);

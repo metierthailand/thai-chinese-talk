@@ -34,6 +34,7 @@ interface PaymentSectionProps {
   form: UseFormReturn<BookingFormValues>;
   readOnly: boolean;
   lockFullyPaid?: boolean;
+  hideAmountsForAdmin?: boolean;
   mode: "create" | "edit" | "view";
   booking?: Booking;
   calculatedAmounts: {
@@ -52,6 +53,7 @@ export function PaymentSection({
   form,
   readOnly,
   lockFullyPaid = false,
+  hideAmountsForAdmin = false,
   mode,
   booking,
   calculatedAmounts,
@@ -93,21 +95,23 @@ export function PaymentSection({
                   <div>
                     <p className="text-muted-foreground text-sm">Total amount</p>
                     <p className="text-lg font-semibold">
-                      {totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
+                      {hideAmountsForAdmin ? "*****" : `${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB`}
                     </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-sm">Paid amount</p>
                     <p className="text-lg font-semibold">
-                      {paidAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
+                      {hideAmountsForAdmin ? "*****" : `${paidAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB`}
                     </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-sm">Balance</p>
-                    <p
-                      className={`text-lg font-semibold ${remainingAmount > 0 ? "text-destructive" : "text-green-600"}`}
-                    >
-                      {remainingAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
+                    <p className="text-lg font-semibold">
+                      {hideAmountsForAdmin ? "*****" : (
+                        <span className={remainingAmount > 0 ? "text-destructive" : "text-green-600"}>
+                          {remainingAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} THB
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -117,6 +121,8 @@ export function PaymentSection({
         </div>
       )}
 
+      {!hideAmountsForAdmin && (
+      <>
       <div className="space-y-4 mt-6">
         <div className="grid grid-cols-1 gap-4">
           <FormField
@@ -490,6 +496,8 @@ export function PaymentSection({
           )}
         </CollapsibleContent>
       </Collapsible>
+      </>
+      )}
     </>
   );
 }

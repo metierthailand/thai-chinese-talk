@@ -153,11 +153,18 @@ async function loadThaiFonts(
   return { font, fontBold };
 }
 
+const EXPORT_PDF_ROLES = ["SUPER_ADMIN", "ADMIN", "SALES"] as const;
+
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
+  if (!EXPORT_PDF_ROLES.includes(session.user.role as (typeof EXPORT_PDF_ROLES)[number])) {
+    return new NextResponse("Forbidden", { status: 403 });
+  }
+
+  const isAdmin = session.user.role === "ADMIN";
 
   const { searchParams } = new URL(request.url);
   const bookingIdsParam = searchParams.get("bookingIds") || "";
@@ -350,22 +357,24 @@ export async function GET(request: Request) {
       const discount = num(b.discountPrice);
       const totalAmount = standardPrice + extraSingle + extraBed + extraSeat + extraBag - discount;
 
-      y = drawLabelValue(page, font, fontBold, "Total amount", `${formatPrice(totalAmount)} THB`, x, y);
-      y = drawLabelValue(page, font, fontBold, "Extra price for single traveller", extraSingle > 0 ? formatPrice(extraSingle) : "-", x, y, sanitize);
+      const priceDisplay = (value: string) => (isAdmin ? "*****" : value);
+
+      y = drawLabelValue(page, font, fontBold, "Total amount", priceDisplay(`${formatPrice(totalAmount)} THB`), x, y);
+      y = drawLabelValue(page, font, fontBold, "Extra price for single traveller", priceDisplay(extraSingle > 0 ? formatPrice(extraSingle) : "-"), x, y, sanitize);
       y -= 12
       y = drawLabelValue(page, font, fontBold, "Room type", ROOM_TYPE_LABELS[b.roomType] ?? b.roomType ?? "-", x, y, sanitize);
-      y = drawLabelValue(page, font, fontBold, "Extra price for extra bed", extraBed > 0 ? formatPrice(extraBed) : "-", x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Extra price for extra bed", priceDisplay(extraBed > 0 ? formatPrice(extraBed) : "-"), x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for room", str(b.roomNote) || "-", x, y, sanitize);
       y -= 12
       y = drawLabelValue(page, font, fontBold, "Seat type", SEAT_TYPE_LABELS[b.seatType] ?? b.seatType ?? "-", x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Seat upgrade type", b.seatClass ? (SEAT_CLASS_LABELS[b.seatClass] ?? b.seatClass) : "-", x, y, sanitize);
-      y = drawLabelValue(page, font, fontBold, "Extra price for seat upgrade", extraSeat > 0 ? formatPrice(extraSeat) : "-", x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Extra price for seat upgrade", priceDisplay(extraSeat > 0 ? formatPrice(extraSeat) : "-"), x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for seat", str(b.seatNote) || "-", x, y, sanitize);
       y -= 12
-      y = drawLabelValue(page, font, fontBold, "Extra price for bag upgrade", extraBag > 0 ? formatPrice(extraBag) : "-", x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Extra price for bag upgrade", priceDisplay(extraBag > 0 ? formatPrice(extraBag) : "-"), x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for bag", str(b.bagNote) || "-", x, y, sanitize);
       y -= 12
-      y = drawLabelValue(page, font, fontBold, "Discount price", discount > 0 ? formatPrice(discount) : "-", x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Discount price", priceDisplay(discount > 0 ? formatPrice(discount) : "-"), x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for discount", str(b.discountNote) || "-", x, y, sanitize);
       y -= 12
       const salesName = b.salesUser
@@ -382,11 +391,14 @@ export async function GET(request: Request) {
       y = drawLine(page, font, fontBold, "Payment Summary", x, y, { bold: true, size: 14, sanitize });
       y -= 12;
 
-      const paidAmount = num(b.paidAmount);
+      const firstPaid = num((b as { firstPayment?: { amount?: unknown } }).firstPayment?.amount);
+      const secondPaid = num((b as { secondPayment?: { amount?: unknown } }).secondPayment?.amount);
+      const thirdPaid = num((b as { thirdPayment?: { amount?: unknown } }).thirdPayment?.amount);
+      const paidAmount = firstPaid + secondPaid + thirdPaid;
       const remaining = totalAmount - paidAmount;
-      y = drawLabelValue(page, font, fontBold, "Total amount", `${formatPrice(totalAmount)} THB`, x, y, sanitize);
-      y = drawLabelValue(page, font, fontBold, "Paid amount", `${formatPrice(paidAmount)} THB`, x, y, sanitize);
-      y = drawLabelValue(page, font, fontBold, "Balance", `${formatPrice(remaining)} THB`, x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Total amount", priceDisplay(`${formatPrice(totalAmount)} THB`), x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Paid amount", priceDisplay(`${formatPrice(paidAmount)} THB`), x, y, sanitize);
+      y = drawLabelValue(page, font, fontBold, "Balance", priceDisplay(`${formatPrice(remaining)} THB`), x, y, sanitize);
     }
 
     const pdfBytes = await pdfDoc.save();

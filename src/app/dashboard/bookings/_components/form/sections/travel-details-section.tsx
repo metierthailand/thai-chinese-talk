@@ -57,6 +57,7 @@ interface TravelDetailsSectionProps {
   form: UseFormReturn<BookingFormValues>;
   readOnly: boolean;
   lockFullyPaid?: boolean;
+  hideAmountsForAdmin?: boolean;
   enableBedPrice: boolean;
   setEnableBedPrice: (enable: boolean) => void;
   enableSeatPrice: boolean;
@@ -91,6 +92,7 @@ export function TravelDetailsSection({
   form,
   readOnly,
   lockFullyPaid = false,
+  hideAmountsForAdmin = false,
   enableBedPrice,
   setEnableBedPrice,
   enableSeatPrice,
@@ -112,6 +114,7 @@ export function TravelDetailsSection({
   tripId,
 }: TravelDetailsSectionProps) {
   const detailsDisabled = readOnly || lockFullyPaid;
+  const maskPriceOnly = hideAmountsForAdmin;
   return (
     <>
       {/* Room Information Section */}
@@ -122,12 +125,12 @@ export function TravelDetailsSection({
             name="roomType"
             render={({ field }) => (
               <FormItem>
-<FormLabel required>Room type</FormLabel>
-              {detailsDisabled ? (
-                <FormControl>
-                  <Input value={field.value ? ROOM_TYPE_LABELS[field.value] ?? field.value : ""} disabled />
-                </FormControl>
-              ) : (
+                <FormLabel required>Room type</FormLabel>
+                {detailsDisabled ? (
+                  <FormControl>
+                    <Input value={field.value ? ROOM_TYPE_LABELS[field.value] ?? field.value : ""} disabled />
+                  </FormControl>
+                ) : (
                   <Select onValueChange={field.onChange} value={field.value} key={`roomType-${field.value}`}>
                     <FormControl>
                       <SelectTrigger className="w-full">
@@ -242,62 +245,66 @@ export function TravelDetailsSection({
           <FormField
             control={form.control}
             name="extraPricePerBed"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center justify-between">
-                  <FormLabel required={enableBedPrice}>Extra price for extra bed</FormLabel>
-                  <div className="flex items-center space-x-2">
-                    <FormLabel htmlFor="bed-price-toggle" className="cursor-pointer text-sm font-normal">
-                      Add-on
-                    </FormLabel>
-                    <Switch
-                      id="bed-price-toggle"
-                      checked={enableBedPrice}
-                      onCheckedChange={(checked) => {
-                        setEnableBedPrice(checked);
-                        if (!checked) {
-                          // field.onChange("");
-                          form.setValue("extraPricePerBed", "", { shouldValidate: false })
-                          form.clearErrors("extraPricePerBed");
-                        } else {
-                          // Trigger validation when enabled
-                          // setTimeout(() => form.trigger("extraPricePerBed"), 0);
-                        }
-                      }}
-                      disabled={detailsDisabled}
-                    />
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between">
+                    <FormLabel required={enableBedPrice}>Extra price for extra bed</FormLabel>
+                    <div className="flex items-center space-x-2">
+                      <FormLabel htmlFor="bed-price-toggle" className="cursor-pointer text-sm font-normal">
+                        Add-on
+                      </FormLabel>
+                      <Switch
+                        id="bed-price-toggle"
+                        checked={enableBedPrice}
+                        onCheckedChange={(checked) => {
+                          setEnableBedPrice(checked);
+                          if (!checked) {
+                            // field.onChange("");
+                            form.setValue("extraPricePerBed", "", { shouldValidate: false })
+                            form.clearErrors("extraPricePerBed");
+                          } else {
+                            // Trigger validation when enabled
+                            // setTimeout(() => form.trigger("extraPricePerBed"), 0);
+                          }
+                        }}
+                        disabled={detailsDisabled || maskPriceOnly}
+                      />
+                    </div>
                   </div>
-                </div>
-                <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    disabled={detailsDisabled || !enableBedPrice}
-                    onChange={(e) => field.onChange(e.target.value)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  <FormControl>
+                    {maskPriceOnly ? (
+                      <Input value="*****" disabled className="bg-muted" />
+                    ) : (
+                      <Input
+                        type="number"
+                        {...field}
+                        disabled={detailsDisabled || !enableBedPrice}
+                        onChange={(e) => field.onChange(e.target.value)}
+                      />
+                    )}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
           <FormField
             control={form.control}
             name="roomNote"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Note for room</FormLabel>
-                <FormControl>
-                  <Textarea
-                    className="resize-none"
-                    {...field}
-                    disabled={detailsDisabled}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Note for room</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      className="resize-none"
+                      {...field}
+                      disabled={detailsDisabled}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
         </div>
       </div>
 
@@ -353,25 +360,17 @@ export function TravelDetailsSection({
                       onCheckedChange={(checked) => {
                         setEnableSeatPrice(checked);
                         if (!checked) {
-                          // Clear extraPricePerSeat when disable
                           form.setValue("extraPricePerSeat", "");
                           form.clearErrors("extraPricePerSeat");
                           form.clearErrors("seatClass");
-                          // Clear seatClass when disable
                           form.setValue("seatClass", undefined);
-                        } else {
-                          // Trigger validation when enabled
-                          // setTimeout(() => {
-                          //   form.trigger("extraPricePerSeat");
-                          //   form.trigger("seatClass");
-                          // }, 0);
                         }
                       }}
-                      disabled={detailsDisabled}
+                      disabled={detailsDisabled || maskPriceOnly}
                     />
                   </div>
                 </div>
-                {detailsDisabled ? (
+                {detailsDisabled || maskPriceOnly ? (
                   <FormControl>
                     <Input
                       value={field.value ? SEAT_CLASS_LABELS[field.value] ?? field.value : ""}
@@ -410,12 +409,16 @@ export function TravelDetailsSection({
               <FormItem>
                 <FormLabel required={enableSeatPrice}>Extra price for seat upgrade</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    disabled={detailsDisabled || !enableSeatPrice}
-                    onChange={(e) => field.onChange(e.target.value)}
-                  />
+                  {maskPriceOnly ? (
+                    <Input value="*****" disabled className="bg-muted" />
+                  ) : (
+                    <Input
+                      type="number"
+                      {...field}
+                      disabled={detailsDisabled || !enableSeatPrice}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  )}
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -463,25 +466,25 @@ export function TravelDetailsSection({
                     onCheckedChange={(checked) => {
                       setEnableBagPrice(checked);
                       if (!checked) {
-                        // field.onChange("");
-                        form.setValue("extraPricePerBag", "", { shouldValidate: false })
+                        form.setValue("extraPricePerBag", "", { shouldValidate: false });
                         form.clearErrors("extraPricePerBag");
-                      } else {
-                        // Trigger validation when enabled
-                        // setTimeout(() => form.trigger("extraPricePerBag"), 0);
                       }
                     }}
-                    disabled={detailsDisabled}
+                    disabled={detailsDisabled || maskPriceOnly}
                   />
                 </div>
               </div>
               <FormControl>
-                <Input
-                  type="number"
-                  {...field}
-                  disabled={detailsDisabled || !enableBagPrice}
-                  onChange={(e) => field.onChange(e.target.value)}
-                />
+                {maskPriceOnly ? (
+                  <Input value="*****" disabled className="bg-muted" />
+                ) : (
+                  <Input
+                    type="number"
+                    {...field}
+                    disabled={detailsDisabled || !enableBagPrice}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                )}
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -528,25 +531,25 @@ export function TravelDetailsSection({
                     onCheckedChange={(checked) => {
                       setEnableDiscount(checked);
                       if (!checked) {
-                        // field.onChange("");
-                        form.setValue("discountPrice", "", { shouldValidate: false })
+                        form.setValue("discountPrice", "", { shouldValidate: false });
                         form.clearErrors("discountPrice");
-                      } else {
-                        // Trigger validation when enabled
-                        // setTimeout(() => form.trigger("discountPrice"), 0);
                       }
                     }}
-                    disabled={detailsDisabled}
+                    disabled={detailsDisabled || maskPriceOnly}
                   />
                 </div>
               </div>
               <FormControl>
-                <Input
-                  type="number"
-                  {...field}
-                  disabled={detailsDisabled || !enableDiscount}
-                  onChange={(e) => field.onChange(e.target.value)}
-                />
+                {maskPriceOnly ? (
+                  <Input value="*****" disabled className="bg-muted" />
+                ) : (
+                  <Input
+                    type="number"
+                    {...field}
+                    disabled={detailsDisabled || !enableDiscount}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                )}
               </FormControl>
               <FormMessage />
             </FormItem>

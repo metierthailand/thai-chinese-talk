@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +42,9 @@ interface BookingFormProps {
 }
 
 export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading = false, booking }: BookingFormProps) {
+  const { data: session } = useSession();
+  const hideAmountsForAdmin = session?.user?.role === "ADMIN";
+
   const {
     form,
     readOnly,
@@ -121,16 +125,16 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
   // Calculate predicted payment status after third payment
   const predictedPaymentStatus = useMemo(() => {
     if (!pendingSubmitValues || !pendingSubmitValues.payments) return "Deposit Paid";
-    
+
     // Calculate total paid from pending payments
     const totalPaid = pendingSubmitValues.payments.reduce(
       (sum, p) => sum + (Number(p?.amount) || 0),
       0
     );
-    
+
     // Get total amount from calculatedAmounts
     const totalAmount = calculatedAmounts.totalAmount;
-    
+
     if (totalPaid >= totalAmount && totalAmount > 0) {
       return "Fully Paid";
     } else if (totalPaid > 0) {
@@ -203,6 +207,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
             form={form}
             readOnly={readOnly}
             lockFullyPaid={lockFullyPaid}
+            hideAmountsForAdmin={hideAmountsForAdmin}
             calculatedAmounts={calculatedAmounts}
             trips={trips}
             tripId={tripId}
@@ -217,6 +222,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
             form={form}
             readOnly={readOnly}
             lockFullyPaid={lockFullyPaid}
+            hideAmountsForAdmin={hideAmountsForAdmin}
             enableBedPrice={enableBedPrice}
             setEnableBedPrice={setEnableBedPrice}
             enableSeatPrice={enableSeatPrice}
@@ -278,6 +284,7 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
             form={form}
             readOnly={readOnly}
             lockFullyPaid={lockFullyPaid}
+            hideAmountsForAdmin={hideAmountsForAdmin}
             mode={mode}
             booking={booking}
             calculatedAmounts={calculatedAmounts}

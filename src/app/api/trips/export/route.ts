@@ -201,14 +201,15 @@ function addBookingsSheet(
   sortedBookings: BookingWithInclude[],
   companionKeyToIndex: Map<string, number>,
   companionKeyOf: (b: BookingWithInclude & { roommateGroupId?: string | null }) => string,
+  maskPricesForAdmin = false,
 ) {
   const startDate = new Date(trip.startDate);
   const endDate = new Date(trip.endDate);
   const duration = formatTripDuration(startDate, endDate);
   const tripNameDisplay = trip.name || "";
   const tripDateStr = `${format(startDate, "dd MMM")} - ${format(endDate, "dd MMM yyyy")}`.toUpperCase();
-  const standardPriceStr = String(Number(trip.standardPrice) ?? "");
-  const singlePriceStr = String(Number(trip.extraPricePerPerson) ?? "");
+  const standardPriceStr = maskPricesForAdmin ? "*****" : String(Number(trip.standardPrice) ?? "");
+  const singlePriceStr = maskPricesForAdmin ? "*****" : String(Number(trip.extraPricePerPerson) ?? "");
 
   const VALUE_SPAN = 5;
   const tripSummaryRows: (string | number)[][] = [
@@ -399,6 +400,10 @@ function addBookingsSheet(
     const third = Number((booking as { thirdPayment?: { amount: unknown } }).thirdPayment?.amount) || 0;
     const balance = total - (first + second + third);
 
+    const priceStr = (v: unknown) => (maskPricesForAdmin ? "*****" : formatPriceForExport(v));
+    const totalStr = maskPricesForAdmin ? "*****" : total.toLocaleString("en-US", { maximumFractionDigits: 0, minimumFractionDigits: 0 });
+    const balanceStr = maskPricesForAdmin ? "*****" : balance > 0 ? formatPriceForExport(balance) : "-";
+
     const rowValues = [
       rowNumber,
       groupIndex,
@@ -427,23 +432,23 @@ function addBookingsSheet(
       mainCustomer.email || "",
       addressStr,
       "",
-      formatPriceForExport((booking as { trip?: { standardPrice: unknown } }).trip?.standardPrice),
-      formatPriceForExport(booking.extraPriceForSingleTraveller),
-      formatPriceForExport(booking.extraPricePerBed),
+      priceStr((booking as { trip?: { standardPrice: unknown } }).trip?.standardPrice),
+      priceStr(booking.extraPriceForSingleTraveller),
+      priceStr(booking.extraPricePerBed),
       booking.seatType ? String(booking.seatType) : "-",
       formatSeatClass(booking.seatClass ?? undefined),
-      formatPriceForExport(booking.extraPricePerSeat),
+      priceStr(booking.extraPricePerSeat),
       booking.seatNote || "-",
-      formatPriceForExport(booking.extraPricePerBag),
+      priceStr(booking.extraPricePerBag),
       booking.bagNote || "-",
-      formatPriceForExport(booking.discountPrice),
+      priceStr(booking.discountPrice),
       booking.discountNote || "-",
       booking.note || "-",
-      total.toLocaleString("en-US", { maximumFractionDigits: 0, minimumFractionDigits: 0 }),
-      formatPriceForExport((booking as { firstPayment?: { amount: unknown } }).firstPayment?.amount),
-      formatPriceForExport((booking as { secondPayment?: { amount: unknown } }).secondPayment?.amount),
-      formatPriceForExport((booking as { thirdPayment?: { amount: unknown } }).thirdPayment?.amount),
-      balance > 0 ? formatPriceForExport(balance) : "-",
+      totalStr,
+      priceStr((booking as { firstPayment?: { amount: unknown } }).firstPayment?.amount),
+      priceStr((booking as { secondPayment?: { amount: unknown } }).secondPayment?.amount),
+      priceStr((booking as { thirdPayment?: { amount: unknown } }).thirdPayment?.amount),
+      balanceStr,
       booking.paymentStatus ? String(booking.paymentStatus).replace(/_/g, " ") : "-",
     ];
 
@@ -516,6 +521,8 @@ export async function GET(request: Request) {
   if (!session) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
+
+  const maskPricesForAdmin = session.user.role === "ADMIN";
 
   try {
     const { searchParams } = new URL(request.url);
@@ -606,6 +613,7 @@ export async function GET(request: Request) {
         sortedBookings,
         companionKeyToIndex,
         companionKeyOf as (b: BookingWithInclude & { roommateGroupId?: string | null }) => string,
+        maskPricesForAdmin,
       );
     }
 
