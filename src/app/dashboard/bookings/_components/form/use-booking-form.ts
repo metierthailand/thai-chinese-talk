@@ -427,14 +427,24 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
     return availableCompanionCustomers.filter((c) => ids.includes(c.id));
   }, [availableCompanionCustomers, companionCustomerIds]);
 
-  // Bookings in the same companion group (for roommate selection). Only in edit mode when we have companionGroupId.
+  // Roommate options:
+  // - Edit mode with companion group: bookings in the same companion group (excluding current booking).
+  // - Create mode or no group: bookings for the companions currently selected in the form (companionCustomerIds),
+  //   so the user can choose roommates from the companions they have selected before saving.
   const availableRoommateBookings = useMemo((): Array<{ id: string; customerId: string; customer: { firstNameEn: string; lastNameEn: string } }> => {
     const list = companionBookingsResponse || [];
-    if (!booking?.companionGroupId || !tripId) return [];
-    return list.filter(
-      (b: Booking) => b.companionGroupId === booking.companionGroupId && b.id !== booking.id
-    );
-  }, [companionBookingsResponse, booking?.id, booking?.companionGroupId, tripId]);
+    if (!tripId) return [];
+
+    if (booking?.companionGroupId) {
+      return list.filter(
+        (b: Booking) => b.companionGroupId === booking.companionGroupId && b.id !== booking.id
+      );
+    }
+
+    // Show bookings for selected companions so user can pick roommates before create/update
+    const companionIds = companionCustomerIds || [];
+    return list.filter((b: Booking) => companionIds.includes(b.customerId));
+  }, [companionBookingsResponse, tripId, booking?.id, booking?.companionGroupId, companionCustomerIds]);
 
   const filteredRoommateBookings = useMemo(() => {
     if (!roommateSearchQuery.trim()) return availableRoommateBookings;
@@ -683,6 +693,21 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
       "companionCustomerIds",
       current.filter((id) => id !== customerId),
     );
+
+    // Also remove any roommates that belong to this companion
+    // Find all booking IDs for this customerId
+    const companionBookings = companionBookingsResponse || [];
+    const bookingIdsToRemove = companionBookings
+      .filter((b: Booking) => b.customerId === customerId)
+      .map((b: Booking) => b.id);
+
+    if (bookingIdsToRemove.length > 0) {
+      const currentRoommates = form.getValues("roommateBookingIds") || [];
+      form.setValue(
+        "roommateBookingIds",
+        currentRoommates.filter((id) => !bookingIdsToRemove.includes(id)),
+      );
+    }
   };
 
   const handleSubmit = async (values: BookingFormValues) => {

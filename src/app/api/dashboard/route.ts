@@ -11,6 +11,10 @@ export async function GET(request: Request) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
+  if (session.user.role !== "SUPER_ADMIN") {
+    return new NextResponse("Forbidden", { status: 403 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const upcomingTripsPage = parseInt(searchParams.get("upcomingTripsPage") || "1", 10);

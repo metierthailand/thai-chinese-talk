@@ -177,7 +177,7 @@ export function TravelDetailsSection({
                           ? "Select trip first"
                           : availableRoommateBookings.length === 0
                             ? "Add companions first"
-                            : "Add roommate (same companion only)"}
+                            : "Add roommate"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[400px] p-0">

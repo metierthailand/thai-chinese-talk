@@ -101,12 +101,14 @@ export async function GET(req: Request) {
       v.includes("T") ? new Date(v) : new Date(`${v}T23:59:59.999Z`);
 
     // Build where clause with proper types
+    // - SUPER_ADMIN: can see all tasks (optionally filtered by userId)
+    // - Others: can see only their own tasks, regardless of provided userId
     const where: Prisma.TaskWhereInput = {
-      ...(userId
-        ? { userId }
-        : !["SUPER_ADMIN", "ADMIN"].includes(session.user.role)
-          ? { userId: session.user.id }
-          : {}),
+      ...(session.user.role === "SUPER_ADMIN"
+        ? userId
+          ? { userId }
+          : {}
+        : { userId: session.user.id }),
       ...(customerId ? { relatedCustomerId: customerId } : {}),
       ...(status && Object.values(TaskStatus).includes(status as TaskStatus)
         ? { status: status as TaskStatus }

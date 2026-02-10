@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Users, FileText, DollarSign, BookMarked } from "lucide-react";
 import { Loading } from "@/components/page/loading";
+import { AccessDenied } from "@/components/page/access-denied";
 
 interface TopCustomerByRevenue {
   customerId: string;
@@ -38,7 +39,7 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [upcomingTripsPage, setUpcomingTripsPage] = useState(1);
@@ -66,8 +67,12 @@ export default function DashboardPage() {
     fetchStats();
   }, [upcomingTripsPage]);
 
-  if (loading) {
+  if (sessionStatus === "loading" || loading) {
     return <Loading />;
+  }
+
+  if (!session || session.user.role !== "SUPER_ADMIN") {
+    return <AccessDenied />;
   }
 
   return (

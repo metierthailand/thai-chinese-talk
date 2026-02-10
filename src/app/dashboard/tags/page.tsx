@@ -37,14 +37,6 @@ export default function TagsPage() {
   const canCreateOrEdit = userRole === "SUPER_ADMIN" || userRole === "SALES";
   const canDelete = userRole === "SUPER_ADMIN";
 
-  if (sessionStatus === "loading") {
-    return <Loading />;
-  }
-
-  if (!session || !canView) {
-    return <AccessDenied />;
-  }
-
   // --------------------
   // params
   // --------------------
@@ -177,61 +169,69 @@ export default function TagsPage() {
   );
 
   return (
-    <div className="flex flex-col gap-8 p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Tags</h2>
-          <p className="text-muted-foreground">Create and update customer tags for groupings and segmentations.</p>
-        </div>
-        {canCreateOrEdit && (
-          <Link href="/dashboard/tags/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Create
-            </Button>
-          </Link>
-        )}
-      </div>
-
-      {/* Search form */}
-      <div className="flex items-center justify-end gap-4">
-        <TagSearch search={search} onSearchChange={handleSearchChange} />
-      </div>
-
-      <div className="relative flex flex-col gap-4 overflow-auto">
-        {isLoading ? (
-          <Loading />
-        ) : error ? (
-          <div className="space-y-8 p-8">
-            <div className="flex h-64 items-center justify-center">
-              <p className="text-destructive">Failed to load tags. Please try again.</p>
+    <>
+      {sessionStatus === "loading" ? (
+        <Loading />
+      ) : !session || !canView ? (
+        <AccessDenied />
+      ) : (
+        <div className="flex flex-col gap-8 p-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight">Tags</h2>
+              <p className="text-muted-foreground">Create and update customer tags for groupings and segmentations.</p>
             </div>
+            {canCreateOrEdit && (
+              <Link href="/dashboard/tags/create">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> Create
+                </Button>
+              </Link>
+            )}
           </div>
-        ) : (
-          <>
-            <div className="overflow-hidden rounded-md border">
-              <DataTable table={table} columns={columns} dndEnabled={false} />
-            </div>
-            <DataTablePagination
-              table={table}
-              total={total}
-              pageSize={pageSize}
-              pageIndex={page - 1}
-              pageCount={pageCount}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
-            />
-          </>
-        )}
-      </div>
 
-      <DeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={() => deletingId && handleDelete(deletingId)}
-        isDeleting={deleteTagMutation.isPending}
-        title="Are you sure?"
-        description="This action cannot be undone. This will permanently delete this item and remove it from all selections."
-      />
-    </div>
+          {/* Search form */}
+          <div className="flex items-center justify-end gap-4">
+            <TagSearch search={search} onSearchChange={handleSearchChange} />
+          </div>
+
+          <div className="relative flex flex-col gap-4 overflow-auto">
+            {isLoading ? (
+              <Loading />
+            ) : error ? (
+              <div className="space-y-8 p-8">
+                <div className="flex h-64 items-center justify-center">
+                  <p className="text-destructive">Failed to load tags. Please try again.</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-hidden rounded-md border">
+                  <DataTable table={table} columns={columns} dndEnabled={false} />
+                </div>
+                <DataTablePagination
+                  table={table}
+                  total={total}
+                  pageSize={pageSize}
+                  pageIndex={page - 1}
+                  pageCount={pageCount}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                />
+              </>
+            )}
+          </div>
+
+          <DeleteDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            onConfirm={() => deletingId && handleDelete(deletingId)}
+            isDeleting={deleteTagMutation.isPending}
+            title="Are you sure?"
+            description="This action cannot be undone. This will permanently delete this item and remove it from all selections."
+          />
+        </div>
+      )}
+    </>
   );
 }

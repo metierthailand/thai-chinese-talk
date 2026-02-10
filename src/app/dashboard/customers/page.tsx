@@ -267,14 +267,13 @@ export default function CustomersPage() {
             Update customer information including personal information, addresses, passports, food allergies.
           </p>
         </div>
-        {canCreateOrEdit && (
+        {/* {canCreateOrEdit && (
           <Link href="/dashboard/customers/create">
             <Button>
-              {/* Plus icon already imported earlier in file if needed */}
               Add Customer
             </Button>
           </Link>
-        )}
+        )} */}
       </div>
 
       {/* Filter & Search form */}
