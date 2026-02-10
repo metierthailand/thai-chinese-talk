@@ -125,42 +125,42 @@ export async function GET(request: Request) {
     });
 
     const sevenDaysAgo = subDays(now, 7);
-    const fallbackAdmin = await prisma.user.findFirst({
-      where: { role: { in: ["SUPER_ADMIN", "ADMIN"] }, isActive: true },
+    // ส่งแจ้งเตือน Trip Upcoming ให้ทุก user ในระบบ (เหมือนกันทุกคน)
+    const allActiveUsers = await prisma.user.findMany({
+      where: { isActive: true },
       select: { id: true },
     });
 
     let tripAlertsCount = 0;
 
     for (const trip of upcomingTrips) {
-      if (!fallbackAdmin) continue;
-
-      const existing = await prisma.notification.findFirst({
-        where: {
-          userId: fallbackAdmin.id,
-          type: "TRIP_UPCOMING",
-          entityId: trip.id,
-          createdAt: { gte: sevenDaysAgo },
-        },
-      });
-
-      if (!existing) {
-        await prisma.notification.create({
-          data: {
-            userId: fallbackAdmin.id,
+      for (const user of allActiveUsers) {
+        const existing = await prisma.notification.findFirst({
+          where: {
+            userId: user.id,
             type: "TRIP_UPCOMING",
-            title: "Upcoming Trip",
-            message: `Trip "${trip.name}" starts on ${new Date(trip.startDate).toLocaleDateString()}.`,
-            link: `/dashboard/trips/${trip.id}`,
             entityId: trip.id,
+            createdAt: { gte: sevenDaysAgo },
           },
         });
-        tripAlertsCount++;
+
+        if (!existing) {
+          await prisma.notification.create({
+            data: {
+              userId: user.id,
+              type: "TRIP_UPCOMING",
+              title: "Upcoming Trip",
+              message: `Trip "${trip.name}" starts on ${new Date(trip.startDate).toLocaleDateString()}.`,
+              link: `/dashboard/trips/${trip.id}`,
+              entityId: trip.id,
+            },
+          });
+          tripAlertsCount++;
+        }
       }
     }
 
-    // 3. Task Due Alerts
-    // Find tasks due today
+    // 3. Task Due Alerts — ส่งเฉพาะเจ้าของ task (user ที่ถูก assign)
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
@@ -180,34 +180,32 @@ export async function GET(request: Request) {
     });
 
     let taskAlertsCount = 0;
+    const startOfTodayForQuery = new Date(new Date().setHours(0, 0, 0, 0));
 
     for (const task of tasksDueToday) {
-      if (task.userId) {
-        // Check for existing notification to avoid duplicates
-        const existingNotification = await prisma.notification.findFirst({
-          where: {
+      if (!task.userId) continue; // ข้าม task ที่ไม่มีผู้รับผิดชอบ
+      // สร้าง notification เฉพาะ user เจ้าของ task (task.userId)
+      const existingNotification = await prisma.notification.findFirst({
+        where: {
+          userId: task.userId,
+          type: "TASK_DUE",
+          entityId: task.id,
+          createdAt: { gte: startOfTodayForQuery },
+        },
+      });
+
+      if (!existingNotification) {
+        await prisma.notification.create({
+          data: {
             userId: task.userId,
             type: "TASK_DUE",
+            title: "Reminder",
+            message: `"${task.topic}" is due today. Please make sure it is completed on time!`,
+            link: `/dashboard/tasks/${task.id}`,
             entityId: task.id,
-            createdAt: {
-              gte: new Date(new Date().setHours(0, 0, 0, 0)), // Created today
-            },
           },
         });
-
-        if (!existingNotification) {
-          await prisma.notification.create({
-            data: {
-              userId: task.userId,
-              type: "TASK_DUE",
-              title: "Reminder",
-              message: `"${task.topic}" is due today. Please make sure it is completed on time!`,
-              link: `/dashboard/tasks?taskId=${task.id}`,
-              entityId: task.id,
-            },
-          });
-          taskAlertsCount++;
-        }
+        taskAlertsCount++;
       }
     }
 
