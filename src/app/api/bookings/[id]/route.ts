@@ -504,7 +504,8 @@ export async function PUT(
         }
       }
 
-      // Roommate group: only within same companion; assign this booking + roommateBookingIds to same room
+      // Roommate group: only within same companion.
+      // Allow multiple roommate groups within one companion group, e.g. A+B and C+D.
       if (roommateBookingIds !== undefined) {
         const afterCompanion = await tx.booking.findUnique({
           where: { id },
@@ -512,25 +513,16 @@ export async function PUT(
         });
         const cgId = afterCompanion?.companionGroupId ?? null;
 
-          if (!cgId) {
+        // If booking is not in any companion group, clear its roommates and exit.
+        if (!cgId) {
           await tx.booking.update({
             where: { id },
             data: { roommateGroupId: null },
           });
-          if (currentBooking.roommateGroupId) {
-            const othersInOldRoom = await tx.booking.findMany({
-              where: { roommateGroupId: currentBooking.roommateGroupId, id: { not: id } },
-              select: { id: true },
-            });
-            if (othersInOldRoom.length > 0) {
-              await tx.booking.updateMany({
-                where: { id: { in: othersInOldRoom.map((b) => b.id) } },
-                data: { roommateGroupId: null },
-              });
-            }
-          }
         } else {
-          const allRoomIds = [id, ...(roommateBookingIds || [])];
+          const requestedRoommateIds = roommateBookingIds || [];
+          const allRoomIds = requestedRoommateIds.length > 0 ? [id, ...requestedRoommateIds] : [id];
+
           const inSameCompanion = await tx.booking.findMany({
             where: { id: { in: allRoomIds }, companionGroupId: cgId },
             select: { id: true },
@@ -538,32 +530,56 @@ export async function PUT(
           if (inSameCompanion.length !== allRoomIds.length) {
             throw new Error("ROOMMATE_SAME_COMPANION");
           }
-          let roommateGroup = await tx.bookingRoommateGroup.findFirst({
-            where: { companionGroupId: cgId },
-            select: { id: true },
-          });
-          if (!roommateGroup) {
-            roommateGroup = await tx.bookingRoommateGroup.create({
-              data: { companionGroupId: cgId },
-              select: { id: true },
-            });
-          }
-          await tx.booking.updateMany({
-            where: { id: { in: allRoomIds } },
-            data: { roommateGroupId: roommateGroup.id },
-          });
-          const leftInRoom = await tx.booking.findMany({
-            where: {
-              roommateGroupId: roommateGroup.id,
-              id: { notIn: allRoomIds },
-            },
-            select: { id: true },
-          });
-          if (leftInRoom.length > 0) {
-            await tx.booking.updateMany({
-              where: { id: { in: leftInRoom.map((b) => b.id) } },
+
+          if (requestedRoommateIds.length === 0) {
+            // User cleared roommates for this booking: remove it from any roommate group
+            await tx.booking.update({
+              where: { id },
               data: { roommateGroupId: null },
             });
+          } else {
+            // Determine roommate group to use based on existing assignments of these bookings.
+            const existingRoommates = await tx.booking.findMany({
+              where: { id: { in: allRoomIds } },
+              select: { id: true, roommateGroupId: true },
+            });
+            const groupIds = Array.from(
+              new Set(existingRoommates.map((b) => b.roommateGroupId).filter((gid): gid is string => !!gid)),
+            );
+
+            let roommateGroupId: string;
+            if (groupIds.length === 1) {
+              // All in the same existing group – reuse it.
+              roommateGroupId = groupIds[0];
+            } else {
+              // No existing group or conflicting groups – create a fresh group for this set.
+              const roommateGroup = await tx.bookingRoommateGroup.create({
+                data: { companionGroupId: cgId },
+                select: { id: true },
+              });
+              roommateGroupId = roommateGroup.id;
+            }
+
+            // Assign selected bookings to the chosen roommate group
+            await tx.booking.updateMany({
+              where: { id: { in: allRoomIds } },
+              data: { roommateGroupId },
+            });
+
+            // Remove any bookings that were previously in this roommate group but are no longer in the set
+            const leftInRoom = await tx.booking.findMany({
+              where: {
+                roommateGroupId,
+                id: { notIn: allRoomIds },
+              },
+              select: { id: true },
+            });
+            if (leftInRoom.length > 0) {
+              await tx.booking.updateMany({
+                where: { id: { in: leftInRoom.map((b) => b.id) } },
+                data: { roommateGroupId: null },
+              });
+            }
           }
         }
       }

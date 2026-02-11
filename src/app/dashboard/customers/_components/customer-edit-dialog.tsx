@@ -18,16 +18,26 @@ interface CustomerEditDialogProps {
   customerId: string;
   /** When provided and user submits with recheck checked, this is called to set booking isRechecked */
   bookingId?: string;
+  /** Current recheck state from parent (e.g. booking form) */
+  isReChecked?: boolean;
   onReCheckedChange?: (checked: boolean) => void;
   /** Called when user submits with recheck checked. With bookingId: update booking API; without: store in form for create. */
   onReCheckedSubmit?: (bookingId?: string) => void | Promise<void>;
 }
 
-export function CustomerEditDialog({ open, onOpenChange, customerId, bookingId, onReCheckedChange, onReCheckedSubmit }: CustomerEditDialogProps) {
+export function CustomerEditDialog({
+  open,
+  onOpenChange,
+  customerId,
+  bookingId,
+  isReChecked: isReCheckedFromParent,
+  onReCheckedChange,
+  onReCheckedSubmit,
+}: CustomerEditDialogProps) {
   const { data: customer, isLoading, error } = useCustomer(customerId);
   const { data: tags = [] } = useAllTags();
   const updateCustomerMutation = useUpdateCustomer();
-  const [isReChecked, setIsReChecked] = useState(false);
+  const [isReChecked, setIsReChecked] = useState(!!isReCheckedFromParent);
 
   // Transform customer data to form values
   const formattedCustomer = useMemo<Partial<CustomerFormValues> | undefined>(() => {

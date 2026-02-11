@@ -30,6 +30,7 @@ export default function NewBookingPage() {
         salesUserId: values.salesUserId,
         passportId: values.passportId,
         companionCustomerIds: values.companionCustomerIds,
+        roommateBookingIds: values.roommateBookingIds,
         note: values.note,
         extraPriceForSingleTraveller: values.extraPriceForSingleTraveller
           ? parseFloat(values.extraPriceForSingleTraveller)

@@ -275,6 +275,7 @@ async function createBooking(data: {
   salesUserId: string;
   passportId: string;
   companionCustomerIds?: string[];
+  roommateBookingIds?: string[];
   agentId?: string;
   note?: string;
   extraPriceForSingleTraveller?: number;

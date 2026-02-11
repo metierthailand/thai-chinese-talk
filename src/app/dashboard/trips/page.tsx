@@ -146,7 +146,7 @@ export default function TripsPage() {
       {
         accessorKey: "type",
         header: "Type",
-        cell: ({ row }) => <div>{row.original.type === "GROUP_TOUR" ? "Group Tour" : "Private Tour"}</div>,
+        cell: ({ row }) => <div>{row.original.type === "GROUP_TOUR" ? "Group tour" : "Private tour"}</div>,
       },
       {
         accessorKey: "status",

@@ -208,8 +208,8 @@ function addBookingsSheet(
   const duration = formatTripDuration(startDate, endDate);
   const tripNameDisplay = trip.name || "";
   const tripDateStr = `${format(startDate, "dd MMM")} - ${format(endDate, "dd MMM yyyy")}`.toUpperCase();
-  const standardPriceStr = maskPricesForAdmin ? "*****" : String(Number(trip.standardPrice) ?? "");
-  const singlePriceStr = maskPricesForAdmin ? "*****" : String(Number(trip.extraPricePerPerson) ?? "");
+  const standardPriceStr = maskPricesForAdmin ? "*****" : formatPriceForExport(trip.standardPrice);
+  const singlePriceStr = maskPricesForAdmin ? "*****" : formatPriceForExport(trip.extraPricePerPerson);
 
   const VALUE_SPAN = 5;
   const tripSummaryRows: (string | number)[][] = [

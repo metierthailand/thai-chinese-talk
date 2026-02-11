@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       prisma.booking.count({
         where: {
           paymentStatus: {
-            in: ["DEPOSIT_PENDING", "DEPOSIT_PAID"],
+            not: "CANCELLED",
           },
         },
       }),
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       prisma.booking.findMany({
         where: {
           paymentStatus: {
-            in: ["DEPOSIT_PAID", "FULLY_PAID"],
+            not: "CANCELLED",
           },
         },
         select: {
@@ -68,7 +68,7 @@ export async function GET(request: Request) {
       prisma.booking.findMany({
         where: {
           paymentStatus: {
-            notIn: ["CANCELLED"],
+            not: "CANCELLED",
           },
         },
         select: {

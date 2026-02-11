@@ -181,7 +181,7 @@ export default function CustomersPage() {
             onSort={handleSort}
           />
         ),
-        cell: ({ row }) => <div>{format(new Date(row.original.createdAt || ""), "dd MMM yyyy")}</div>,
+        cell: ({ row }) => format(new Date(row.original.createdAt || ""), "dd MMM yyyy"),
       },
       {
         id: "actions",

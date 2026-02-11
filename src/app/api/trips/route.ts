@@ -116,14 +116,16 @@ export async function GET(request: Request) {
     });
 
     const tripIds = trips.map((t) => t.id);
-    // Count bookings with DEPOSIT_PAID or FULLY_PAID per trip
+    // Count bookings without CANCELLED status per trip
     const paidCounts =
       tripIds.length > 0
         ? await prisma.booking.groupBy({
             by: ["tripId"],
             where: {
               tripId: { in: tripIds },
-              paymentStatus: { in: ["DEPOSIT_PAID", "FULLY_PAID"] },
+              paymentStatus: {
+                not: "CANCELLED",
+              },
             },
             _count: { id: true },
           })

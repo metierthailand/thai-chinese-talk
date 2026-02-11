@@ -483,13 +483,13 @@ export default function AccountPage() {
                     </Card>
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardDescription>Total Sales</CardDescription>
+                        <CardDescription>Total Commission (MTD)</CardDescription>
                         <CardTitle className="text-2xl">
                           {new Intl.NumberFormat("th-TH", {
                             style: "currency",
                             currency: "THB",
                             maximumFractionDigits: 0,
-                          }).format(commissionData.totalSales || 0)}
+                          }).format(commissionData.mtdCommission || 0)}
                         </CardTitle>
                       </CardHeader>
                     </Card>

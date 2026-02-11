@@ -230,6 +230,7 @@ export async function POST(req: Request) {
       salesUserId,
       passportId,
       companionCustomerIds,
+      roommateBookingIds,
       agentId,
       note,
       extraPriceForSingleTraveller,
@@ -513,6 +514,73 @@ export async function POST(req: Request) {
         });
       }
 
+      // 5. Roommate group: only within same companion group.
+      // Allow multiple roommate groups within one companion group, e.g. A+B and C+D.
+      if (roommateBookingIds && roommateBookingIds.length > 0) {
+        const afterCompanion = await tx.booking.findUnique({
+          where: { id: newBooking.id },
+          select: { companionGroupId: true },
+        });
+        const cgId = afterCompanion?.companionGroupId ?? null;
+
+        // If there is no companion group, roommates are not allowed
+        if (!cgId) {
+          throw new Error("ROOMMATE_SAME_COMPANION");
+        }
+
+        const allRoomIds = [newBooking.id, ...roommateBookingIds];
+        const inSameCompanion = await tx.booking.findMany({
+          where: { id: { in: allRoomIds }, companionGroupId: cgId },
+          select: { id: true },
+        });
+        if (inSameCompanion.length !== allRoomIds.length) {
+          throw new Error("ROOMMATE_SAME_COMPANION");
+        }
+
+        // Determine roommate group to use based on existing assignments of these bookings.
+        const existingRoommates = await tx.booking.findMany({
+          where: { id: { in: allRoomIds } },
+          select: { id: true, roommateGroupId: true },
+        });
+        const groupIds = Array.from(
+          new Set(existingRoommates.map((b) => b.roommateGroupId).filter((id): id is string => !!id)),
+        );
+
+        let roommateGroupId: string;
+        if (groupIds.length === 1) {
+          // All in the same existing group (or none but same id) – reuse it.
+          roommateGroupId = groupIds[0];
+        } else {
+          // No existing group or conflicting groups – create a fresh group for this set.
+          const roommateGroup = await tx.bookingRoommateGroup.create({
+            data: { companionGroupId: cgId },
+            select: { id: true },
+          });
+          roommateGroupId = roommateGroup.id;
+        }
+
+        // Assign selected bookings to the chosen roommate group
+        await tx.booking.updateMany({
+          where: { id: { in: allRoomIds } },
+          data: { roommateGroupId },
+        });
+
+        // Remove any bookings that were previously in this roommate group but are no longer in the set
+        const leftInRoom = await tx.booking.findMany({
+          where: {
+            roommateGroupId,
+            id: { notIn: allRoomIds },
+          },
+          select: { id: true },
+        });
+        if (leftInRoom.length > 0) {
+          await tx.booking.updateMany({
+            where: { id: { in: leftInRoom.map((b) => b.id) } },
+            data: { roommateGroupId: null },
+          });
+        }
+      }
+
       // Return the updated booking
       const updatedBooking = await tx.booking.findUnique({
         where: { id: newBooking.id },
@@ -621,6 +689,12 @@ export async function POST(req: Request) {
     return NextResponse.json(booking);
   } catch (error) {
     console.error("[BOOKINGS_POST]", error);
+    if (error instanceof Error && error.message === "ROOMMATE_SAME_COMPANION") {
+      return new NextResponse(
+        JSON.stringify({ message: "All roommates must be in the same companion group." }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

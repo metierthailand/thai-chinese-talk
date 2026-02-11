@@ -94,9 +94,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ agentId:
     const details = commissions.map((commission) => {
       const customer = commission.booking.customer;
       const customerName =
-        customer.firstNameTh && customer.lastNameTh
-          ? `${customer.firstNameTh} ${customer.lastNameTh}`
-          : `${customer.firstNameEn} ${customer.lastNameEn}`;
+        customer.firstNameEn && customer.lastNameEn
+          ? `${customer.firstNameEn} ${customer.lastNameEn}`
+          : `${customer.firstNameTh} ${customer.lastNameTh}`;
 
       return {
         id: commission.id,

@@ -259,6 +259,22 @@ export async function GET(request: Request) {
             },
           },
         },
+        roommateGroup: {
+          include: {
+            bookings: {
+              include: {
+                customer: {
+                  select: {
+                    firstNameEn: true,
+                    lastNameEn: true,
+                    firstNameTh: true,
+                    lastNameTh: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         trip: {
           select: {
             code: true,
@@ -336,10 +352,23 @@ export async function GET(request: Request) {
       }
 
       const otherInGroup = b.companionGroup?.bookings.filter((bb) => bb.customerId !== b.customerId) ?? [];
-      const companions = otherInGroup.map(
-        (cc) => `${str(cc.customer?.firstNameEn)} ${str(cc.customer?.lastNameEn)}`.trim() || `${str(cc.customer?.firstNameTh)} ${str(cc.customer?.lastNameTh)}`.trim()
-      ).filter(Boolean);
-      y = drawLabelValue(page, font, fontBold, "Companion", companions.length ? companions.join(", ") : "-", x, y, sanitize);
+      const companions = otherInGroup
+        .map(
+          (cc) =>
+            `${str(cc.customer?.firstNameEn)} ${str(cc.customer?.lastNameEn)}`.trim() ||
+            `${str(cc.customer?.firstNameTh)} ${str(cc.customer?.lastNameTh)}`.trim(),
+        )
+        .filter(Boolean);
+      y = drawLabelValue(
+        page,
+        font,
+        fontBold,
+        "Companion",
+        companions.length ? companions.join(", ") : "-",
+        x,
+        y,
+        sanitize,
+      );
       y -= 12;
 
       drawHorizontalLine(page, y);
@@ -363,6 +392,26 @@ export async function GET(request: Request) {
       y = drawLabelValue(page, font, fontBold, "Extra price for single traveller", priceDisplay(extraSingle > 0 ? formatPrice(extraSingle) : "-"), x, y, sanitize);
       y -= 12
       y = drawLabelValue(page, font, fontBold, "Room type", ROOM_TYPE_LABELS[b.roomType] ?? b.roomType ?? "-", x, y, sanitize);
+
+      const otherRoommates = b.roommateGroup?.bookings.filter((bb) => bb.id !== b.id) ?? [];
+      const roommates = otherRoommates
+        .map(
+          (rr) =>
+            `${str(rr.customer?.firstNameEn)} ${str(rr.customer?.lastNameEn)}`.trim() ||
+            `${str(rr.customer?.firstNameTh)} ${str(rr.customer?.lastNameTh)}`.trim(),
+        )
+        .filter(Boolean);
+      y = drawLabelValue(
+        page,
+        font,
+        fontBold,
+        "Roommate",
+        roommates.length ? roommates.join(", ") : "-",
+        x,
+        y,
+        sanitize,
+      );
+
       y = drawLabelValue(page, font, fontBold, "Extra price for extra bed", priceDisplay(extraBed > 0 ? formatPrice(extraBed) : "-"), x, y, sanitize);
       y = drawLabelValue(page, font, fontBold, "Note for room", str(b.roomNote) || "-", x, y, sanitize);
       y -= 12

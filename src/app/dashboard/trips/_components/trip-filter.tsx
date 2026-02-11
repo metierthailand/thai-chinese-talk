@@ -112,9 +112,9 @@ export function TripFilter({ onFilterChange }: TripFilterProps) {
             <SelectValue placeholder="Trip type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All Types</SelectItem>
-            <SelectItem value="GROUP_TOUR">Group Tour</SelectItem>
-            <SelectItem value="PRIVATE_TOUR">Private Tour</SelectItem>
+            <SelectItem value="ALL">All types</SelectItem>
+            <SelectItem value="GROUP_TOUR">Group tour</SelectItem>
+            <SelectItem value="PRIVATE_TOUR">Private tour</SelectItem>
           </SelectContent>
         </Select>
 

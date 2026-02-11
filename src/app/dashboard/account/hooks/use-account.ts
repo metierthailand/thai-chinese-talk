@@ -27,6 +27,7 @@ export interface CommissionData {
   commissionRate: number; // This is commissionPerHead (fixed amount per booking)
   totalSales: number;
   totalCommission: number;
+  mtdCommission: number;
   totalBookings: number;
   bookings: CommissionBooking[];
   page: number;

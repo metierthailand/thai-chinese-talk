@@ -47,6 +47,9 @@ export async function GET(request: Request) {
           },
         },
       },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
     // Calculate totals from all commissions using cached paidAmount
@@ -58,6 +61,19 @@ export async function GET(request: Request) {
       (sum, commission) => sum + Number(commission.amount),
       0
     );
+
+    // Calculate month-to-date commission (current calendar month)
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const mtdCommission = allCommissions.reduce((sum, commission) => {
+      const createdAt = commission.createdAt;
+      if (createdAt >= startOfMonth && createdAt <= endOfMonth) {
+        return sum + Number(commission.amount);
+      }
+      return sum;
+    }, 0);
 
     // Get paginated commissions for bookings list
     const commissions = await prisma.commission.findMany({
@@ -148,6 +164,7 @@ export async function GET(request: Request) {
       commissionRate: user.commissionPerHead ? Number(user.commissionPerHead) : 0,
       totalSales,
       totalCommission,
+      mtdCommission,
       totalBookings: total,
       bookings,
       page,

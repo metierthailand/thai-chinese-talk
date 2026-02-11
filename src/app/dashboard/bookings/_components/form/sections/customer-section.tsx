@@ -354,6 +354,10 @@ export function CustomerSection({
                   onOpenChange={setEditCustomerDialogOpen}
                   customerId={field.value}
                   bookingId={bookingId}
+                  isReChecked={isRechecked}
+                  onReCheckedChange={(checked) => {
+                    form.setValue("isRechecked", checked, { shouldDirty: true });
+                  }}
                   onReCheckedSubmit={handleReCheckedSubmit}
                 />
               </>

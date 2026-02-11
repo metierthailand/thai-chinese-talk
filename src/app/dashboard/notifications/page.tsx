@@ -65,7 +65,7 @@ export default function NotificationsPage() {
         accessorKey: "title",
         header: "Title",
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-32">
             <span className="font-medium">{row.original.title}</span>
             {!row.original.isRead && (
               <span className="flex h-2 w-2 rounded-full bg-blue-600" />
@@ -77,7 +77,7 @@ export default function NotificationsPage() {
         accessorKey: "message",
         header: "Message",
         cell: ({ row }) => (
-          <div className="max-w-md text-sm text-muted-foreground line-clamp-2">
+          <div className="max-w-md text-sm text-muted-foreground whitespace-pre-wrap wrap-break-word line-clamp-2">
             {row.original.message}
           </div>
         ),
@@ -94,7 +94,7 @@ export default function NotificationsPage() {
       {
         accessorKey: "createdAt",
         header: "Date",
-        cell: ({ row }) => format(new Date(row.original.createdAt), "PPp"),
+        cell: ({ row }) => format(new Date(row.original.createdAt), "dd MMM yyyy"),
       },
       {
         id: "actions",

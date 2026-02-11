@@ -45,7 +45,9 @@ export async function GET(
     const paidBookingsCount = await prisma.booking.count({
       where: {
         tripId: id,
-        paymentStatus: { in: ["DEPOSIT_PAID", "FULLY_PAID"] },
+        paymentStatus: {
+          not: "CANCELLED",
+        },
       },
     });
 
