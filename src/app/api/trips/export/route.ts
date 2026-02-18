@@ -538,6 +538,10 @@ export async function GET(request: Request) {
 
     const workbook = new ExcelJS.Workbook();
 
+    let filenameStartDate: string | null = null;
+    let filenameType: string | null = null;
+    let filenameIata: string | null = null;
+
     for (const tid of tripIds) {
       const trip = await prisma.trip.findUnique({
         where: { id: tid },
@@ -554,9 +558,17 @@ export async function GET(request: Request) {
           tg: true,
           staff: true,
           note: true,
+          type: true,
+          airlineAndAirport: { select: { code: true } },
         },
       });
       if (!trip) continue;
+
+      if (filenameStartDate === null) {
+        filenameStartDate = format(new Date(trip.startDate), "yyyyMMdd");
+        filenameType = trip.type === "GROUP_TOUR" ? "GROUP" : "PRIVATE";
+        filenameIata = trip.airlineAndAirport?.code ?? "";
+      }
 
       let bookings = await prisma.booking.findMany({
         where: { tripId: tid },
@@ -579,30 +591,28 @@ export async function GET(request: Request) {
 
       type BookingForSort = (typeof bookings)[0] & { roommateGroupId?: string | null };
       const companionKeyOf = (b: BookingForSort) => b.companionGroupId ?? b.id;
-      const roommateKeyOf = (b: BookingForSort) => b.roommateGroupId ?? b.id;
+      // Order companion groups by "first person" in group = earliest createdAt (oldest at top)
+      const companionKeys = [...new Set(bookings.map((b) => companionKeyOf(b as BookingForSort)))];
+      const keyToMinCreated = new Map<string, number>();
+      for (const key of companionKeys) {
+        const groupBookings = bookings.filter((b) => companionKeyOf(b as BookingForSort) === key);
+        const minCreated = Math.min(...groupBookings.map((b) => new Date(b.createdAt).getTime()));
+        keyToMinCreated.set(key, minCreated);
+      }
+      const companionKeysByFirstCreated = [...companionKeys].sort(
+        (ka, kb) => (keyToMinCreated.get(ka) ?? 0) - (keyToMinCreated.get(kb) ?? 0),
+      );
       const companionKeyToIndex = new Map<string, number>();
-      let nextCompanionIndex = 0;
-      for (const b of bookings) {
-        const key = companionKeyOf(b as BookingForSort);
-        if (!companionKeyToIndex.has(key)) companionKeyToIndex.set(key, ++nextCompanionIndex);
-      }
-      const roommateKeyToIndex = new Map<string, number>();
-      let nextRoommateIndex = 0;
-      for (const b of bookings) {
-        const key = roommateKeyOf(b as BookingForSort);
-        if (!roommateKeyToIndex.has(key)) roommateKeyToIndex.set(key, ++nextRoommateIndex);
-      }
+      companionKeysByFirstCreated.forEach((key, i) => companionKeyToIndex.set(key, i + 1));
 
       const sortedBookings = [...bookings].sort((a, b) => {
         const ca = companionKeyToIndex.get(companionKeyOf(a as BookingForSort)) ?? 0;
         const cb = companionKeyToIndex.get(companionKeyOf(b as BookingForSort)) ?? 0;
         if (ca !== cb) return ca - cb;
-        const ra = roommateKeyToIndex.get(roommateKeyOf(a as BookingForSort)) ?? 0;
-        const rb = roommateKeyToIndex.get(roommateKeyOf(b as BookingForSort)) ?? 0;
-        if (ra !== rb) return ra - rb;
-        const nameA = `${a.customer.firstNameEn} ${a.customer.lastNameEn}`;
-        const nameB = `${b.customer.firstNameEn} ${b.customer.lastNameEn}`;
-        return nameA.localeCompare(nameB);
+        // Within same companion group: order by createdAt ascending (created first = first row)
+        const ta = new Date(a.createdAt).getTime();
+        const tb = new Date(b.createdAt).getTime();
+        return ta - tb;
       });
 
       const sheetName = buildSheetName(trip);
@@ -618,7 +628,7 @@ export async function GET(request: Request) {
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
-    const filename = `trip-bookings-export-${new Date().toISOString().split("T")[0]}.xlsx`;
+    const filename = `${filenameStartDate ?? "export"}-${filenameType ?? "GROUP"}-${filenameIata ?? "N/A"}-${format(new Date(), "yyyyMMdd")}.xlsx`;
 
     return new NextResponse(buffer, {
       headers: {

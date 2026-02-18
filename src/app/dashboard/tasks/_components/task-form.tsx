@@ -156,7 +156,7 @@ export function TaskForm({ mode, initialData, onSubmit, onCancel, isLoading = fa
           name="relatedCustomerId"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel required>Customer</FormLabel>
+              <FormLabel>Customer</FormLabel>
               {readOnly ? (
                 <FormControl>
                   <Input

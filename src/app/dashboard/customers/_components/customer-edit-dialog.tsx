@@ -92,25 +92,6 @@ export function CustomerEditDialog({
           <DialogTitle className="text-3xl">Customer</DialogTitle>
         </DialogHeader>
 
-        {/* Re-check the customer data checkbox */}
-        <div className="flex items-center space-x-2 py-4">
-          <Checkbox
-            id="recheck-customer"
-            checked={isReChecked}
-            onCheckedChange={(checked) => {
-              const isChecked = checked === true;
-              setIsReChecked(isChecked);
-              onReCheckedChange?.(isChecked);
-            }}
-          />
-          <Label
-            htmlFor="recheck-customer"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            Please check the box if the customer&apos;s information has already been rechecked.
-          </Label>
-        </div>
-
         {isLoading ? (
           <div className="flex h-64 items-center justify-center">
             <Loading />
@@ -129,6 +110,26 @@ export function CustomerEditDialog({
             availableTags={tags}
           />
         )}
+
+
+        {/* Re-check the customer data checkbox */}
+        <div className="flex items-center space-x-2 py-4">
+          <Checkbox
+            id="recheck-customer"
+            checked={isReChecked}
+            onCheckedChange={(checked) => {
+              const isChecked = checked === true;
+              setIsReChecked(isChecked);
+              onReCheckedChange?.(isChecked);
+            }}
+          />
+          <Label
+            htmlFor="recheck-customer"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-red-500"
+          >
+            Please check the box if the customer&apos;s information has already been rechecked.
+          </Label>
+        </div>
       </DialogContent>
     </Dialog>
   );

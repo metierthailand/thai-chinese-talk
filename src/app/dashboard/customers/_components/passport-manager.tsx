@@ -51,6 +51,10 @@ export function PassportManager({ className, customerId, customerFirstName, cust
   const [editingPassport, setEditingPassport] = useState<PassportInput | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewingPassport, setViewingPassport] = useState<Passport | null>(null);
+  const [issuingDatePopoverOpen, setIssuingDatePopoverOpen] = useState(false);
+  const [issuingDateCalendarMonth, setIssuingDateCalendarMonth] = useState<Date>(() => new Date());
+  const [expiryDatePopoverOpen, setExpiryDatePopoverOpen] = useState(false);
+  const [expiryDateCalendarMonth, setExpiryDateCalendarMonth] = useState<Date>(() => new Date());
 
   const createPassport = useCreatePassport(customerId);
   const updatePassport = useUpdatePassport(customerId);
@@ -314,7 +318,16 @@ export function PassportManager({ className, customerId, customerFirstName, cust
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel required>Date of issue</FormLabel>
-                      <Popover>
+                      <Popover
+                        open={issuingDatePopoverOpen}
+                        onOpenChange={(open) => {
+                          setIssuingDatePopoverOpen(open);
+                          if (open) {
+                            const v = form.getValues("issuingDate");
+                            setIssuingDateCalendarMonth(v ? new Date(v) : new Date());
+                          }
+                        }}
+                      >
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
@@ -333,6 +346,8 @@ export function PassportManager({ className, customerId, customerFirstName, cust
                           <Calendar
                             captionLayout="dropdown"
                             mode="single"
+                            month={issuingDateCalendarMonth}
+                            onMonthChange={setIssuingDateCalendarMonth}
                             selected={field.value ? new Date(field.value) : undefined}
                             onSelect={(date) => field.onChange(date)}
                             disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
@@ -356,7 +371,16 @@ export function PassportManager({ className, customerId, customerFirstName, cust
                     return (
                       <FormItem className="flex flex-col">
                         <FormLabel required>Date of expiry</FormLabel>
-                        <Popover>
+                        <Popover
+                          open={expiryDatePopoverOpen}
+                          onOpenChange={(open) => {
+                            setExpiryDatePopoverOpen(open);
+                            if (open) {
+                              const v = form.getValues("expiryDate");
+                              setExpiryDateCalendarMonth(v ? new Date(v) : new Date());
+                            }
+                          }}
+                        >
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -375,6 +399,8 @@ export function PassportManager({ className, customerId, customerFirstName, cust
                             <Calendar
                               captionLayout="dropdown"
                               mode="single"
+                              month={expiryDateCalendarMonth}
+                              onMonthChange={setExpiryDateCalendarMonth}
                               selected={field.value ? new Date(field.value) : undefined}
                               onSelect={(date) => field.onChange(date)}
                               fromYear={minYear}

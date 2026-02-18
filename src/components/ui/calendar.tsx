@@ -6,10 +6,135 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "lucide-react"
-import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
+import {
+  type DropdownProps,
+  DayButton,
+  DayPicker,
+  getDefaultClassNames,
+} from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { UI } from "react-day-picker"
+
+/** Year as combobox (search + select) when captionLayout is dropdown/dropdown-years. */
+function YearsDropdownInput(props: DropdownProps) {
+  const {
+    value: valueProp,
+    onChange,
+    options,
+    disabled,
+    className,
+    classNames,
+    style,
+    "aria-label": ariaLabel,
+  } = props
+  const year = (() => {
+    const v = valueProp
+    if (typeof v === "number") return v
+    if (Array.isArray(v)) return Number(v[0]) || new Date().getFullYear()
+    return Number(v) || new Date().getFullYear()
+  })()
+  const [open, setOpen] = React.useState(false)
+  const minYear = options?.length
+    ? Math.min(...options.map((o) => o.value))
+    : year - 100
+  const maxYear = options?.length
+    ? Math.max(...options.map((o) => o.value))
+    : year + 100
+  const yearOptions = React.useMemo(() => {
+    if (options?.length) return options.map((o) => o.value)
+    const list: number[] = []
+    for (let y = maxYear; y >= minYear; y--) list.push(y)
+    return list
+  }, [options, minYear, maxYear])
+
+  const handleSelect = (selectedYear: number) => {
+    if (onChange) {
+      onChange({
+        target: { value: String(selectedYear) },
+      } as React.ChangeEvent<HTMLSelectElement>)
+    }
+    setOpen(false)
+  }
+
+  const listRef = React.useRef<HTMLDivElement>(null)
+  const [searchValue, setSearchValue] = React.useState("")
+  React.useEffect(() => {
+    if (!open) setSearchValue("")
+  }, [open])
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <span
+        data-disabled={disabled}
+        className={classNames[UI.DropdownRoot]}
+      >
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            disabled={disabled}
+            aria-label={ariaLabel}
+            aria-expanded={open}
+            className={cn(
+              classNames[UI.YearsDropdown],
+              "flex h-8 min-w-16 items-center justify-center gap-1 rounded-md px-2 text-center text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+              className
+            )}
+            style={style}
+          >
+            {year}
+            <ChevronDownIcon className="size-3.5 opacity-50" />
+          </button>
+        </PopoverTrigger>
+      </span>
+      <PopoverContent className="w-24 p-0" align="start">
+        <Command
+          shouldFilter={true}
+          value={searchValue}
+          onValueChange={(v) => {
+            setSearchValue(v)
+            if (listRef.current) listRef.current.scrollTop = 0
+          }}
+          filter={(value, search) => {
+            const s = search.trim()
+            if (s === "") return 1
+            return value.startsWith(s) ? 1 : 0
+          }}
+        >
+          <CommandInput className="h-9" />
+          <CommandList ref={listRef}>
+            <CommandEmpty>No results</CommandEmpty>
+            <CommandGroup>
+              {yearOptions.map((y) => (
+                <CommandItem
+                  key={y}
+                  value={String(y)}
+                  onSelect={() => handleSelect(y)}
+                >
+                  {y}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 function Calendar({
   className,
@@ -159,6 +284,9 @@ function Calendar({
           )
         },
         DayButton: CalendarDayButton,
+        ...(captionLayout === "dropdown" || captionLayout === "dropdown-years"
+          ? { YearsDropdown: YearsDropdownInput }
+          : {}),
         WeekNumber: ({ children, ...props }) => {
           return (
             <td {...props}>

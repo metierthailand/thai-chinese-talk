@@ -71,8 +71,8 @@ export const customerFormSchema = z.object({
         imageUrl: z.string().optional().nullable(),
         isPrimary: z.boolean(),
       }),
-    )
-    .min(1, "At least one passport is required"),
+    ),
+    // .min(1, "At least one passport is required"),
 
   foodAllergies: z
     .array(
@@ -96,7 +96,7 @@ interface Customer {
   email: string | null;
   phoneNumber: string | null;
   type: "INDIVIDUAL" | "CORPORATE";
-  title?: "MR" | "MRS" | "MISS" | "MASTER" | "OTHER" | null;
+  title?: "MR" | "MRS" | "MISS" | "MASTER" | null;
   lineId?: string | null;
   dateOfBirth?: string | null;
   note?: string | null;

@@ -79,7 +79,7 @@ export default function TripsPage() {
       {
         accessorKey: "code",
         header: "Trip code",
-        cell: ({ row }) => <div className="font-mono font-medium">{row.original.code}</div>,
+        cell: ({ row }) => <div className="font-mono font-medium max-w-[100px] truncate">{row.original.code}</div>,
       },
       {
         accessorKey: "name",

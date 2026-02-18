@@ -318,7 +318,10 @@ export function BookingForm({ mode, initialData, onSubmit, onCancel, isLoading =
 
         {/* Create Customer Dialog */}
         <Dialog open={createCustomerDialogOpen} onOpenChange={setCreateCustomerDialogOpen} modal={false}>
-          <DialogContent className="max-h-[90vh] w-full! lg:w-[820px]! sm:max-w-7xl overflow-y-auto">
+          <DialogContent
+            className="max-h-[90vh] w-full! lg:w-[820px]! sm:max-w-7xl overflow-y-auto"
+            onInteractOutside={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle className="text-3xl">New Customer</DialogTitle>
             </DialogHeader>

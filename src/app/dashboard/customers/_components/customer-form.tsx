@@ -68,6 +68,10 @@ export function CustomerForm({
   const [isPassportsOpen, setIsPassportsOpen] = useState(true);
   const [isFoodAllergiesOpen, setIsFoodAllergiesOpen] = useState(true);
   const [isDobUnknown, setIsDobUnknown] = useState(initialData?.dateOfBirth === MIN_DOB);
+  const [dobPopoverOpen, setDobPopoverOpen] = useState(false);
+  const [dobCalendarMonth, setDobCalendarMonth] = useState<Date>(() => new Date());
+  const [passportIssuingDateCalendarMonth, setPassportIssuingDateCalendarMonth] = useState<Date>(() => new Date());
+  const [passportExpiryDateCalendarMonth, setPassportExpiryDateCalendarMonth] = useState<Date>(() => new Date());
 
   const form = useForm<CustomerFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -273,7 +277,7 @@ export function CustomerForm({
                   <SelectItem value="MRS">Mrs. (นาง)</SelectItem>
                   <SelectItem value="MISS">Miss. (นางสาว/เด็กหญิง)</SelectItem>
                   <SelectItem value="MASTER">Master (เด็กชาย)</SelectItem>
-                  <SelectItem value="OTHER">Other (อื่นๆ)</SelectItem>
+                  <SelectItem value="OTHER">Other (คุณ)</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -367,7 +371,16 @@ export function CustomerForm({
                     </Label>
                   </div>
                 </div>
-                <Popover>
+                <Popover
+                  open={dobPopoverOpen}
+                  onOpenChange={(open) => {
+                    setDobPopoverOpen(open);
+                    if (open) {
+                      const v = form.getValues("dateOfBirth");
+                      setDobCalendarMonth(v ? new Date(v) : new Date());
+                    }
+                  }}
+                >
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
@@ -390,6 +403,8 @@ export function CustomerForm({
                     <Calendar
                       captionLayout="dropdown"
                       mode="single"
+                      month={dobCalendarMonth}
+                      onMonthChange={setDobCalendarMonth}
                       selected={field.value ? new Date(field.value) : undefined}
                       onSelect={(date) => {
                         field.onChange(date ? format(date, "yyyy-MM-dd") : "");
@@ -1015,7 +1030,14 @@ export function CustomerForm({
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel required>Date of issue</FormLabel>
-                          <Popover>
+                          <Popover
+                            onOpenChange={(open) => {
+                              if (open) {
+                                const v = form.getValues(`passports.${index}.issuingDate`);
+                                setPassportIssuingDateCalendarMonth(v ? new Date(v) : new Date());
+                              }
+                            }}
+                          >
                             <PopoverTrigger asChild>
                               <FormControl>
                                 <Button
@@ -1035,6 +1057,8 @@ export function CustomerForm({
                               <Calendar
                                 captionLayout="dropdown"
                                 mode="single"
+                                month={passportIssuingDateCalendarMonth}
+                                onMonthChange={setPassportIssuingDateCalendarMonth}
                                 selected={field.value ? new Date(field.value) : undefined}
                                 onSelect={(date) => field.onChange(date)}
                                 disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
@@ -1057,7 +1081,14 @@ export function CustomerForm({
                         return (
                           <FormItem className="flex flex-col">
                             <FormLabel required>Date of expiry</FormLabel>
-                            <Popover>
+                            <Popover
+                              onOpenChange={(open) => {
+                                if (open) {
+                                  const v = form.getValues(`passports.${index}.expiryDate`);
+                                  setPassportExpiryDateCalendarMonth(v ? new Date(v) : new Date());
+                                }
+                              }}
+                            >
                               <PopoverTrigger asChild>
                                 <FormControl>
                                   <Button
@@ -1076,6 +1107,8 @@ export function CustomerForm({
                                 <Calendar
                                   captionLayout="dropdown"
                                   mode="single"
+                                  month={passportExpiryDateCalendarMonth}
+                                  onMonthChange={setPassportExpiryDateCalendarMonth}
                                   selected={field.value ? new Date(field.value) : undefined}
                                   onSelect={(date) => field.onChange(date)}
                                   fromYear={minYear}

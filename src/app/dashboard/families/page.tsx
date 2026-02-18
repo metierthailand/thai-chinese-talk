@@ -38,7 +38,7 @@ function buildFamilyColumns(
     accessorKey: "customerName",
     header: "Customer name",
     cell: ({ row }) => (
-      <div>
+      <div className="max-w-[580px] truncate">
         {row.original.customers
           .map((customer) => customer.customer.firstNameEn + " " + customer.customer.lastNameEn)
           .join(", ")}

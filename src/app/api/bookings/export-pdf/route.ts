@@ -453,7 +453,12 @@ export async function GET(request: Request) {
     const pdfBytes = await pdfDoc.save();
     const pdfBuffer = Buffer.from(pdfBytes);
 
-    const filename = `bookings-export-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+    const firstCust = bookings[0]?.customer;
+    const firstNameEn = str(firstCust?.firstNameEn).trim();
+    const lastNameEn = str(firstCust?.lastNameEn).trim();
+    const namePart =
+      (firstNameEn + lastNameEn.slice(0, 2).toUpperCase()).replace(/[^a-zA-Z0-9_-]/g, "") || "export";
+    const filename = `Bookings-${namePart}-${format(new Date(), "yyyyMMdd")}.pdf`;
     return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
