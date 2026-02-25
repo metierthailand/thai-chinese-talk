@@ -315,8 +315,8 @@ model Booking {
   roommateGroup    BookingRoommateGroup? @relation(fields: [roommateGroupId], references: [id], onDelete: SetNull)
   agentId          String?
   agent            User?             @relation("AgentBookings", fields: [agentId], references: [id])
-  passportId       String
-  passport         Passport          @relation(fields: [passportId], references: [id], onDelete: Restrict)
+  passportId       String?
+  passport         Passport?         @relation(fields: [passportId], references: [id], onDelete: SetNull)
 
   isRechecked Boolean @default(false)
 

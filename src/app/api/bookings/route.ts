@@ -251,10 +251,24 @@ export async function POST(req: Request) {
       isRechecked,
     } = body;
 
-    if (!customerId || !tripId || !salesUserId || !passportId || !roomType || !seatType) {
-      return new NextResponse("Missing required fields: customerId, tripId, salesUserId, passportId, roomType, and seatType are required", {
+    if (!customerId || !tripId || !salesUserId || !roomType || !seatType) {
+      return new NextResponse("Missing required fields: customerId, tripId, salesUserId, roomType, and seatType are required", {
         status: 400,
       });
+    }
+
+    // Validate passport belongs to the customer (only if passportId provided)
+    if (passportId && passportId.trim() !== "") {
+      const passport = await prisma.passport.findUnique({
+        where: { id: passportId },
+        select: { customerId: true },
+      });
+      if (!passport || passport.customerId !== customerId) {
+        return new NextResponse(
+          JSON.stringify({ message: "The selected passport does not belong to the customer." }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      }
     }
 
     // Prevent duplicate: same customer cannot have more than one booking in the same trip
@@ -265,18 +279,6 @@ export async function POST(req: Request) {
     if (existingBooking) {
       return new NextResponse(
         JSON.stringify({ message: "This customer already has a booking in the selected trip." }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
-    // Validate passport belongs to the customer
-    const passport = await prisma.passport.findUnique({
-      where: { id: passportId },
-      select: { customerId: true },
-    });
-    if (!passport || passport.customerId !== customerId) {
-      return new NextResponse(
-        JSON.stringify({ message: "The selected passport does not belong to the customer." }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
@@ -411,7 +413,7 @@ export async function POST(req: Request) {
           salesUserId,
           tripId,
           agentId: finalAgentId,
-          passportId: passportId,
+          passportId: passportId && passportId.trim() !== "" ? passportId : null,
           note: note || null,
           extraPriceForSingleTraveller: extraPriceForSingleTraveller ? Number(extraPriceForSingleTraveller) : null,
           roomType: roomType as "DOUBLE_BED" | "TWIN_BED",

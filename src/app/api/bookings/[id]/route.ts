@@ -292,8 +292,12 @@ export async function PUT(
     if (salesUserId !== undefined && salesUserId !== "") updateData.salesUser = { connect: { id: salesUserId } };
     if (tripId !== undefined && tripId !== "") updateData.trip = { connect: { id: tripId } };
     if (agentId !== undefined) updateData.agent = { connect: { id: agentId } };
-    if (passportId !== undefined && passportId !== "") {
-      updateData.passport = { connect: { id: passportId } };
+    if (passportId !== undefined) {
+      if (passportId && passportId !== "") {
+        updateData.passport = { connect: { id: passportId } };
+      } else {
+        updateData.passport = { disconnect: true };
+      }
     }
 
     // Handle companion customers separately using explicit join table

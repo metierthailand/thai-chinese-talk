@@ -713,18 +713,19 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
   const handleSubmit = async (values: BookingFormValues) => {
     if (!onSubmit || readOnly) return;
 
-    if (values.customerId && (!values.passportId || values.passportId.trim() === "")) {
+    // Require passport only when customer has passports but none selected
+    if (values.customerId && customerPassports.length > 0 && (!values.passportId || values.passportId.trim() === "")) {
       toast.error("Please select a passport.");
       return;
     }
 
-    // In create mode, ensure passportId is set if customer is selected
+    // In create mode, auto-select primary/first passport only when customer has passports
     if (mode === "create" && values.customerId && customerPassports.length > 0 && !values.passportId) {
       const primaryPassport = customerPassports.find((p) => p.isPrimary);
       if (primaryPassport) {
         values.passportId = primaryPassport.id;
         form.setValue("passportId", primaryPassport.id);
-      } else if (customerPassports.length > 0) {
+      } else {
         values.passportId = customerPassports[0].id;
         form.setValue("passportId", customerPassports[0].id);
       }

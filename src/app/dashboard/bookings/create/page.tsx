@@ -28,7 +28,7 @@ export default function NewBookingPage() {
         customerId: values.customerId,
         tripId: values.tripId,
         salesUserId: values.salesUserId,
-        passportId: values.passportId,
+        passportId: values.passportId || undefined,
         companionCustomerIds: values.companionCustomerIds,
         roommateBookingIds: values.roommateBookingIds,
         note: values.note,

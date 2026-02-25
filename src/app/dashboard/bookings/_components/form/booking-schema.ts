@@ -30,7 +30,7 @@ export const baseFormSchema = z.object({
   customerId: z.string().min(1, { message: "Please select the information." }),
   tripId: z.string().min(1, { message: "Please select the information." }),
   salesUserId: z.string().min(1, { message: "Please select the information." }),
-  passportId: z.string().min(1, { message: "Please select the information." }),
+  passportId: z.string().optional(),
   companionCustomerIds: z.array(z.string()).optional(),
   roommateBookingIds: z.array(z.string()).optional(),
   note: z.string().optional(),

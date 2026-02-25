@@ -268,12 +268,12 @@ async function fetchBooking(id: string): Promise<Booking> {
   };
 }
 
-// Create booking function
-async function createBooking(data: {
+// Create booking input type (passportId optional for customers without passport)
+type CreateBookingInput = {
   customerId: string;
   tripId: string;
   salesUserId: string;
-  passportId: string;
+  passportId?: string;
   companionCustomerIds?: string[];
   roommateBookingIds?: string[];
   agentId?: string;
@@ -295,7 +295,9 @@ async function createBooking(data: {
   firstPaymentRatio: string;
   isRechecked?: boolean;
   payments?: Array<{ amount?: string; proofOfPayment?: string }>;
-}): Promise<Booking> {
+};
+
+async function createBooking(data: CreateBookingInput): Promise<Booking> {
   const res = await fetch("/api/bookings", {
     method: "POST",
     headers: {
@@ -417,7 +419,7 @@ export function useBooking(id: string | undefined) {
 export function useCreateBooking() {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<Booking, Error, CreateBookingInput>({
     mutationFn: createBooking,
     onSuccess: () => {
       // Invalidate all booking queries to refetch

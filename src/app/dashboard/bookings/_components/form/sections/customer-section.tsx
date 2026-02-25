@@ -373,7 +373,7 @@ export function CustomerSection({
         name="passportId"
         render={({ field }) => (
           <FormItem className="flex flex-col w-full">
-            <FormLabel required={!readOnly}>Passport</FormLabel>
+            <FormLabel>Passport</FormLabel>
             {readOnly ? (
               <FormControl>
                 {(() => {
