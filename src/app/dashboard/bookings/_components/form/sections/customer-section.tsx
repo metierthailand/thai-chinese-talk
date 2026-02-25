@@ -41,6 +41,8 @@ import { Trip } from "@/app/dashboard/trips/hooks/use-trips";
 import { useWatch } from "react-hook-form";
 import { differenceInMonths, format } from "date-fns";
 import { useUpdateBooking } from "@/app/dashboard/bookings/hooks/use-bookings";
+import { useQueryClient } from "@tanstack/react-query";
+import { passportKeys } from "@/app/dashboard/customers/hooks/use-passport";
 
 interface CustomerSectionProps {
   form: UseFormReturn<BookingFormValues>;
@@ -89,7 +91,14 @@ export function CustomerSection({
   const customerDisabled = readOnly || lockFullyPaid;
 
   const updateBookingMutation = useUpdateBooking();
+  const queryClient = useQueryClient();
   const isRechecked = useWatch({ control: form.control, name: "isRechecked" }) ?? false;
+
+  const invalidatePassports = () => {
+    if (customerId) {
+      queryClient.invalidateQueries({ queryKey: passportKeys.byCustomer(customerId) });
+    }
+  };
 
   const handleReCheckedSubmit = async (id?: string) => {
     if (id) {
@@ -346,12 +355,18 @@ export function CustomerSection({
               <>
                 <CustomerViewDialog
                   open={viewCustomerDialogOpen}
-                  onOpenChange={setViewCustomerDialogOpen}
+                  onOpenChange={(open) => {
+                    setViewCustomerDialogOpen(open);
+                    if (!open) invalidatePassports();
+                  }}
                   customerId={field.value}
                 />
                 <CustomerEditDialog
                   open={editCustomerDialogOpen}
-                  onOpenChange={setEditCustomerDialogOpen}
+                  onOpenChange={(open) => {
+                    setEditCustomerDialogOpen(open);
+                    if (!open) invalidatePassports();
+                  }}
                   customerId={field.value}
                   bookingId={bookingId}
                   isReChecked={isRechecked}
