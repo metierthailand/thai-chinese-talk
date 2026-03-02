@@ -738,17 +738,7 @@ export function useBookingForm({ mode, initialData, booking, onSubmit }: UseBook
       );
     }
 
-    // In create mode, ensure first payment amount matches calculated value
-    if (mode === "create" && values.payments && values.payments.length > 0 && values.payments[0]?.amount) {
-      const calculatedValue = calculatedAmounts.firstPaymentAmount.toFixed(2);
-      const enteredValue = parseFloat(values.payments[0].amount);
-      const expectedValue = parseFloat(calculatedValue);
-
-      // If values don't match, use the calculated value
-      if (Math.abs(enteredValue - expectedValue) > 0.01) {
-        values.payments[0].amount = calculatedValue;
-      }
-    }
+    // In create mode, use the amount from the input field as-is (no override with calculated ratio value)
 
     // In edit mode, check if this is a new third payment (payment without id at index 2)
     // Third payment is the final payment and cannot be edited after submission

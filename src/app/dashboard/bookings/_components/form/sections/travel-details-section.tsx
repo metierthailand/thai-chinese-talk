@@ -458,7 +458,7 @@ export function TravelDetailsSection({
           render={({ field }) => (
             <FormItem>
               <div className="flex items-center justify-between">
-                <FormLabel required={enableBagPrice}>Extra price for bag upgrade</FormLabel>
+                <FormLabel required={enableBagPrice}>Extra price</FormLabel>
                 <div className="flex items-center space-x-2">
                   <FormLabel htmlFor="bag-price-toggle" className="cursor-pointer text-sm font-normal">
                     Add-on
@@ -499,7 +499,7 @@ export function TravelDetailsSection({
           name="bagNote"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Note for bag</FormLabel>
+              <FormLabel>Note for extra</FormLabel>
               <FormControl>
                 <Textarea
                   className="resize-none"

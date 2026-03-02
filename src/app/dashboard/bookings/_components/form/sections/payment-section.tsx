@@ -371,22 +371,7 @@ export function PaymentSection({
                             value={field.value || ""}
                             disabled={isDisabled}
                             onWheel={(e) => e.currentTarget.blur()}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              field.onChange(value);
-                              // If user manually changes the value in create mode for first payment, validate it matches calculated
-                              if (mode === "create" && index === 0 && value) {
-                                const calculated = calculatedAmounts.firstPaymentAmount.toFixed(2);
-                                const entered = parseFloat(value);
-                                const expected = parseFloat(calculated);
-                                if (Math.abs(entered - expected) > 0.01) {
-                                  // Show warning but don't block - let backend validate
-                                  console.warn(
-                                    `First payment amount (${entered}) does not match calculated value (${expected}). The calculated value will be used.`,
-                                  );
-                                }
-                              }
-                            }}
+                            onChange={(e) => field.onChange(e.target.value)}
                           />
                         </FormControl>
                         {mode === "create" && index === 0 && (

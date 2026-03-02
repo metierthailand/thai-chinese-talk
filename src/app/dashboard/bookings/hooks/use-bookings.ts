@@ -422,8 +422,8 @@ export function useCreateBooking() {
   return useMutation<Booking, Error, CreateBookingInput>({
     mutationFn: createBooking,
     onSuccess: () => {
-      // Invalidate all booking queries to refetch
       queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["companionBookings"] });
       toast.success("Created successfully.");
     },
     onError: (error: Error) => {
@@ -439,9 +439,8 @@ export function useUpdateBooking() {
   return useMutation({
     mutationFn: updateBooking,
     onSuccess: (data, variables) => {
-      // Invalidate all booking queries to refetch
       queryClient.invalidateQueries({ queryKey: bookingKeys.all });
-      // Update the specific booking in cache
+      queryClient.invalidateQueries({ queryKey: ["companionBookings"] });
       queryClient.setQueryData(bookingKeys.detail(variables.id), data);
       toast.success("Updated successfully.");
     },
