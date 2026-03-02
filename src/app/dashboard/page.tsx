@@ -125,7 +125,7 @@ export default function DashboardPage() {
             <Users className="text-muted-foreground h-4 w-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.customerCount || 0}</div>
+            <div className="text-2xl font-bold">{stats?.customerCount.toLocaleString() || 0}</div>
           </CardContent>
         </Card>
         <Card>
@@ -137,7 +137,7 @@ export default function DashboardPage() {
             <BookMarked className="text-muted-foreground h-4 w-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.openBookingsCount || 0}</div>
+            <div className="text-2xl font-bold">{stats?.openBookingsCount.toLocaleString() || 0}</div>
           </CardContent>
         </Card>
         <Card>
@@ -149,7 +149,7 @@ export default function DashboardPage() {
             <FileText className="text-muted-foreground h-4 w-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.activeLeadsCount || 0}</div>
+            <div className="text-2xl font-bold">{stats?.activeLeadsCount.toLocaleString() || 0}</div>
           </CardContent>
         </Card>
       </div>
