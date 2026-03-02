@@ -65,6 +65,7 @@ export function PaymentSection({
   selectedCustomer,
 }: PaymentSectionProps) {
   const paymentDisabled = readOnly || lockFullyPaid;
+
   return (
     <>
       <h3 className="text-lg font-semibold">Payment summary</h3>
@@ -360,7 +361,7 @@ export function PaymentSection({
                   control={form.control}
                   name={`payments.${index}.amount`}
                   render={({ field }) => {
-                    const isDisabled = readOnly || isExistingPayment;
+                    const isDisabled = readOnly;
                     return (
                       <FormItem>
                         <FormLabel required>{paymentType} Payment</FormLabel>
@@ -392,7 +393,7 @@ export function PaymentSection({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{paymentType} Payment Upload</FormLabel>
-                      {readOnly || isExistingPayment ? (
+                      {readOnly ? (
                         <FormControl>
                           {field.value ? (
                             <div className="space-y-2">
