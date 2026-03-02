@@ -66,8 +66,8 @@ export interface TripsResponse {
 export const tripKeys = {
   all: ["trips"] as const,
   lists: () => [...tripKeys.all, "list"] as const,
-  list: (page: number, pageSize: number, search?: string, tripDateFrom?: string, tripDateTo?: string, type?: string, status?: string) =>
-    [...tripKeys.lists(), page, pageSize, search, tripDateFrom, tripDateTo, type, status] as const,
+  list: (page: number, pageSize: number, search?: string, tripDateFrom?: string, tripDateTo?: string, type?: string, status?: string, sortBy?: string, sortOrder?: string) =>
+    [...tripKeys.lists(), page, pageSize, search, tripDateFrom, tripDateTo, type, status, sortBy, sortOrder] as const,
   details: () => [...tripKeys.all, "detail"] as const,
   detail: (id: string) => [...tripKeys.details(), id] as const,
 };
@@ -81,6 +81,8 @@ async function fetchTrips(
   tripDateTo?: string,
   type?: string,
   status?: string,
+  sortBy?: string,
+  sortOrder?: string,
 ): Promise<TripsResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -101,6 +103,12 @@ async function fetchTrips(
   }
   if (status && status !== "ALL") {
     params.set("status", status);
+  }
+  if (sortBy) {
+    params.set("sortBy", sortBy);
+  }
+  if (sortOrder) {
+    params.set("sortOrder", sortOrder);
   }
 
   const res = await fetch(`/api/trips?${params.toString()}`);
@@ -165,7 +173,6 @@ async function updateTrip({ id, data }: { id: string; data: TripFormValues }): P
   return res.json();
 }
 
-// Hook to fetch trips with pagination
 export function useTrips(
   page: number,
   pageSize: number,
@@ -174,10 +181,12 @@ export function useTrips(
   tripDateTo?: string,
   type?: string,
   status?: string,
+  sortBy?: string,
+  sortOrder?: string,
 ) {
   return useQuery({
-    queryKey: tripKeys.list(page, pageSize, search, tripDateFrom, tripDateTo, type, status),
-    queryFn: () => fetchTrips(page, pageSize, search, tripDateFrom, tripDateTo, type, status),
+    queryKey: tripKeys.list(page, pageSize, search, tripDateFrom, tripDateTo, type, status, sortBy, sortOrder),
+    queryFn: () => fetchTrips(page, pageSize, search, tripDateFrom, tripDateTo, type, status, sortBy, sortOrder),
     staleTime: 30 * 1000, // 30 seconds
   });
 }

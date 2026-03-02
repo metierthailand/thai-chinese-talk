@@ -24,6 +24,8 @@ export async function GET(request: Request) {
     const tripDateTo = searchParams.get("tripDateTo") || "";
     const type = searchParams.get("type") || "";
     const status = searchParams.get("status") || "";
+    const sortBy = searchParams.get("sortBy") || "";
+    const sortOrder = (searchParams.get("sortOrder") || "desc") as "asc" | "desc";
 
     const searchFilter: Prisma.TripWhereInput =
       search.trim().length > 0
@@ -90,15 +92,17 @@ export async function GET(request: Request) {
     // Get total count for pagination
     const total = await prisma.trip.count({ where });
 
+    const orderBy: Prisma.TripOrderByWithRelationInput =
+      sortBy === "startDate"
+        ? { startDate: sortOrder }
+        : { createdAt: "desc" };
+
     // Fetch paginated trips
     const trips = await prisma.trip.findMany({
       skip,
       take: pageSize,
       where,
-      orderBy: {
-        // startDate: "asc",
-        createdAt: "desc",
-      },
+      orderBy,
       include: {
         airlineAndAirport: true,
         _count: {

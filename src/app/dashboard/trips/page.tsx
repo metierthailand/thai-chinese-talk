@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Eye, Download } from "lucide-react";
+import { Plus, Edit, Eye, Download, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { DataTable } from "@/components/data-table/data-table";
@@ -19,6 +19,43 @@ import { getTripStatusLabel, getTripStatusVariant } from "@/lib/constants/trip";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { AccessDenied } from "@/components/page/access-denied";
+
+type TripSortBy = "startDate" | "";
+type TripSortOrder = "asc" | "desc";
+
+function SortableHeader({
+  label,
+  sortKey,
+  currentSortBy,
+  currentSortOrder,
+  onSort,
+}: {
+  label: string;
+  sortKey: TripSortBy;
+  currentSortBy: string;
+  currentSortOrder: TripSortOrder;
+  onSort: (key: TripSortBy) => void;
+}) {
+  const isActive = Boolean(currentSortBy && currentSortBy === sortKey);
+  return (
+    <button
+      type="button"
+      className="inline-flex items-center gap-1.5 font-medium hover:text-foreground"
+      onClick={() => onSort(sortKey)}
+    >
+      {label}
+      {isActive ? (
+        currentSortOrder === "asc" ? (
+          <ArrowUp className="h-4 w-4" />
+        ) : (
+          <ArrowDown className="h-4 w-4" />
+        )
+      ) : (
+        <ArrowUpDown className="h-4 w-4 text-muted-foreground/60" />
+      )}
+    </button>
+  );
+}
 
 export default function TripsPage() {
   const { data: session, status: sessionStatus } = useSession();
@@ -36,8 +73,36 @@ export default function TripsPage() {
   const tripDateToQuery = searchParams.get("tripDateTo") || "";
   const typeQuery = searchParams.get("type") || "ALL";
   const statusQuery = searchParams.get("status") || "ALL";
+  const sortByQuery = searchParams.get("sortBy") || "";
+  const sortOrderQuery = (searchParams.get("sortOrder") || "desc") as TripSortOrder;
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const handleSort = useCallback(
+    (key: TripSortBy) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (key === "") {
+        params.delete("sortBy");
+        params.delete("sortOrder");
+        params.set("page", "1");
+      } else if (sortByQuery === key && sortOrderQuery === "desc") {
+        params.set("sortBy", key);
+        params.set("sortOrder", "asc");
+        params.set("page", "1");
+      } else if (sortByQuery === key && sortOrderQuery === "asc") {
+        params.delete("sortBy");
+        params.delete("sortOrder");
+        params.set("page", "1");
+      } else {
+        params.set("sortBy", key);
+        params.set("sortOrder", "desc");
+        params.set("page", "1");
+      }
+      const newUrl = params.toString() ? `?${params.toString()}` : "";
+      router.push(`/dashboard/trips${newUrl}`, { scroll: false });
+    },
+    [searchParams, router, sortByQuery, sortOrderQuery],
+  );
 
   const columns: ColumnDef<Trip>[] = useMemo(
     () => [
@@ -107,7 +172,15 @@ export default function TripsPage() {
       },
       {
         accessorKey: "dates",
-        header: "Trip date",
+        header: () => (
+          <SortableHeader
+            label="Trip date"
+            sortKey="startDate"
+            currentSortBy={sortByQuery}
+            currentSortOrder={sortOrderQuery}
+            onSort={handleSort}
+          />
+        ),
         cell: ({ row }) => {
           const trip = row.original;
           return (
@@ -181,7 +254,7 @@ export default function TripsPage() {
         ),
       },
     ],
-    [selectedIds, canCreateOrEdit],
+    [selectedIds, canCreateOrEdit, sortByQuery, sortOrderQuery, handleSort],
   );
 
   // Use TanStack Query to fetch trips
@@ -196,7 +269,9 @@ export default function TripsPage() {
     tripDateFromQuery || undefined,
     tripDateToQuery || undefined,
     typeQuery !== "ALL" ? typeQuery : undefined,
-    statusQuery !== "ALL" ? statusQuery : undefined
+    statusQuery !== "ALL" ? statusQuery : undefined,
+    sortByQuery || undefined,
+    sortOrderQuery || undefined
   );
 
   const trips = useMemo(() => tripsResponse?.data ?? [], [tripsResponse?.data]);
